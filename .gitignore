@@ -1,0 +1,10 @@
+
+motors/\.settings/
+
+motors/Release/
+
+Main/Debug/
+
+Main/Release/
+
+Main/\.settings/
