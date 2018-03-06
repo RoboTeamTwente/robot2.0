@@ -39,6 +39,8 @@
 #include "main.h"
 #include "stm32f3xx_hal.h"
 #include "dma.h"
+#include "i2c.h"
+#include "spi.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -46,8 +48,6 @@
 /* USER CODE BEGIN Includes */
 #include "PuttyInterface/PuttyInterface.h"
 #include "motorscomm/motorscomm.h"
-#include "encoder/encoder.h"
-
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -58,19 +58,14 @@ PuttyInterfaceTypeDef puttystruct;
 motorscomm_HandleTypeDef motorscommstruct = {
 		.huart = &huart3
 };
-bool tx_flag = true;
-bool rx_flag = true;
+
+bool RXFlag = true;
+bool TXFlag = true;
 bool send_new_data = false;
-
-bool printrxtx = false;
-bool printspeed = false;
-
 int TX_err_count = 0;
 int RX_err_count = 0;
 int RX_count = 0;
 int TX_count = 0;
-
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,6 +73,7 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+
 void HandleCommand(char* input);
 /* USER CODE END PFP */
 
@@ -115,65 +111,73 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_USART3_UART_Init();
-  MX_TIM1_Init();
   MX_USART1_UART_Init();
+  MX_TIM1_Init();
+  MX_SPI1_Init();
+  MX_USART2_UART_Init();
+  MX_TIM17_Init();
+  MX_TIM6_Init();
+  MX_I2C1_Init();
+  MX_USART3_UART_Init();
   MX_TIM2_Init();
-  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1);
-  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, 1);
-  HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, 1);
-  HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, 1);
 
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
+  motorscomm_Init(&motorscommstruct);
+
   motorscommstruct.TX_message.id[0] = motorscomm_LF;
   motorscommstruct.TX_message.id[1] = motorscomm_LB;
   motorscommstruct.TX_message.id[2] = motorscomm_RB;
   motorscommstruct.TX_message.id[3] = motorscomm_RF;
-  motorscommstruct.TX_message.wheel_speed[0] = 3.3;
-  motorscommstruct.TX_message.wheel_speed[1] = 2.2;
-  motorscommstruct.TX_message.wheel_speed[2] = 1.1;
-  motorscommstruct.TX_message.wheel_speed[3] = 0.0;
 
   HAL_Delay(1000);
-  HAL_TIM_Base_Start_IT(&htim4);
+  // enable UART transmission timer
+  HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint led_timer = 0;
   while (1)
   {
-	  if (rx_flag){
-		  rx_flag = false;
-		  HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,0);
-		  //motors[0].PID->ref = motorscommstruct.RX_message.wheel_speed[0];
+	  if(HAL_GetTick() - 500 > led_timer){
+		  led_timer = HAL_GetTick();
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+	  }
+
+  /* USER CODE END WHILE */
+
+  /* USER CODE BEGIN 3 */
+	  if(RXFlag){
+		  RXFlag = false;
 		  motorscomm_Update(&motorscommstruct);
 	  }
 	  if(send_new_data){
 		  // start new transmission, if transmit was busy wait another cycle before trying again
-		  //motorscommstruct.TX_message.wheel_speed[0] = motors[0].encoder->speed;
 		  HAL_StatusTypeDef error_code = motorscomm_UART_StartTransmit(&motorscommstruct, 0);
 		  if(error_code == HAL_OK){
 			  // transmission successful
 			  send_new_data = false;
-			  HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,0);
-		  }else{
+			  HAL_GPIO_WritePin(LD0_GPIO_Port,LD0_Pin,0);
+		  }
+		  else{
 			  // transmission failed, trying again next while loop cycle
 			  uprintf("Transmit failed error code:[%d]\n\r", error_code);
 		  }
 	  }else{
+
 		  PuttyInterface_Update(&puttystruct);
 	  }
+	  if(!(HAL_GetTick() % 500U)){
+			  //motorscommstruct.TX_message.wheel_speed[0] = HAL_GetTick()/1000;
+			  uprintf("===main===%c %04ld %c=== suc/err:TX %d/%d, RX %d/%d\n\r", 181, (HAL_GetTick() / 100), 198, TX_count, TX_err_count, RX_count, RX_err_count);
+			  //uprintf("TX = [%.02f, %d] [%.02f, %d] [%.02f, %d] [%.02f, %d]\n\r", motorscommstruct.TX_message.wheel_speed[0], motorscommstruct.TX_message.id[0], motorscommstruct.TX_message.wheel_speed[1], motorscommstruct.TX_message.id[1], motorscommstruct.TX_message.wheel_speed[2], motorscommstruct.TX_message.id[2], motorscommstruct.TX_message.wheel_speed[3], motorscommstruct.TX_message.id[3]);
+			  //uprintf("RX = [%.02f, %d] [%.02f, %d] [%.02f, %d] [%.02f, %d]\n\r", motorscommstruct.RX_message.wheel_speed[0], motorscommstruct.RX_message.id[0], motorscommstruct.RX_message.wheel_speed[1], motorscommstruct.RX_message.id[1], motorscommstruct.RX_message.wheel_speed[2], motorscommstruct.RX_message.id[2], motorscommstruct.RX_message.wheel_speed[3], motorscommstruct.RX_message.id[3]);
+			  uprintf("RX = [%.02f, %d] \n\r", motorscommstruct.RX_message.wheel_speed[1], motorscommstruct.RX_message.id[1]);
+		  }
 
-	  if(!(HAL_GetTick() % 500)){
-		  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
 	  }
-  /* USER CODE END WHILE */
-
-  /* USER CODE BEGIN 3 */
-  }
   /* USER CODE END 3 */
 
 }
@@ -191,10 +195,11 @@ void SystemClock_Config(void)
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
@@ -217,17 +222,18 @@ void SystemClock_Config(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART3
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART2
+                              |RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_I2C1
                               |RCC_PERIPHCLK_TIM1;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
   PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
+  PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
   PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
-
-  HAL_RCC_MCOConfig(RCC_MCO, RCC_MCO1SOURCE_HSE, RCC_MCODIV_1);
 
     /**Configure the Systick interrupt time 
     */
@@ -242,7 +248,6 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-//!!this function will receive the commands when the are complete strcmp(input, "command") will return zero if "command" is equal to input
 void HandleCommand(char* input){
 	if(!strcmp(input, "start")){
 		uprintf("started;>)\n\r");
@@ -250,50 +255,36 @@ void HandleCommand(char* input){
 		uprintf("stopped\n\r");
 	}
 }
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	HAL_GPIO_TogglePin(LD0_GPIO_Port, LD0_Pin);
+	if(huart->Instance == huart1.Instance){
+		puttystruct.huart2_Rx_len = 1;
+		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
+	}else if(huart->Instance == huart3.Instance){
+		RX_count++;
+		if (RXFlag){
+			RX_err_count++;
+		}
+		RXFlag = true;
+	}
+}
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-	/*for(uint32_t i = 0; i < AMOUNT_OF_MOTORS; i++ ){
-		encoder_Input(GPIO_Pin, motors[i].encoder);
-	}*/
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+	if(huart->Instance == huart3.Instance){
+		TX_count++;
+		TXFlag = true;
+	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-    /*if (htim->Instance == TIM3){
-		pid_Control(encoder_CalculateSpeed(motors[motor_ptr].encoder), motors[motor_ptr].PID);
-		//pid_Control(motors[motor_ptr].encoder->cnt[0] + motors[motor_ptr].encoder->cnt[1], motors[motor_ptr].PID);
-		motor_ptr = (motor_ptr + 1) % AMOUNT_OF_MOTORS;
-    }*/
-    if (htim->Instance == TIM4){
+	if (htim->Instance == TIM2){
 		if (send_new_data){
 			TX_err_count++;
 		}
 		send_new_data = true;
-		HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,1);
-	}
-
-}
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
-	if(huart->Instance == huart1.Instance){
-		puttystruct.huart2_Rx_len = 1;
-		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
-	}
-	if(huart->Instance == huart3.Instance){
-		RX_count++;
-		if (rx_flag){
-			RX_err_count++;
-		}
-		rx_flag = true;
+		HAL_GPIO_WritePin(LD0_GPIO_Port,LD0_Pin,1);
 	}
 }
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-	if(huart->Instance == huart3.Instance){
-		TX_count++;
-		tx_flag = true;
-	}
-}
-
 /* USER CODE END 4 */
 
 /**
