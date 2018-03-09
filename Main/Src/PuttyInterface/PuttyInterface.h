@@ -8,7 +8,7 @@
 #ifndef PUTTYINTERFACE_H_
 #define PUTTYINTERFACE_H_
 
-#define PUTTY_USART
+#define PUTTY_USART// or choose #define PUTTY_USART
 
 #ifdef PUTTY_USART
 #define huartx huart1

@@ -58,10 +58,15 @@ PuttyInterfaceTypeDef puttystruct;
 motorscomm_HandleTypeDef motorscommstruct = {
 		.huart = &huart3
 };
-bool tx_flag = true;
-bool rx_flag = true;
-bool send_new_data = false;
 
+typedef enum {
+	motorscomm_Initialize,
+	motorscomm_Transmitting,
+	motorscomm_Idle,
+	motorscomm_Failed
+}motorscomm_states;
+
+motorscomm_states motorscomm_state = motorscomm_Initialize;
 bool printrxtx = false;
 bool printspeed = false;
 
@@ -69,6 +74,7 @@ int TX_err_count = 0;
 int RX_err_count = 0;
 int RX_count = 0;
 int TX_count = 0;
+HAL_StatusTypeDef error_code;
 
 
 /* USER CODE END PV */
@@ -121,11 +127,6 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1);
-  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, 1);
-  HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, 1);
-  HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, 1);
-
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
   motorscommstruct.TX_message.id[0] = motorscomm_LF;
@@ -137,42 +138,46 @@ int main(void)
   motorscommstruct.TX_message.wheel_speed[2] = 1.1;
   motorscommstruct.TX_message.wheel_speed[3] = 0.0;
 
-  HAL_Delay(1000);
-  HAL_TIM_Base_Start_IT(&htim4);
+  uint led_count = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if (rx_flag){
-		  rx_flag = false;
-		  HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,0);
-		  //motors[0].PID->ref = motorscommstruct.RX_message.wheel_speed[0];
-		  motorscomm_Update(&motorscommstruct);
-	  }
-	  if(send_new_data){
-		  // start new transmission, if transmit was busy wait another cycle before trying again
-		  //motorscommstruct.TX_message.wheel_speed[0] = motors[0].encoder->speed;
-		  HAL_StatusTypeDef error_code = motorscomm_UART_StartTransmit(&motorscommstruct, 0);
+	  switch(motorscomm_state){
+	  case motorscomm_Initialize:
+		  error_code = motorscomm_HAL_UART_Receive(&motorscommstruct);
 		  if(error_code == HAL_OK){
-			  // transmission successful
-			  send_new_data = false;
-			  HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,0);
+			  motorscomm_state = motorscomm_Idle;
 		  }else{
 			  // transmission failed, trying again next while loop cycle
+			  RX_err_count++;
 			  uprintf("Transmit failed error code:[%d]\n\r", error_code);
 		  }
-	  }else{
-		  PuttyInterface_Update(&puttystruct);
+		  break;
+	  case motorscomm_Transmitting:
+	  case motorscomm_Idle:
+		  if(motorscommstruct.UART2_Rx_flag){
+			  motorscommstruct.UART2_Rx_flag = false;
+			  motorscomm_DecodeBuf(&motorscommstruct);
+		  }
+		  break;
+	  case motorscomm_Failed:
+		  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1);
+		  break;
 	  }
+	  motorscommstruct.TX_message.wheel_speed[0] = 1.234F;
 
-	  if(!(HAL_GetTick() % 500)){
-		  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+	  if((HAL_GetTick() > led_count + 500)){
+		  led_count = HAL_GetTick();
+		  HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
+		  uprintf("suc/err:TX[%d/%d];RX[%d/%d]\n\r", TX_count, TX_err_count, RX_count, RX_err_count);
 	  }
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+	  PuttyInterface_Update(&puttystruct);
   }
   /* USER CODE END 3 */
 
@@ -259,38 +264,50 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-    /*if (htim->Instance == TIM3){
-		pid_Control(encoder_CalculateSpeed(motors[motor_ptr].encoder), motors[motor_ptr].PID);
-		//pid_Control(motors[motor_ptr].encoder->cnt[0] + motors[motor_ptr].encoder->cnt[1], motors[motor_ptr].PID);
-		motor_ptr = (motor_ptr + 1) % AMOUNT_OF_MOTORS;
-    }*/
-    if (htim->Instance == TIM4){
-		if (send_new_data){
-			TX_err_count++;
-		}
-		send_new_data = true;
-		HAL_GPIO_WritePin(LED2_GPIO_Port,LED2_Pin,1);
-	}
 
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
 	if(huart->Instance == huart1.Instance){
 		puttystruct.huart2_Rx_len = 1;
 		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
 	}
 	if(huart->Instance == huart3.Instance){
-		RX_count++;
-		if (rx_flag){
-			RX_err_count++;
+		if(motorscomm_state == motorscomm_Idle){
+			motorscommstruct.UART2_Rx_flag = true;
+			error_code = motorscomm_UART_StartTransmit(&motorscommstruct, 0);
+			if(error_code == HAL_OK){
+			  // transmission successful
+			  motorscomm_state = motorscomm_Transmitting;
+			}else{
+			  // transmission failed, trying again next while loop cycle
+			  TX_err_count++;
+			  motorscomm_state = motorscomm_Failed;
+			  uprintf("Transmit failed error code:[%d]\n\r", error_code);
+			}
+			RX_count++;
+		}else{
+			uprintf("motorscomm_Failed from HAL_UART_RxCpltCallback; motorstate = [%d]\n\r", motorscomm_state);
+			motorscomm_state = motorscomm_Failed;
 		}
-		rx_flag = true;
 	}
 }
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+
 	if(huart->Instance == huart3.Instance){
-		TX_count++;
-		tx_flag = true;
+		if(motorscomm_Transmitting == motorscomm_state){
+			error_code = motorscomm_HAL_UART_Receive(&motorscommstruct);
+			if(error_code == HAL_OK){
+			  motorscomm_state = motorscomm_Idle;
+			}else{
+			  // transmission failed, trying again next while loop cycle
+			  RX_err_count++;
+			  uprintf("Transmit failed error code:[%d]\n\r", error_code);
+			}
+			TX_count++;
+		}else{
+			uprintf("motorscomm_Failed from HAL_UART_TxCpltCallback; motorstate = [%d]\n\r", motorscomm_state);
+			motorscomm_state = motorscomm_Failed;
+		}
 	}
 }
 

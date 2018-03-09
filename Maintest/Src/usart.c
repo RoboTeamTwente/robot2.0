@@ -102,12 +102,12 @@ void MX_USART3_UART_Init(void)
 {
 
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 1152000;
+  huart3.Init.BaudRate = 1500000;
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
   huart3.Init.Mode = UART_MODE_TX_RX;
-  huart3.Init.HwFlowCtl = UART_HWCONTROL_RTS_CTS;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart3.Init.OverSampling = UART_OVERSAMPLING_16;
   huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
@@ -134,7 +134,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     PA9     ------> USART1_TX
     PA10     ------> USART1_RX 
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
+    GPIO_InitStruct.Pin = Tx_PC_Pin|Rx_PC_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
@@ -190,11 +190,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
   
     /**USART3 GPIO Configuration    
     PB10     ------> USART3_TX
-    PB11     ------> USART3_RX
-    PB13     ------> USART3_CTS
-    PB14     ------> USART3_RTS 
+    PB11     ------> USART3_RX 
     */
-    GPIO_InitStruct.Pin = MCU_TX_Pin|MCU_RX_Pin|MCU_CTS_Pin|MCU_CTSB14_Pin;
+    GPIO_InitStruct.Pin = MCU_TX_Pin|MCU_RX_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
@@ -258,7 +256,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     PA9     ------> USART1_TX
     PA10     ------> USART1_RX 
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9|GPIO_PIN_10);
+    HAL_GPIO_DeInit(GPIOA, Tx_PC_Pin|Rx_PC_Pin);
 
     /* USART1 interrupt Deinit */
     HAL_NVIC_DisableIRQ(USART1_IRQn);
@@ -298,11 +296,9 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
   
     /**USART3 GPIO Configuration    
     PB10     ------> USART3_TX
-    PB11     ------> USART3_RX
-    PB13     ------> USART3_CTS
-    PB14     ------> USART3_RTS 
+    PB11     ------> USART3_RX 
     */
-    HAL_GPIO_DeInit(GPIOB, MCU_TX_Pin|MCU_RX_Pin|MCU_CTS_Pin|MCU_CTSB14_Pin);
+    HAL_GPIO_DeInit(GPIOB, MCU_TX_Pin|MCU_RX_Pin);
 
     /* USART3 DMA DeInit */
     HAL_DMA_DeInit(uartHandle->hdmarx);

@@ -83,6 +83,11 @@ void motorscomm_EncodeBuf(motorscomm_HandleTypeDef* mc);
 HAL_StatusTypeDef motorscomm_UART_StartTransmit(motorscomm_HandleTypeDef* mc, uint32_t slave);
 
 /*
+ *
+ */
+HAL_StatusTypeDef motorscomm_HAL_UART_Receive(motorscomm_HandleTypeDef* mc);
+
+/*
  * function to be called when a UART Callback is received
  */
 void motorscomm_UART_Callback(motorscomm_HandleTypeDef* mc, UART_HandleTypeDef *huart);

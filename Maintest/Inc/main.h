@@ -71,12 +71,12 @@
 #define MCU_RX_GPIO_Port GPIOB
 #define ID0_Pin GPIO_PIN_12
 #define ID0_GPIO_Port GPIOB
-#define MCU_CTS_Pin GPIO_PIN_13
-#define MCU_CTS_GPIO_Port GPIOB
-#define MCU_CTSB14_Pin GPIO_PIN_14
-#define MCU_CTSB14_GPIO_Port GPIOB
 #define ID1_Pin GPIO_PIN_15
 #define ID1_GPIO_Port GPIOB
+#define Tx_PC_Pin GPIO_PIN_9
+#define Tx_PC_GPIO_Port GPIOA
+#define Rx_PC_Pin GPIO_PIN_10
+#define Rx_PC_GPIO_Port GPIOA
 #define ID2_Pin GPIO_PIN_11
 #define ID2_GPIO_Port GPIOA
 #define ID3_Pin GPIO_PIN_12

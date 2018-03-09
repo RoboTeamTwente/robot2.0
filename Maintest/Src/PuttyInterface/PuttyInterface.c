@@ -114,7 +114,7 @@ void TextOut(char *str){
 	uint8_t length = strlen(str);
 
 #ifdef PUTTY_USART
-	HAL_UART_Transmit(&huartx, (uint8_t*)str, length, 0xFFFF);
+	HAL_UART_Transmit_IT(&huartx, (uint8_t*)str, length, 0xFFFF);
 #endif
 #ifdef PUTTY_USB
 	if(usb_comm){

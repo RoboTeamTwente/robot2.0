@@ -49,10 +49,11 @@ void motorscomm_Init(motorscomm_HandleTypeDef* mc){
  * update function which should be called regularly to keep communication going
  */
 uint8_t motorscomm_Update(motorscomm_HandleTypeDef* mc){
-	HAL_UART_Receive_DMA(mc->huart,mc->UART2RX_buf,16);
+	uint retval = HAL_UART_Receive_DMA(mc->huart,mc->UART2RX_buf,16);
 	motorscomm_DecodeBuf(mc);
-	return 1;
+	return retval;
 }
+
 
 /*
  * Function to convert the received bytearray into an abstract message
@@ -89,6 +90,9 @@ HAL_StatusTypeDef motorscomm_UART_StartTransmit(motorscomm_HandleTypeDef* mc, ui
 	return HAL_UART_Transmit_DMA(mc->huart,mc->UART2TX_buf, 16);
 }
 
+HAL_StatusTypeDef  motorscomm_HAL_UART_Receive(motorscomm_HandleTypeDef* mc){
+	return HAL_UART_Receive_DMA(mc->huart,mc->UART2RX_buf,16);
+}
 /*
  * function to be called when a UART Callback is received
  */
