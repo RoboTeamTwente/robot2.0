@@ -29,12 +29,12 @@ typedef struct{
 /*
  * each wheel enumerated from right front clockwise to left front wheel
  */
-enum wheel_number{
+typedef enum {
 	motorscomm_RF,
 	motorscomm_RB,
 	motorscomm_LB,
 	motorscomm_LF,
-};
+}wheel_number;
 /*
  * abstract message which holds the wheel speeds and their id in the same order
  */

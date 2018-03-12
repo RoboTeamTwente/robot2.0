@@ -44,6 +44,8 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
+#include <stdlib.h>
+#include <math.h>
 #include "PuttyInterface/PuttyInterface.h"
 #include "motorscomm/motorscomm.h"
 #include "encoder/encoder.h"
@@ -65,10 +67,11 @@ typedef enum {
 	motorscomm_Idle,
 	motorscomm_Failed
 }motorscomm_states;
-
 motorscomm_states motorscomm_state = motorscomm_Initialize;
-bool printrxtx = false;
-bool printspeed = false;
+
+uint64_t while_cnt = 0;
+uint64_t while_cnt_cnt = 0;
+uint64_t while_avg = 0;
 
 int TX_err_count = 0;
 int RX_err_count = 0;
@@ -76,6 +79,23 @@ int RX_count = 0;
 int TX_count = 0;
 HAL_StatusTypeDef error_code;
 
+encoder_HandleTypeDef encoder_LB = {
+	.CHANNEL[0] = CHA_LB_Pin,
+	.CHANNEL[1] = CHB_LB_Pin,
+	.CHANNEL_Port[0] = CHA_LB_GPIO_Port,
+	.CHANNEL_Port[1] = CHA_LB_GPIO_Port,
+	.MeasurementTimer = NULL,
+	.cnt[0] = 0,
+	.cnt[1] = 0,
+	.direction = 0,
+	.period = 0,
+	.last_tim_sample = 0,
+	.prev_tim_sample = 0,
+	.speed = 0,
+	.COUNTS_PER_ROTATION = 1024,
+	.CLK_FREQUENCY = 72000000,
+	.GEAR_RATIO = 3
+};
 
 /* USER CODE END PV */
 
@@ -85,6 +105,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void HandleCommand(char* input);
+void ControlMotor(wheel_number wheel, float duty_cycle);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -138,13 +159,22 @@ int main(void)
   motorscommstruct.TX_message.wheel_speed[2] = 1.1;
   motorscommstruct.TX_message.wheel_speed[3] = 0.0;
 
+//  HAL_TIM_Base_Start(&htim1);
+  HAL_TIM_Base_Start(&htim2);
+  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_4);
+  HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_2);
   uint led_count = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_TIM_Base_Start_IT(&htim4);
+
   while (1)
   {
+	  while_cnt++;
 	  switch(motorscomm_state){
 	  case motorscomm_Initialize:
 		  error_code = motorscomm_HAL_UART_Receive(&motorscommstruct);
@@ -161,18 +191,27 @@ int main(void)
 		  if(motorscommstruct.UART2_Rx_flag){
 			  motorscommstruct.UART2_Rx_flag = false;
 			  motorscomm_DecodeBuf(&motorscommstruct);
+			  for(uint i = 0; i < 4; i++){
+				  ControlMotor(motorscommstruct.RX_message.id[i], motorscommstruct.RX_message.wheel_speed[i]);
+			  }
 		  }
 		  break;
 	  case motorscomm_Failed:
 		  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, 1);
 		  break;
 	  }
-	  motorscommstruct.TX_message.wheel_speed[0] = 1.234F;
 
 	  if((HAL_GetTick() > led_count + 500)){
 		  led_count = HAL_GetTick();
 		  HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
 		  uprintf("suc/err:TX[%d/%d];RX[%d/%d]\n\r", TX_count, TX_err_count, RX_count, RX_err_count);
+		  uprintf("received is [%f, %f, %f, %f]\n\r", motorscommstruct.RX_message.wheel_speed[0], motorscommstruct.RX_message.wheel_speed[1], motorscommstruct.RX_message.wheel_speed[2], motorscommstruct.RX_message.wheel_speed[3]);
+		  uint8_t* ptr = motorscommstruct.UART2RX_buf;
+		  uprintf("RX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++);
+		  ptr = motorscommstruct.UART2TX_buf;
+		  uprintf("TX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++);
+		  uprintf("avg n_whileloops = [%ld]\n\r", while_avg);
+
 	  }
   /* USER CODE END WHILE */
 
@@ -202,7 +241,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -217,7 +256,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -248,6 +287,31 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 //!!this function will receive the commands when the are complete strcmp(input, "command") will return zero if "command" is equal to input
+void ControlMotor(wheel_number wheel, float duty_cycle){
+	bool FR = duty_cycle > 0;
+	duty_cycle = fabs(duty_cycle);
+	if(duty_cycle > 1){
+		duty_cycle = 1;
+	}
+	switch(wheel){
+	case motorscomm_LB:
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (uint)(duty_cycle*MAX_PWM));
+		HAL_GPIO_WritePin(FR_LB_GPIO_Port, FR_LB_Pin, FR);
+		break;
+	case motorscomm_LF:
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (uint)(duty_cycle*MAX_PWM));
+		HAL_GPIO_WritePin(FR_LF_GPIO_Port, FR_LF_Pin, FR);
+		break;
+	case motorscomm_RB:
+		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint)(duty_cycle*MAX_PWM));
+		HAL_GPIO_WritePin(FR_RB_GPIO_Port, FR_RB_Pin, FR);
+		break;
+	case motorscomm_RF:
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, (uint)(duty_cycle*MAX_PWM));
+		HAL_GPIO_WritePin(FR_RF_GPIO_Port, FR_RF_Pin, FR);
+		break;
+	}
+}
 void HandleCommand(char* input){
 	if(!strcmp(input, "start")){
 		uprintf("started;>)\n\r");
@@ -264,7 +328,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-
+	if(htim->Instance == htim4.Instance){
+		while_cnt_cnt++;
+		while_avg = ((while_avg * while_cnt_cnt - while_avg) + while_cnt)/while_cnt_cnt;
+		while_cnt = 0;
+	}
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart1.Instance){
@@ -274,6 +342,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart3.Instance){
 		if(motorscomm_state == motorscomm_Idle){
 			motorscommstruct.UART2_Rx_flag = true;
+			// dont look at these lines, they're necessary
+			uint8_t buf = motorscommstruct.UART2RX_buf[0];
+			memmove(motorscommstruct.UART2RX_buf, &motorscommstruct.UART2RX_buf[1], 15);
+			motorscommstruct.UART2RX_buf[15] = buf;
 			error_code = motorscomm_UART_StartTransmit(&motorscommstruct, 0);
 			if(error_code == HAL_OK){
 			  // transmission successful

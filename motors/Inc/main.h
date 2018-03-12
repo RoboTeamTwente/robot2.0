@@ -48,27 +48,28 @@
 /* USER CODE END Includes */
 
 /* Private define ------------------------------------------------------------*/
+#define MAX_PWM 2400
 
 #define LED2_Pin GPIO_PIN_13
 #define LED2_GPIO_Port GPIOC
 #define LED3_Pin GPIO_PIN_14
 #define LED3_GPIO_Port GPIOC
-#define CHA_RF_Pin GPIO_PIN_0
-#define CHA_RF_GPIO_Port GPIOA
-#define CHB_RF_Pin GPIO_PIN_1
-#define CHB_RF_GPIO_Port GPIOA
-#define CHA_RB_Pin GPIO_PIN_2
-#define CHA_RB_GPIO_Port GPIOA
-#define CHB_RB_Pin GPIO_PIN_3
-#define CHB_RB_GPIO_Port GPIOA
-#define CHA_LB_Pin GPIO_PIN_4
-#define CHA_LB_GPIO_Port GPIOA
-#define CHB_LB_Pin GPIO_PIN_5
-#define CHB_LB_GPIO_Port GPIOA
-#define CHA_LF_Pin GPIO_PIN_6
+#define CHA_LF_Pin GPIO_PIN_0
 #define CHA_LF_GPIO_Port GPIOA
-#define CHB_LF_Pin GPIO_PIN_7
+#define CHB_LF_Pin GPIO_PIN_1
 #define CHB_LF_GPIO_Port GPIOA
+#define CHA_LB_Pin GPIO_PIN_2
+#define CHA_LB_GPIO_Port GPIOA
+#define CHB_LB_Pin GPIO_PIN_3
+#define CHB_LB_GPIO_Port GPIOA
+#define CHA_RB_Pin GPIO_PIN_4
+#define CHA_RB_GPIO_Port GPIOA
+#define CHB_RB_Pin GPIO_PIN_5
+#define CHB_RB_GPIO_Port GPIOA
+#define CHA_RF_Pin GPIO_PIN_6
+#define CHA_RF_GPIO_Port GPIOA
+#define CHB_RF_Pin GPIO_PIN_7
+#define CHB_RF_GPIO_Port GPIOA
 #define FR_LF_Pin GPIO_PIN_12
 #define FR_LF_GPIO_Port GPIOB
 #define FR_RF_Pin GPIO_PIN_15

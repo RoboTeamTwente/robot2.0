@@ -87,8 +87,8 @@ void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : PAPin PAPin PAPin PAPin 
                            PAPin PAPin PAPin PAPin */
-  GPIO_InitStruct.Pin = CHA_RF_Pin|CHB_RF_Pin|CHA_RB_Pin|CHB_RB_Pin 
-                          |CHA_LB_Pin|CHB_LB_Pin|CHA_LF_Pin|CHB_LF_Pin;
+  GPIO_InitStruct.Pin = CHA_LF_Pin|CHB_LF_Pin|CHA_LB_Pin|CHB_LB_Pin 
+                          |CHA_RB_Pin|CHB_RB_Pin|CHA_RF_Pin|CHB_RF_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);

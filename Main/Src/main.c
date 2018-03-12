@@ -46,6 +46,7 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
+#include <stdlib.h>
 #include "PuttyInterface/PuttyInterface.h"
 #include "motorscomm/motorscomm.h"
 #include "ID/ReadId.h"
@@ -60,6 +61,9 @@ motorscomm_HandleTypeDef motorscommstruct = {
 		.huart = &huart3
 };
 
+uint8_t address = -1;
+
+
 enum motorscomm_states{
 	motorscomm_Initialize,
 	motorscomm_Transmitting,
@@ -71,6 +75,10 @@ int RX_err_count = 0;
 int RX_count = 0;
 int TX_count = 0;
 HAL_StatusTypeDef error_code;
+
+uint64_t while_cnt = 0;
+uint64_t while_cnt_cnt = 0;
+uint64_t while_avg = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -124,6 +132,7 @@ int main(void)
   MX_I2C1_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  address = ReadAddress();
 
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
@@ -132,7 +141,11 @@ int main(void)
   motorscommstruct.TX_message.id[1] = motorscomm_LB;
   motorscommstruct.TX_message.id[2] = motorscomm_RB;
   motorscommstruct.TX_message.id[3] = motorscomm_RF;
-  //HAL_Delay(100);
+  motorscommstruct.TX_message.wheel_speed[0] = 0.1F;
+  motorscommstruct.TX_message.wheel_speed[1] = 0.5F;
+  motorscommstruct.TX_message.wheel_speed[2] = 1.0F;
+  motorscommstruct.TX_message.wheel_speed[3] = 2.0F;
+  HAL_Delay(1000);
   // enable UART transmission timer
   /* USER CODE END 2 */
 
@@ -141,6 +154,7 @@ int main(void)
   uint led_timer = 0;
   while (1)
   {
+	  while_cnt++;
 	  switch(motorscomm_state){
 	  case motorscomm_Initialize:
 		  uprintf("motorscomm_Initialize\n\r");
@@ -166,6 +180,12 @@ int main(void)
 		  led_timer = HAL_GetTick();
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 		  uprintf("suc/err:TX[%d/%d];RX[%d/%d]\n\r", TX_count, TX_err_count, RX_count, RX_err_count);
+		  uprintf("Tx = [%f, %f, %f, %f]\n\r", motorscommstruct.TX_message.wheel_speed[0], motorscommstruct.TX_message.wheel_speed[1], motorscommstruct.TX_message.wheel_speed[2], motorscommstruct.TX_message.wheel_speed[3]);
+		  uint8_t* ptr = motorscommstruct.UART2RX_buf;
+		  uprintf("RX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++);
+		  ptr = motorscommstruct.UART2TX_buf;
+		  uprintf("TX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++, *ptr++);
+		  uprintf("avg n_whileloops = [%ld]\n\r", while_avg);
 	  }
   }
   /* USER CODE END 3 */
@@ -246,6 +266,12 @@ void HandleCommand(char* input){
 		uprintf("stopped\n\r");
 	}else if(!strcmp(input, "address")){
 		uprintf("address = [%d]\n\r", ReadAddress());
+	}else if(!memcmp(input, "control", 7)){
+		float duty = atof(input+ 8);
+		for(uint i = 0; i < 4; i++){
+			motorscommstruct.TX_message.wheel_speed[i] = duty;
+		}
+		uprintf("speed set to = [%f]\n\r", motorscommstruct.TX_message.wheel_speed[0]);
 	}
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
@@ -285,6 +311,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM6){
+		while_cnt_cnt++;
+		while_avg = ((while_avg * while_cnt_cnt - while_avg) + while_cnt)/while_cnt_cnt;
+		while_cnt = 0;
 		if (motorscomm_Receiving != motorscomm_state){
 			TX_err_count++;
 			uprintf("motorscomm_Failed from HAL_TIM_PeriodElapsedCallback; state = [%d]\n\r", motorscomm_state);
@@ -295,8 +324,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		if(error_code == HAL_OK){
 		  // transmission successful
 		  motorscomm_state = motorscomm_Transmitting;
-		}
-		else{
+		}else{
 		  // transmission failed, trying again next while loop cycle
 		  uprintf("Transmit failed error code:[%d]\n\r", error_code);
 		  motorscomm_state = motorscomm_Failed;

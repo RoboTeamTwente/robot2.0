@@ -58,12 +58,12 @@ uint8_t motorscomm_Update(motorscomm_HandleTypeDef* mc){
  * Function to convert the received bytearray into an abstract message
  */
 void motorscomm_DecodeBuf(motorscomm_HandleTypeDef* mc){
+	velocity_id_union bytes;
 	uint32_t* ptr = (uint32_t*)mc->UART2RX_buf;
-	velocity_id_union uni;
 	for(uint32_t i = 0; i < 4; i++){
-		uni.id = *ptr++;
-		mc->RX_message.wheel_speed[i] = uni.vel;
-		mc->RX_message.id[i] = uni.id & 0x03;
+		bytes.id = *ptr++;
+		mc->RX_message.wheel_speed[i] = bytes.vel;
+		mc->RX_message.id[i] = bytes.id & 0x03;
 	}
 }
 
