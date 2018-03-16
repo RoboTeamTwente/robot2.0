@@ -7,6 +7,7 @@
 #include "MTiControl.h"
 #include <string.h>
 
+#define MThuart huart2
 uint8_t aRxBuffer[2];
 struct XbusParser * XBParser;
 uint8_t HAL_UART_TxCpltCallback_flag = 0;
@@ -49,13 +50,12 @@ void StoreReceivedBytes(){
 }
 HAL_StatusTypeDef Usart3ReceiveMessage_IT(uint8_t* message, uint16_t size){
 	HAL_StatusTypeDef return_value;
-	return_value = HAL_UART_Receive_IT(&huart3, message, size);
+	return_value = HAL_UART_Receive_IT(&MThuart, message, size);
 
 	return return_value;
 }
 // Callback is called when the HAL_Uart application is finished transmitting its bytes
 void MT_HAL_UART_TxCpltCallback(){
-
 	HAL_UART_TxCpltCallback_flag = 1;
 }
 // Callback is called when the HAL_Uart received its wanted amount of bytes
@@ -73,7 +73,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
 void SendXbusMessage(struct XbusMessage XbusMessage){
 	uint8_t raw[128];
 	size_t XbusMes_size =  XbusMessage_format(raw, (struct XbusMessage const*)&XbusMessage, XLLF_Uart);
-	HAL_UART_Transmit_IT(&huart3, raw, XbusMes_size);
+	HAL_UART_Transmit_IT(&MThuart, raw, XbusMes_size);
 }
 //This function sends the wakeUpAck message.
 //param  None
@@ -82,12 +82,12 @@ void SendWakeUpAck(){
 	struct XbusMessage XbusMes = {XMID_WakeUpAck};
 	uint8_t raw[128];
 	size_t XbusMes_size =  XbusMessage_format(raw, (struct XbusMessage const*)&XbusMes, XLLF_Uart);
-	HAL_UART_Transmit_IT(&huart3, raw, XbusMes_size);
+	HAL_UART_Transmit_IT(&MThuart, raw, XbusMes_size);
 }
 // Wait till a certain message type is received from MTi over usart
 int WaitForAck(enum XsMessageId XMID){
 	uint8_t buf[5];
-	HAL_UART_Receive(&huart3, buf, 5, 500);
+	HAL_UART_Receive(&MThuart, buf, 5, 500);
 	XbusParser_parseBuffer(XBParser, buf, 5);
 	if(cplt_mess_stored_flag){
 		if(ReceivedMessageStorage->mid == XMID){
@@ -115,7 +115,7 @@ void MTi_Init(){
 // if cancel_previous, the current running receive operation is cancelled
 void ReadNewMessage(uint8_t cancel_previous){
 	if(cancel_previous){
-		HAL_UART_AbortReceive(&huart3);
+		HAL_UART_AbortReceive(&MThuart);
 	}
 	Usart3ReceiveMessage_IT((uint8_t *)aRxBuffer, 1);
 }
@@ -125,7 +125,7 @@ void MtiReset(){
 	HAL_GPIO_WritePin(LD0_GPIO_Port, LD0_Pin, 0);
 }
 void CancelMtiOperation(){
-	HAL_UART_Abort(&huart3);
+	HAL_UART_Abort(&MThuart);
 	MtiReset();
 }
 // XBP_handleMessage is called when the xbusparser is done parsing one message
