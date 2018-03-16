@@ -48,6 +48,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
 #include "PuttyInterface/PuttyInterface.h"
+#include "myNRF24.h"
 #include "motorscomm/motorscomm.h"
 #include "ID/ReadId.h"
 #include "MTiControl/MTiControl.h"
@@ -62,8 +63,8 @@ motorscomm_HandleTypeDef motorscommstruct = {
 		.huart = &huart3
 };
 
-uint8_t address = -1;
-
+uint8_t address = 1;
+uint8_t freqChannel = 78;
 
 enum motorscomm_states{
 	motorscomm_Initialize,
@@ -166,6 +167,8 @@ int main(void)
   speed_x = 0;
   speed_y = 0;
   HAL_Delay(1000);
+  initRobo(&hspi1, freqChannel, address);
+  dataPacket dataStruct;
   // enable UART transmission timer
   /* USER CODE END 2 */
 
@@ -174,6 +177,18 @@ int main(void)
   uint led_timer = 0;
   while (1)
   {
+
+
+	  if(irqRead(&hspi1)){
+	  		  roboCallback(&hspi1, &dataStruct);
+	  		  if(dataStruct.robotID == address){
+	  			  //HAL_GPIO_TogglePin(led3_GPIO_Port, led3_Pin);
+	  			  //HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	  			  //HAL_GPIO_TogglePin(LED1_GPIO_Port, LED2_Pin);
+	  			  //kicker
+	  		  }
+	  		  HAL_GPIO_TogglePin(LD0_GPIO_Port, LD0_Pin);
+	  	  }
 	  while_cnt++;// counts how many times the while loop is passed
 	  switch(motorscomm_state){
 	  case motorscomm_Initialize:
@@ -189,7 +204,7 @@ int main(void)
 		  }
 		  break;
 	  case motorscomm_Failed:
-		  HAL_GPIO_WritePin(LD0_GPIO_Port, LD0_Pin, 1);
+		  //HAL_GPIO_WritePin(LD0_GPIO_Port, LD0_Pin, 1);
 		  break;
 	  }
 
