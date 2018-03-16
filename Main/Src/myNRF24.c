@@ -11,37 +11,8 @@
 #include <myNRF24.h>
 #include <string.h>
 
-//*************************auxillery functions**********************************//
+//*************************Auxiliary functions**********************************//
 //*******************not actually for NRF24 control*****************************//
-
-//blink leds for debugging purposes
-/*void fun(){
-	  //HAL_GPIO_WritePin(GPIOE, LD3_Pin, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOE, LD4_Pin, GPIO_PIN_SET);
-	  HAL_Delay(100);
-	  HAL_GPIO_WritePin(GPIOE, LD4_Pin, GPIO_PIN_RESET);
-	//  HAL_GPIO_WritePin(GPIOE, LD6_Pin, GPIO_PIN_SET);
-	  HAL_Delay(100);
-	 // HAL_GPIO_WritePin(GPIOE, LD6_Pin, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOE, LD8_Pin, GPIO_PIN_SET);
-	  HAL_Delay(100);
-	  HAL_GPIO_WritePin(GPIOE, LD8_Pin, GPIO_PIN_RESET);
-	 // HAL_GPIO_WritePin(GPIOE, LD10_Pin, GPIO_PIN_SET);
-	  HAL_Delay(100);
-	 // HAL_GPIO_WritePin(GPIOE, LD10_Pin, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOE, LD9_Pin, GPIO_PIN_SET);
-	  HAL_Delay(100);
-	  HAL_GPIO_WritePin(GPIOE, LD9_Pin, GPIO_PIN_RESET);
-	 // HAL_GPIO_WritePin(GPIOE, LD7_Pin, GPIO_PIN_SET);
-	  HAL_Delay(100);
-	 // HAL_GPIO_WritePin(GPIOE, LD7_Pin, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOE, LD5_Pin, GPIO_PIN_SET);
-	  HAL_Delay(100);
-	  HAL_GPIO_WritePin(GPIOE, LD5_Pin, GPIO_PIN_RESET);
-	 // HAL_GPIO_WritePin(GPIOE, LD3_Pin, GPIO_PIN_SET);
-	  HAL_Delay(100);
-}*/
-
 
 
 //set a specific bit in a byte to a 1 or a 0
@@ -83,13 +54,13 @@ uint8_t readBit(uint8_t byte, uint8_t position){
 //put the nss pin corresponding to the SPI used high
 void nssHigh(SPI_HandleTypeDef* spiHandle){
 
-	HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(SPI2_NSS_GPIO_Port, SPI2_NSS_Pin, GPIO_PIN_SET);
 
 }
 
 //put the nss pin corresponding to the SPI used low
 void nssLow(SPI_HandleTypeDef* spiHandle){
-	HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(SPI2_NSS_GPIO_Port, SPI2_NSS_Pin, GPIO_PIN_RESET);
 }
 
 //put the ce pin corresponding to the SPI used high
@@ -108,7 +79,7 @@ void ceLow(SPI_HandleTypeDef* spiHandle){
 //read the interrupt pin
 uint8_t irqRead(SPI_HandleTypeDef* spiHandle){
 
-	if(!HAL_GPIO_ReadPin(SPI1_IRQ_GPIO_Port, SPI1_IRQ_Pin)){
+	if(!HAL_GPIO_ReadPin(SPI2_IRQ_GPIO_Port, SPI2_IRQ_Pin)){
 
 		return 1;
 	}
@@ -493,6 +464,17 @@ void enableDataPipe(SPI_HandleTypeDef* spiHandle, uint8_t pipeNumber){
 	}
 }
 
+void enableAcknowledgements(SPI_HandleTypeDef* spiHandle){
+	uint8_t reg1D = readReg(spiHandle, 0x1D);	//Read current reg1D
+	reg1D = setBit(reg1D, 1, 1);				//Enable payload with ACK
+	reg1D = setBit(reg1D, 2, 1);				//Enable dynamic payload length
+	writeReg(spiHandle, 0x1D, reg1D);			//Write to reg1D
+
+	uint8_t reg1C = readReg(spiHandle, 0x1C);
+	reg1C = setBit(reg1C, 0, 1);				//Enable dynamic payload length for pipe 0
+	writeReg(spiHandle, 0x1C, reg1C);
+}
+
 //disable a RX data pipe
 //note: pipe 0 is invalid, as it is used for acks
 void disableDataPipe(SPI_HandleTypeDef* spiHandle, uint8_t pipeNumber){
@@ -647,6 +629,13 @@ void flushRX(SPI_HandleTypeDef* spiHandle){
 	nssHigh(spiHandle);
 }
 
+void sendAckPayload(SPI_HandleTypeDef* spiHandle){
+	nssLow(spiHandle);
+	uint8_t sendData = 0xA80F; //W_ACK_PAYLOAD
+	HAL_SPI_Transmit(spiHandle, &sendData, 2, 100);
+	nssHigh(spiHandle);
+}
+
 //send a byte. only used in TX mode
 //warning: after sending, the CE pin stays high.
 //it should be put down manually when either MAX_RT or TX_DS is high
@@ -742,7 +731,10 @@ void initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t address
 	//set the frequency channel
 	setFreqChannel(spiHandle, freqChannel);
 
-	//enable pipe 0 and 1, diabable all other pipes
+	//set acks to accept payloads with variable length.
+	//enableAcknowledgements(spiHandle);
+
+	//enable pipe 0 and 1, disable all other pipes
 	uint8_t dataPipeArray[6] = {1, 1, 0, 0, 0, 0};
 	setDataPipeArray(spiHandle, dataPipeArray);
 
