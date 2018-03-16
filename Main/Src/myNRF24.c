@@ -54,13 +54,13 @@ uint8_t readBit(uint8_t byte, uint8_t position){
 //put the nss pin corresponding to the SPI used high
 void nssHigh(SPI_HandleTypeDef* spiHandle){
 
-	HAL_GPIO_WritePin(SPI2_NSS_GPIO_Port, SPI2_NSS_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(SPI1_NSS_GPIO_Port, SPI1_NSS_Pin, GPIO_PIN_SET);
 
 }
 
 //put the nss pin corresponding to the SPI used low
 void nssLow(SPI_HandleTypeDef* spiHandle){
-	HAL_GPIO_WritePin(SPI2_NSS_GPIO_Port, SPI2_NSS_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(SPI1_NSS_GPIO_Port, SPI1_NSS_Pin, GPIO_PIN_RESET);
 }
 
 //put the ce pin corresponding to the SPI used high
@@ -79,7 +79,7 @@ void ceLow(SPI_HandleTypeDef* spiHandle){
 //read the interrupt pin
 uint8_t irqRead(SPI_HandleTypeDef* spiHandle){
 
-	if(!HAL_GPIO_ReadPin(SPI2_IRQ_GPIO_Port, SPI2_IRQ_Pin)){
+	if(!HAL_GPIO_ReadPin(SPI1_IRQ_GPIO_Port, SPI1_IRQ_Pin)){
 
 		return 1;
 	}

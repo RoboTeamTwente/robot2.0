@@ -49,6 +49,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "PuttyInterface/PuttyInterface.h"
+#include "myNRF24.h"
 #include "motorscomm/motorscomm.h"
 #include "ID/ReadId.h"
 #include "myNRF24.h"
@@ -65,17 +66,6 @@ motorscomm_HandleTypeDef motorscommstruct = {
 
 uint8_t address = 1;
 uint8_t freqChannel = 78;
-
-#define MAX_TIME_AFTER_LAST_MESSAGE 100
-
-const float _a0 = 60 * 3.1415/180.0; //240
-const float _a1 = 120 * 3.1415/180.0; //300
-const float _a2 = 240  * 3.1415/180.0; //60
-const float _a3 = 300 * 3.1415/180.0; //120
-
-#define _R   0.09f
-#define _r   0.0275f
-
 
 enum motorscomm_states{
 	motorscomm_Initialize,
@@ -178,6 +168,8 @@ int main(void)
   speed_x = 0;
   speed_y = 0;
   HAL_Delay(1000);
+  initRobo(&hspi1, freqChannel, address);
+  dataPacket dataStruct;
   // enable UART transmission timer
   /* USER CODE END 2 */
 
@@ -204,42 +196,19 @@ int main(void)
   uint led_timer = 0;
   while (1)
   {
-	  while_cnt++;
+
+
 	  if(irqRead(&hspi1)){
-		  LastPackageTime = HAL_GetTick();
-		  roboCallback(&hspi1, &dataStruct);
-		  if(dataStruct.robotID == address){
-			  HAL_GPIO_TogglePin(LD0_GPIO_Port,LD0_Pin);
-			  float magnitude = dataStruct.robotVelocity / 1000; //from mm/s to m/s;
-			  float direction = dataStruct.movingDirection * (2*M_PI/512);
-			  float cosDir = cos(direction);
-			  float sinDir = sin(direction);
-			  float xComponent = cosDir*magnitude;
-			  float yComponent = sinDir*magnitude;
-			  int rotSign;
-
-			  if(dataStruct.rotationDirection != 0){
-				  rotSign = -1;
-			  }else{
-				  rotSign = 1;
-			  }
-
-			  wRadPerSec = (dataStruct.angularVelocity/180.0)*PI;
-			  angularComponent = rotSign*_R*wRadPerSec;
-
-			  motorscommstruct.TX_message.wheel_speed[0] = ((-cos_a0*yComponent * 1.4 + sin_a0*xComponent + angularComponent)*wheelScalar)/(30*8);
-			  motorscommstruct.TX_message.wheel_speed[1] = ((-cos_a1*yComponent * 1.4 + sin_a1*xComponent + angularComponent)*wheelScalar)/(30*8);
-			  motorscommstruct.TX_message.wheel_speed[2] = ((-cos_a2*yComponent * 1.4 + sin_a2*xComponent + angularComponent)*wheelScalar)/(30*8);
-			  motorscommstruct.TX_message.wheel_speed[3] = ((-cos_a3*yComponent * 1.4 + sin_a3*xComponent + angularComponent)*wheelScalar)/(30*8);
-		  }
-
-	  }else if (HAL_GetTick()-LastPackageTime > MAX_TIME_AFTER_LAST_MESSAGE){
-		  motorscommstruct.TX_message.wheel_speed[0] = 0;
-		  motorscommstruct.TX_message.wheel_speed[1] = 0;
-		  motorscommstruct.TX_message.wheel_speed[2] = 0;
-		  motorscommstruct.TX_message.wheel_speed[3] = 0;
-	  }
-
+	  		  roboCallback(&hspi1, &dataStruct);
+	  		  if(dataStruct.robotID == address){
+	  			  //HAL_GPIO_TogglePin(led3_GPIO_Port, led3_Pin);
+	  			  //HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	  			  //HAL_GPIO_TogglePin(LED1_GPIO_Port, LED2_Pin);
+	  			  //kicker
+	  		  }
+	  		  HAL_GPIO_TogglePin(LD0_GPIO_Port, LD0_Pin);
+	  	  }
+	  while_cnt++;// counts how many times the while loop is passed
 	  switch(motorscomm_state){
 	  case motorscomm_Initialize:
 		  uprintf("motorscomm_Initialize\n\r");
@@ -254,7 +223,7 @@ int main(void)
 		  }
 		  break;
 	  case motorscomm_Failed:
-		  HAL_GPIO_WritePin(LD0_GPIO_Port, LD0_Pin, 1);
+		  //HAL_GPIO_WritePin(LD0_GPIO_Port, LD0_Pin, 1);
 		  break;
 	  }
 
