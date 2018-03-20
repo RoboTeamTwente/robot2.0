@@ -65,10 +65,6 @@
 #define chip_GPIO_Port GPIOB
 #define charge_Pin GPIO_PIN_2
 #define charge_GPIO_Port GPIOB
-#define MCU_TX_Pin GPIO_PIN_10
-#define MCU_TX_GPIO_Port GPIOB
-#define MCU_RX_Pin GPIO_PIN_11
-#define MCU_RX_GPIO_Port GPIOB
 #define ID0_Pin GPIO_PIN_12
 #define ID0_GPIO_Port GPIOB
 #define ID1_Pin GPIO_PIN_15

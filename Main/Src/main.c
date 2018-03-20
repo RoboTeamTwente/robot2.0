@@ -38,7 +38,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f3xx_hal.h"
-#include "dma.h"
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
@@ -59,7 +58,7 @@
 /* Private variables ---------------------------------------------------------*/
 PuttyInterfaceTypeDef puttystruct;
 motorscomm_HandleTypeDef motorscommstruct = {
-		.huart = &huart3
+		//.huart = &huart3
 };
 
 uint8_t address = -1;
@@ -139,7 +138,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
   MX_SPI1_Init();
@@ -147,7 +145,6 @@ int main(void)
   MX_TIM17_Init();
   MX_TIM6_Init();
   MX_I2C1_Init();
-  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   address = ReadAddress();
 
@@ -165,6 +162,12 @@ int main(void)
   MTi_Init();
   speed_x = 0;
   speed_y = 0;
+  if(WaitForAck(XMID_WakeUp)){
+		SendWakeUpAck();
+		uprintf("Communication with MTi started, in config state.\n\r");
+	}else{
+		uprintf("No communication with MTi!\n\r");
+	}
   HAL_Delay(1000);
   // enable UART transmission timer
   /* USER CODE END 2 */
@@ -211,13 +214,13 @@ int main(void)
 	  if(HAL_GetTick() > led_timer + 500 ){
 		  led_timer = HAL_GetTick();
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  uprintf("suc/err:TX[%d/%d];RX[%d/%d]\n\r", TX_count, TX_err_count, RX_count, RX_err_count);
-		  uprintf("Tx = [%f, %f, %f, %f]\n\r", motorscommstruct.TX_message.wheel_speed[0], motorscommstruct.TX_message.wheel_speed[1], motorscommstruct.TX_message.wheel_speed[2], motorscommstruct.TX_message.wheel_speed[3]);
-		  uint8_t* ptr = motorscommstruct.UART2RX_buf;
-		  uprintf("RX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++));
-		  ptr = motorscommstruct.UART2TX_buf;
-		  uprintf("TX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++));
-		  uprintf("avg n_whileloops = [%lu]\n\r", while_avg);
+//		  uprintf("suc/err:TX[%d/%d];RX[%d/%d]\n\r", TX_count, TX_err_count, RX_count, RX_err_count);
+//		  uprintf("Tx = [%f, %f, %f, %f]\n\r", motorscommstruct.TX_message.wheel_speed[0], motorscommstruct.TX_message.wheel_speed[1], motorscommstruct.TX_message.wheel_speed[2], motorscommstruct.TX_message.wheel_speed[3]);
+//		  uint8_t* ptr = motorscommstruct.UART2RX_buf;
+//		  uprintf("RX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++));
+//		  ptr = motorscommstruct.UART2TX_buf;
+//		  uprintf("TX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++));
+//		  uprintf("avg n_whileloops = [%lu]\n\r", while_avg);
 	  }
   }
   /* USER CODE END 3 */
@@ -237,13 +240,12 @@ void SystemClock_Config(void)
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
-  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -264,11 +266,9 @@ void SystemClock_Config(void)
   }
 
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART2
-                              |RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_I2C1
-                              |RCC_PERIPHCLK_TIM1;
+                              |RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_TIM1;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
-  PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_SYSCLK;
   PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
@@ -310,7 +310,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart1.Instance){
 		puttystruct.huart2_Rx_len = 1;
 		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
-	}else if(huart->Instance == huart3.Instance){
+	}else if(/*huart->Instance == huart3.Instance){
 		if(motorscomm_state == motorscomm_Receiving){
 			motorscommstruct.UART2_Rx_flag = true;
 			RX_count++;
@@ -318,14 +318,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 			uprintf("motorscomm_Failed from HAL_UART_RxCpltCallback\n\r");
 			motorscomm_state = motorscomm_Failed;
 		}
-	}else if(huart->Instance == huart2.Instance){
+	}else if(*/huart->Instance == huart2.Instance){
 		MT_HAL_UART_RxCpltCallback();
 	}
 
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-	if(huart->Instance == huart3.Instance){
+	if(/*huart->Instance == huart3.Instance){
 		if(motorscomm_Transmitting == motorscomm_state){
 			error_code = motorscomm_HAL_UART_Receive(&motorscommstruct);
 			if(error_code == HAL_OK){
@@ -341,7 +341,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
 			uprintf("motorscomm_Failed from HAL_UART_TxCpltCallback\n\r");
 			motorscomm_state = motorscomm_Failed;
 		}
-	}else if(huart->Instance == huart2.Instance){
+	}else if(*/huart->Instance == huart2.Instance){
 		MT_HAL_UART_TxCpltCallback();
 	}
 }
@@ -351,22 +351,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		while_cnt_cnt++;
 		while_avg = ((while_avg * while_cnt_cnt - while_avg) + while_cnt)/while_cnt_cnt;
 		while_cnt = 0;
-		if (motorscomm_Receiving != motorscomm_state){
-			TX_err_count++;
-			uprintf("motorscomm_Failed from HAL_TIM_PeriodElapsedCallback; state = [%d]\n\r", motorscomm_state);
-			motorscomm_state = motorscomm_Failed;
-			return;
-		}
-		error_code = motorscomm_UART_StartTransmit(&motorscommstruct, 0);
-		if(error_code == HAL_OK){
-		  // transmission successful
-		  motorscomm_state = motorscomm_Transmitting;
-		}else{
-		  // transmission failed, trying again next while loop cycle
-		  uprintf("Transmit failed error code:[%d]\n\r", error_code);
-		  motorscomm_state = motorscomm_Failed;
-		  RX_err_count++;
-		}
+//		if (motorscomm_Receiving != motorscomm_state){
+//			TX_err_count++;
+//			uprintf("motorscomm_Failed from HAL_TIM_PeriodElapsedCallback; state = [%d]\n\r", motorscomm_state);
+//			motorscomm_state = motorscomm_Failed;
+//			return;
+//		}
+//		error_code = motorscomm_UART_StartTransmit(&motorscommstruct, 0);
+//		if(error_code == HAL_OK){
+//		  // transmission successful
+//		  motorscomm_state = motorscomm_Transmitting;
+//		}else{
+//		  // transmission failed, trying again next while loop cycle
+//		  uprintf("Transmit failed error code:[%d]\n\r", error_code);
+//		  motorscomm_state = motorscomm_Failed;
+//		  RX_err_count++;
+//		}
 	}
 }
 

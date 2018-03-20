@@ -1,8 +1,8 @@
 /**
   ******************************************************************************
-  * File Name          : dma.h
-  * Description        : This file contains all the function prototypes for
-  *                      the dma.c file
+  * @file           : main.h
+  * @brief          : Header for main.c file.
+  *                   This file contains the common defines of the application.
   ******************************************************************************
   ** This notice applies to any and all portions of this file
   * that are not between comment pairs USER CODE BEGIN and
@@ -36,43 +36,85 @@
   *
   ******************************************************************************
   */
-/* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __dma_H
-#define __dma_H
 
-#ifdef __cplusplus
- extern "C" {
-#endif
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __MAIN_H__
+#define __MAIN_H__
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f3xx_hal.h"
-#include "main.h"
-
-/* DMA memory to memory transfer handles -------------------------------------*/
-extern void _Error_Handler(char*, int);
 
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
 
+/* Private define ------------------------------------------------------------*/
+
+#define Geneva_cal_sens_Pin GPIO_PIN_13
+#define Geneva_cal_sens_GPIO_Port GPIOC
+#define Geneva_dir_A_Pin GPIO_PIN_14
+#define Geneva_dir_A_GPIO_Port GPIOC
+#define Geneva_dir_B_Pin GPIO_PIN_15
+#define Geneva_dir_B_GPIO_Port GPIOC
+#define xsens1_Pin GPIO_PIN_0
+#define xsens1_GPIO_Port GPIOA
+#define xsens2_Pin GPIO_PIN_1
+#define xsens2_GPIO_Port GPIOA
+#define Charge_done_Pin GPIO_PIN_4
+#define Charge_done_GPIO_Port GPIOA
+#define kick_Pin GPIO_PIN_0
+#define kick_GPIO_Port GPIOB
+#define chip_Pin GPIO_PIN_1
+#define chip_GPIO_Port GPIOB
+#define charge_Pin GPIO_PIN_2
+#define charge_GPIO_Port GPIOB
+#define ID0_Pin GPIO_PIN_12
+#define ID0_GPIO_Port GPIOB
+#define ID1_Pin GPIO_PIN_15
+#define ID1_GPIO_Port GPIOB
+#define Tx_PC_Pin GPIO_PIN_9
+#define Tx_PC_GPIO_Port GPIOA
+#define Rx_PC_Pin GPIO_PIN_10
+#define Rx_PC_GPIO_Port GPIOA
+#define ID2_Pin GPIO_PIN_11
+#define ID2_GPIO_Port GPIOA
+#define ID3_Pin GPIO_PIN_12
+#define ID3_GPIO_Port GPIOA
+#define LD1_Pin GPIO_PIN_13
+#define LD1_GPIO_Port GPIOA
+#define LD0_Pin GPIO_PIN_14
+#define LD0_GPIO_Port GPIOA
+#define Geneva_enc_A_Pin GPIO_PIN_15
+#define Geneva_enc_A_GPIO_Port GPIOA
+#define Geneva_enc_B_Pin GPIO_PIN_4
+#define Geneva_enc_B_GPIO_Port GPIOB
+#define bs_interrupt_Pin GPIO_PIN_5
+#define bs_interrupt_GPIO_Port GPIOB
+#define MTi_nRSt_Pin GPIO_PIN_8
+#define MTi_nRSt_GPIO_Port GPIOB
+#define Geneva_PWM_Pin GPIO_PIN_9
+#define Geneva_PWM_GPIO_Port GPIOB
+
+/* ########################## Assert Selection ############################## */
+/**
+  * @brief Uncomment the line below to expanse the "assert_param" macro in the 
+  *        HAL drivers code
+  */
+/* #define USE_FULL_ASSERT    1U */
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
-void MX_DMA_Init(void);
+#ifdef __cplusplus
+ extern "C" {
+#endif
+void _Error_Handler(char *, int);
 
-/* USER CODE BEGIN Prototypes */
-
-/* USER CODE END Prototypes */
-
+#define Error_Handler() _Error_Handler(__FILE__, __LINE__)
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __dma_H */
-
-/**
-  * @}
-  */
+#endif /* __MAIN_H__ */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
