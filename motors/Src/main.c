@@ -341,10 +341,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart3.Instance){
 		if(motorscomm_state == motorscomm_Idle){
 			motorscommstruct.UART2_Rx_flag = true;
-			// dont look at these lines, they're necessary
+			// dont look at these lines, they're somehow necessary
 			uint8_t buf = motorscommstruct.UART2RX_buf[0];
 			memmove(motorscommstruct.UART2RX_buf, &motorscommstruct.UART2RX_buf[1], 15);
 			motorscommstruct.UART2RX_buf[15] = buf;
+			// end of nonsense
 			error_code = motorscomm_UART_StartTransmit(&motorscommstruct, 0);
 			if(error_code == HAL_OK){
 			  // transmission successful

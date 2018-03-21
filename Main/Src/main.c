@@ -51,10 +51,6 @@
 #include "myNRF24.h"
 #include "motorscomm/motorscomm.h"
 #include "ID/ReadId.h"
-<<<<<<< master
-#include "myNRF24.h"
-=======
-#include "MTiControl/MTiControl.h"
 #include <math.h>
 >>>>>>> did some changes to the ioc
 /* USER CODE END Includes */
@@ -68,7 +64,7 @@ motorscomm_HandleTypeDef motorscommstruct = {
 		/*.huart = &huart3*/
 };
 
-uint8_t address = 1;
+uint8_t address = -1;
 uint8_t freqChannel = 78;
 
 enum motorscomm_states{
@@ -92,9 +88,18 @@ uint8_t message_handled_flag = 0;
 float speed_x, speed_y;
 HAL_StatusTypeDef error_code;
 
-uint64_t while_cnt = 0;
-uint64_t while_cnt_cnt = 0;
-uint64_t while_avg = 0;
+uint while_cnt = 0;
+uint while_cnt_cnt = 0;
+uint while_avg = 0;
+
+#define MAX_TIME_AFTER_LAST_MESSAGE 1000
+
+const float _a0 = 60 * 3.1415/180.0; //240
+const float _a1 = 120 * 3.1415/180.0; //300
+const float _a2 = 240  * 3.1415/180.0; //60
+const float _a3 = 300 * 3.1415/180.0; //120
+#define _R   0.09f
+#define _r   0.0275f
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,12 +108,6 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void HandleCommand(char* input);
-void MTiPrintOutputConfig(struct XbusMessage const* message);
-void MTiErrorHandler(struct XbusMessage const* message);
-void printMessageData(struct XbusMessage const* message);
-void PrintUsartStatus(HAL_StatusTypeDef status);
-void HandleMessage();
-float calculateSpeed(float acc_x, float acc_y, float acc_z, int freq);
 
 /* USER CODE END PFP */
 
@@ -152,6 +151,7 @@ int main(void)
   MX_TIM17_Init();
   MX_TIM6_Init();
   MX_I2C1_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   address = ReadAddress();
 
@@ -166,11 +166,11 @@ int main(void)
   motorscommstruct.TX_message.wheel_speed[1] = 0.5F;
   motorscommstruct.TX_message.wheel_speed[2] = 1.0F;
   motorscommstruct.TX_message.wheel_speed[3] = 2.0F;
-  MTi_Init();
   speed_x = 0;
   speed_y = 0;
   HAL_Delay(1000);
   initRobo(&hspi1, freqChannel, address);
+  uint receptiontimer = 0xffff;
   dataPacket dataStruct;
   // enable UART transmission timer
   /* USER CODE END 2 */
@@ -198,16 +198,45 @@ int main(void)
   uint led_timer = 0;
   while (1)
   {
-//	  if(irqRead(&hspi1)){
-//	  		  //roboCallback(&hspi1, &dataStruct);
-//	  		  //if(dataStruct.robotID == address){
-//	  			  //HAL_GPIO_TogglePin(led3_GPIO_Port, led3_Pin);
-//	  			  //HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-//	  			  //HAL_GPIO_TogglePin(LED1_GPIO_Port, LED2_Pin);
-//	  			  //kicker
-//	  		  //}
-//	  		  HAL_GPIO_TogglePin(LD0_GPIO_Port, LD0_Pin);
-//	  	  }
+	  if(irqRead(&hspi1)){
+		  roboCallback(&hspi1, &dataStruct);
+		  if(dataStruct.robotID == address){
+			  HAL_GPIO_TogglePin(LD0_GPIO_Port, LD0_Pin);
+			  float magnitude = dataStruct.robotVelocity / 1000; //from mm/s to m/s;
+			  float direction = dataStruct.movingDirection * (2*M_PI/512);
+			  uprintf("magnitude,direction [ %f, %f]\n\r", magnitude, direction );
+			  float cosDir = cos(direction);
+			  float sinDir = sin(direction);
+			  float xComponent = cosDir*magnitude;
+			  float yComponent = sinDir*magnitude;
+			  uprintf("xComponent, yComponent [ %f, %f]\n\r", xComponent, yComponent );
+			  float wRadPerSec;
+			  float wheelScalar = 1/_r;
+			  float angularComponent;
+			  int rotSign;
+
+			  if(dataStruct.rotationDirection != 0){
+				  rotSign = -1;
+			  }else{
+				  rotSign = 1;
+			  }
+
+			  wRadPerSec = (dataStruct.angularVelocity/180.0)*PI;
+			  angularComponent = rotSign*_R*wRadPerSec;
+
+			  motorscommstruct.TX_message.wheel_speed[0] = ((-cos(_a0)*yComponent * 1.4 + sin(_a0)*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[1] = ((-cos(_a1)*yComponent * 1.4 + sin(_a1)*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[2] = ((-cos(_a2)*yComponent * 1.4 + sin(_a2)*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[3] = ((-cos(_a3)*yComponent * 1.4 + sin(_a3)*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  uprintf("send wheel speeds are [ %f, %f, %f, %f]\n\r", motorscommstruct.TX_message.wheel_speed[0], motorscommstruct.TX_message.wheel_speed[1],motorscommstruct.TX_message.wheel_speed[2],motorscommstruct.TX_message.wheel_speed[3]);
+			  receptiontimer = HAL_GetTick();
+		  }
+	  }else if(HAL_GetTick() - MAX_TIME_AFTER_LAST_MESSAGE > receptiontimer){
+		motorscommstruct.TX_message.wheel_speed[0] = 0;
+		motorscommstruct.TX_message.wheel_speed[1] = 0;
+		motorscommstruct.TX_message.wheel_speed[2] = 0;
+		motorscommstruct.TX_message.wheel_speed[3] = 0;
+	  }
 	  while_cnt++;// counts how many times the while loop is passed
 	  switch(motorscomm_state){
 	  case motorscomm_Initialize:
@@ -227,17 +256,6 @@ int main(void)
 		  break;
 	  }
 
-	  if(cplt_mess_stored_flag){
-			cplt_mess_stored_flag = 0;
-			if(DEBUG) uprintf("cplt_mess_stored_flag\n\r");
-			HandleMessage();
-			if(!stop_after_message_complete){
-				message_handled_flag = 0;
-				ReadNewMessage(0);
-			}
-		}
-
-		CheckWhatNeedsToBeDone();
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -271,12 +289,13 @@ void SystemClock_Config(void)
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -297,9 +316,11 @@ void SystemClock_Config(void)
   }
 
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART2
-                              |RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_TIM1;
+                              |RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_I2C1
+                              |RCC_PERIPHCLK_TIM1;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_SYSCLK;
   PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
@@ -335,154 +356,26 @@ void HandleCommand(char* input){
 			motorscommstruct.TX_message.wheel_speed[i] = duty;
 		}
 		uprintf("speed set to = [%f]\n\r", motorscommstruct.TX_message.wheel_speed[0]);
-	}else if(strcmp(input, "start2") == 0){
-		uprintf("Starting device MTi\n\r");
-		//HAL_GPIO_WritePin(GPIOB, MT_RST_Pin, 1);
-		if(WaitForAck(XMID_WakeUp)){
-			uprintf("Communication with MTi started, going to measure state in .5 seconds.\n\r");
-		}else{
-			uprintf("No communication with MTi!\n\r");
-		}
-	}else if(strcmp(input, "config") == 0){
-		struct XbusMessage mess = { .mid = XMID_GoToConfig,
-									.data = NULL,
-									.length = 0};
-
-		uint8_t cnt = 0;
-		while(!WaitForAck(XMID_GoToConfigAck) && cnt < 20 ){
-			SendXbusMessage(mess);
-			cnt++;
-		}
-		if(cnt < 20){
-			uprintf("In config state.\n\r");
-		}else{
-			uprintf("No GoToConfigAck received.\n\r");
-		}
-	}else if(strcmp(input, "measure") == 0){
-		struct XbusMessage mess = { .mid = XMID_GoToMeasurement,
-									.data = NULL,
-									.length = 0};
-		SendXbusMessage(mess);
-		if(WaitForAck(XMID_GoToMeasurementAck)){
-			uprintf("In measurement state.\n\r");
-		}else{
-			uprintf("No GoToMeasurementAck received.\n\r");
-		}
-
-	}else if(strcmp(input, "reqdata") == 0){
-		uprintf("Sending request data message.\n\r");
-		struct XbusMessage mess = { .mid = XMID_ReqData,
-									.length = 0,
-									.data = NULL};
-		SendXbusMessage(mess);
-		ReadNewMessage(0);
-	}else if(strcmp(input, "factoryreset") == 0){
-		uprintf("Resetting the configuration.\n\r");
-		struct XbusMessage mess = { .mid = XMID_RestoreFactoryDef,
-									.length = 0,
-									.data = NULL};
-		SendXbusMessage(mess);
-	}else if(strcmp(input, "selftest") == 0){
-		uprintf("Running self test of MTi.\n\r");
-		struct XbusMessage mess = { .mid = XMID_RunSelftest,
-									.length = 0,
-									.data = NULL};
-		SendXbusMessage(mess);
-	}else if(strcmp(input, "setoutputperiod") == 0){
-		uprintf("setting outputconfig.\n\r");
-		uint16_t data = 0x012C;// 300 Hz
-		struct XbusMessage mess = { .mid = XMID_SetPeriod,
-									.data = &data,
-									.length = 0};
-		SendXbusMessage(mess);
-	}else if(memcmp(input, "enterdata", strlen("enterdata")) == 0){
-		uprintf("Creating a message manually.\n\r");
-		struct XbusMessage mess;
-		mess.mid = XMID_SetOutputConfiguration;
-
-		uint8_t data[64];
-		uint8_t * dptr = data;
-		int holder[2];
-		sscanf(input, "enterdata%04x%04x", &holder[0], &holder[1] );
-		dptr = XbusUtility_writeU16(dptr, holder[0]);
-		dptr = XbusUtility_writeU16(dptr, holder[1]);
-		mess.data = data;
-		if(DEBUG){
-			uprintf(smallStrBuffer, "\n[%02x %02x %02x %02x]\n\n", data[0], data[1], data[2], data[3]);
-
-		}
-		SendXbusMessage(mess);
-	}else if(memcmp(input, "setconfig", strlen("setconfig")) == 0){
-		uint8_t n_configs = 2;
-		uint16_t frequency = 60;
-		uprintf("Setting the preset configuration.\n\r");
-		struct OutputConfiguration config[n_configs];
-		config[0].dtype = XDI_PacketCounter;
-		config[0].freq =  frequency;
-		config[1].dtype = XDI_Acceleration;
-		config[1].freq =  frequency;
-		struct XbusMessage mess;
-		mess.mid = XMID_SetOutputConfiguration;
-		mess.length = n_configs;
-		mess.data = &config;
-		uint16_t* mdptr = mess.data;
-		if(DEBUG){
-			uprintf("[%x %x] [%x %x] [%x %x]\n", *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++);
-
-		}
-		SendXbusMessage(mess);
-		ReadNewMessage(0);
-	}else if(strcmp(input, "receive") == 0){
-		uprintf("receiving a message in interrupt mode\n\r");
-		ReadNewMessage(0);
-
-	}else if(strcmp(input, "reqconfig") == 0){
-		uprintf("requesting output configuration mode\n\r");
-		struct XbusMessage mess = { .mid = XMID_ReqOutputConfiguration,
-									.data = NULL,
-									.length = 0};
-		SendXbusMessage(mess);
-		ReadNewMessage(0);
-	}else if(strcmp(input, "reset") == 0){
-		MtiReset();
-	}else if(strcmp(input, "abort") == 0){
-		CancelMtiOperation();
-	}else if(strcmp(input, "readcontinue") == 0){
-		uprintf("Reading continuously till readstop command\n\r");
-		stop_after_message_complete = 0;
-		ReadNewMessage(0);
-	}else if(strcmp(input, "readstop") == 0){
-		stop_after_message_complete = 1;
-	}else if(strcmp(input, "temp") == 0){
-		uprintf("temporary message holder.");
-		uint8_t data[] = {0x40, 0x20,0x01, 0x80, 0x80, 0x20,0x01, 0x80};
-		struct XbusMessage mess = {
-				.mid = XMID_SetOutputConfiguration,
-				.data = data,
-				.length = sizeof(data)};
-		SendXbusMessage(mess);
 	}
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart1.Instance){
 		puttystruct.huart2_Rx_len = 1;
 		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
-	/*}else if(huart->Instance == huart3.Instance){
+	}else if(huart->Instance == huart3.Instance){
 		if(motorscomm_state == motorscomm_Receiving){
 			motorscommstruct.UART2_Rx_flag = true;
 			RX_count++;
 		}else{
 			uprintf("motorscomm_Failed from HAL_UART_RxCpltCallback\n\r");
 			motorscomm_state = motorscomm_Failed;
-		}*/
-	}else if(huart->Instance == huart2.Instance){
-		MT_HAL_UART_RxCpltCallback();
+		}
 	}
 
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-	if(/*huart->Instance == huart3.Instance){
+	if(huart->Instance == huart3.Instance){
 		if(motorscomm_Transmitting == motorscomm_state){
 			error_code = motorscomm_HAL_UART_Receive(&motorscommstruct);
 			if(error_code == HAL_OK){
@@ -498,8 +391,6 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
 			uprintf("motorscomm_Failed from HAL_UART_TxCpltCallback\n\r");
 			motorscomm_state = motorscomm_Failed;
 		}
-	}else if(*/huart->Instance == huart2.Instance){
-		MT_HAL_UART_TxCpltCallback();
 	}
 }
 
@@ -508,237 +399,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		while_cnt_cnt++;
 		while_avg = ((while_avg * while_cnt_cnt - while_avg) + while_cnt)/while_cnt_cnt;
 		while_cnt = 0;
-//		if (motorscomm_Receiving != motorscomm_state){
-//			TX_err_count++;
-//			uprintf("motorscomm_Failed from HAL_TIM_PeriodElapsedCallback; state = [%d]\n\r", motorscomm_state);
-//			motorscomm_state = motorscomm_Failed;
-//			return;
-//		}
-//		error_code = motorscomm_UART_StartTransmit(&motorscommstruct, 0);
-//		if(error_code == HAL_OK){
-//		  // transmission successful
-//		  motorscomm_state = motorscomm_Transmitting;
-//		}else{
-//		  // transmission failed, trying again next while loop cycle
-//		  uprintf("Transmit failed error code:[%d]\n\r", error_code);
-//		  motorscomm_state = motorscomm_Failed;
-//		  RX_err_count++;
-//		}
-	}
-}
-
-void HandleMessage(){
-	if(ReceivedMessageStorage->mid == XMID_Error){
-		MTiErrorHandler(ReceivedMessageStorage);
-	}else if(ReceivedMessageStorage->mid == XMID_MTData2){
-		printMessageData(ReceivedMessageStorage);
-	}else if(ReceivedMessageStorage->mid == XMID_ReqOutputConfigurationAck){
-		MTiPrintOutputConfig(ReceivedMessageStorage);
-	}
-	message_handled_flag = 1;
-	DeallocateMem();
-}
-
-void MTiPrintOutputConfig(struct XbusMessage const* message){
-	if (!message)
-		return;
-	uprintf("MTiPrintOutputConfig:\n");
-
-	uint8_t* rawptr = message->data;
-	uint16_t fptr[message->length];
-	uprintf("len = [%u]", message->length);
-
-	for(uint16_t * i = fptr; i < fptr + (message->length)/2; i++){
-		rawptr = XbusUtility_readU16(i, rawptr);
-		uprintf("[%04x]", *i);
-
-	}
-	uprintf("\n\r");
-
-
-	uint16_t freq;
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Temperature, message))){
-		uprintf("XDI_Temperature:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_UtcTime, message))){
-		uprintf("XDI_UtcTime:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_PacketCounter, message))){
-		uprintf("XDI_PacketCounter:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeFine, message))){
-		uprintf("XDI_SampleTimeFine:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeCoarse, message))){
-		uprintf("XDI_SampleTimeCoarse:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Quaternion, message))){
-		uprintf("XDI_Quaternion:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RotationMatrix, message))){
-		uprintf("XDI_RotationMatrix:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_EulerAngles, message))){
-		uprintf("XDI_EulerAngles:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaV, message))){
-		uprintf("XDI_DeltaV:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Acceleration, message))){
-		uprintf("XDI_Acceleration:%x\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_FreeAcceleration, message))){
-			uprintf("XDI_FreeAcceleration:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_AccelerationHR, message))){
-		uprintf("XDI_AccelerationHR:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurn, message))){
-		uprintf("XDI_RateOfTurn:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaQ, message))){
-		uprintf("XDI_DeltaQ:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurnHR, message))){
-		uprintf("XDI_RateOfTurnHR:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_MagneticField, message))){
-		uprintf("XDI_MagneticField:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusByte, message))){
-		uprintf("XDI_StatusByte:%u\n", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusWord, message))){
-		uprintf("XDI_StatusWord:%u\n", freq);
-
-	}
-}
-void MTiErrorHandler(struct XbusMessage const* message){
-	if (!message)
-		return;
-	uprintf("ERROR: %02x\n", *(uint8_t *)(message->data));
-
-}
-
-void printMessageData(struct XbusMessage const* message){
-	if (!message)
-		return;
-	uprintf("MTData2:");
-
-	uint16_t counter;
-	if (XbusMessage_getDataItem(&counter, XDI_PacketCounter, message))
-	{
-		uprintf(" Packet counter: %5d", counter);
-
-	}
-	uint32_t SampleTimeFine;
-	if (XbusMessage_getDataItem(&SampleTimeFine, XDI_SampleTimeFine, message))
-	{
-		uprintf(" SampleTimeFine: %lu", SampleTimeFine);
-
-	}
-	float ori[4];
-	if (XbusMessage_getDataItem(ori, XDI_Quaternion, message))
-	{
-		uprintf(" Orientation: (%.3f, %.3f, %.3f, %.3f)", ori[0], ori[1],
-				ori[2], ori[3]);
-
-	}
-	float angles[3];
-	if (XbusMessage_getDataItem(angles, XDI_EulerAngles, message))
-	{
-		uprintf(" EulerAngles: (%.3f, %.3f, %.3f)", angles[0], angles[1], angles[2]);
-
-	}
-	float delta_v[3];
-	if (XbusMessage_getDataItem(delta_v, XDI_DeltaV, message))
-	{
-		uprintf(" deltaV: (%.3f, %.3f, %.3f)", delta_v[0], delta_v[1], delta_v[2]);
-
-	}
-	float acc[3];
-	if (XbusMessage_getDataItem(acc, XDI_Acceleration, message))
-	{
-		uprintf(" Acceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
-
-		uprintf("current speed = [%f].\n", calculateSpeed(acc[0], acc[1],acc[2], 100));
-
-	}
-	float gyr[3];
-	if (XbusMessage_getDataItem(gyr, XDI_RateOfTurn, message))
-	{
-		uprintf(" Rate Of Turn: (%.3f %.3f %.3f)", gyr[0], gyr[1], gyr[2]);
-
-	}
-	float delta_q[4];
-	if (XbusMessage_getDataItem(delta_q, XDI_Quaternion, message))
-	{
-		uprintf(" deltaQ: (%.3f, %.3f, %.3f, %.3f)", delta_q[0], delta_q[1],
-				delta_q[2], delta_q[3]);
-
-	}
-	float mag[3];
-	if (XbusMessage_getDataItem(mag, XDI_MagneticField, message))
-	{
-		uprintf(" Magnetic Field: (%.3f, %.3f, %.3f)", mag[0], mag[1], mag[2]);
-
-	}
-	uint32_t status;
-	if (XbusMessage_getDataItem(&status, XDI_StatusWord, message))
-	{
-		uprintf(" Status:%lX", status);
-
-	}
-	uprintf(" \n\r");
-}
-
-void PrintUsartStatus(HAL_StatusTypeDef status){
-	if(DEBUG){
-		switch(status){
-			case HAL_OK:// no problem
-				//uprintf("HAL_OK\n\r");
-				break;
-			case HAL_BUSY:
-				uprintf("HAL_BUSY\n\r");
-				break;
-			case HAL_ERROR:
-				uprintf("HAL_ERROR\n\r");
-				break;
-			case HAL_TIMEOUT:
-				uprintf("HAL_TIMEOUT\n\r");
-				break;
-			default:
-				uprintf("Unknown HAL_StatusTypeDef\n\r");
-				break;
+		if (motorscomm_Receiving != motorscomm_state){
+			TX_err_count++;
+			uprintf("motorscomm_Failed from HAL_TIM_PeriodElapsedCallback; state = [%d]\n\r", motorscomm_state);
+			motorscomm_state = motorscomm_Failed;
+			return;
+		}
+		error_code = motorscomm_UART_StartTransmit(&motorscommstruct, 0);
+		if(error_code == HAL_OK){
+		  // transmission successful
+		  motorscomm_state = motorscomm_Transmitting;
+		}else{
+		  // transmission failed, trying again next while loop cycle
+		  uprintf("Transmit failed error code:[%d]\n\r", error_code);
+		  motorscomm_state = motorscomm_Failed;
+		  RX_err_count++;
 		}
 	}
 }
 
-float calculateSpeed(float acc_x, float acc_y, float acc_z, int freq)
-{
-    float dt = 1/freq;
-    speed_x += acc_x + dt;
-    speed_y += acc_y + dt;
-    float speed_total = sqrt(speed_x*speed_x + speed_y*speed_y);
-    return speed_total;
-}
 /* USER CODE END 4 */
 
 /**

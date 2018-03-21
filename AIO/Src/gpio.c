@@ -64,37 +64,63 @@ void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOE_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, FR_LF_Pin|FR_LB_Pin|LD4_Pin|LD3_Pin 
-                          |LD2_Pin|LD1_Pin|LD0_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, FR_RB_Pin|LD5_Pin|LD4_Pin|LD3_Pin 
+                          |LD2_Pin|LD1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LD5_Pin|FR_RB_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, FR_RF_Pin|Charge_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, FR_RF_Pin|Charge_Pin|Xsens_nRst_Pin|Geneva_dir_A_Pin 
-                          |Geneva_dir_B_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, Kick_Pin|Chip_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, Chip_Pin|Kick_Pin|LD6_Pin|FR_LB_Pin 
+                          |bs_nRST_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, FR_LF_Pin|reserve0_Pin|reserve1_Pin|reserve2_Pin 
+                          |reserve3_Pin|Geneva_dir_A_Pin|Geneva_dir_B_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PEPin PEPin PEPin PEPin 
-                           PEPin PEPin PEPin */
-  GPIO_InitStruct.Pin = FR_LF_Pin|FR_LB_Pin|LD4_Pin|LD3_Pin 
-                          |LD2_Pin|LD1_Pin|LD0_Pin;
+                           PEPin PEPin */
+  GPIO_InitStruct.Pin = FR_RB_Pin|LD5_Pin|LD4_Pin|LD3_Pin 
+                          |LD2_Pin|LD1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PBPin PBPin */
-  GPIO_InitStruct.Pin = LD5_Pin|FR_RB_Pin;
+  /*Configure GPIO pins : PCPin PCPin */
+  GPIO_InitStruct.Pin = FR_RF_Pin|Charge_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PtPin */
+  GPIO_InitStruct.Pin = XSENS_nRST_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(XSENS_nRST_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PtPin */
+  GPIO_InitStruct.Pin = Charge_done_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(Charge_done_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PBPin PBPin PBPin PBPin 
+                           PBPin */
+  GPIO_InitStruct.Pin = Chip_Pin|Kick_Pin|LD6_Pin|FR_LB_Pin 
+                          |bs_nRST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -113,26 +139,19 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(SPI1_IRQ_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PDPin PDPin PDPin PDPin 
-                           PDPin */
-  GPIO_InitStruct.Pin = FR_RF_Pin|Charge_Pin|Xsens_nRst_Pin|Geneva_dir_A_Pin 
-                          |Geneva_dir_B_Pin;
+                           PDPin PDPin PDPin */
+  GPIO_InitStruct.Pin = FR_LF_Pin|reserve0_Pin|reserve1_Pin|reserve2_Pin 
+                          |reserve3_Pin|Geneva_dir_A_Pin|Geneva_dir_B_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PCPin PCPin */
-  GPIO_InitStruct.Pin = Kick_Pin|Chip_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = Charge_done_Pin;
+  GPIO_InitStruct.Pin = empty_battery_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Charge_done_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(empty_battery_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
   GPIO_InitStruct.Pin = Geneva_cal_sens_Pin;
