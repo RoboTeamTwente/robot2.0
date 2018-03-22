@@ -91,8 +91,8 @@
 #define Geneva_enc_B_GPIO_Port GPIOB
 #define bs_interrupt_Pin GPIO_PIN_5
 #define bs_interrupt_GPIO_Port GPIOB
-#define SPI1_NSS_Pin GPIO_PIN_8
-#define SPI1_NSS_GPIO_Port GPIOB
+#define SPI1_CS_Pin GPIO_PIN_8
+#define SPI1_CS_GPIO_Port GPIOB
 #define Geneva_PWM_Pin GPIO_PIN_9
 #define Geneva_PWM_GPIO_Port GPIOB
 

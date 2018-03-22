@@ -47,9 +47,11 @@
 
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
+#include <math.h>
 #include "PuttyInterface/PuttyInterface.h"
 #include "motorscomm/motorscomm.h"
 #include "ID/ReadId.h"
+#include "myNRF24.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -61,7 +63,18 @@ motorscomm_HandleTypeDef motorscommstruct = {
 		.huart = &huart3
 };
 
-uint8_t address = -1;
+uint8_t address = 1;
+uint8_t freqChannel = 78;
+
+#define MAX_TIME_AFTER_LAST_MESSAGE 100
+
+const float _a0 = 60 * 3.1415/180.0; //240
+const float _a1 = 120 * 3.1415/180.0; //300
+const float _a2 = 240  * 3.1415/180.0; //60
+const float _a3 = 300 * 3.1415/180.0; //120
+
+#define _R   0.09f
+#define _r   0.0275f
 
 
 enum motorscomm_states{
@@ -151,10 +164,63 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  nssHigh(&hspi1);
+
+  initRobo(&hspi1, freqChannel, address);
+  dataPacket dataStruct;
+  float cos_a0 = cos(_a0);
+  float sin_a0 = sin(_a0);
+  float cos_a1 = cos(_a1);
+  float sin_a1 = sin(_a1);
+  float cos_a2 = cos(_a2);
+  float sin_a2 = sin(_a2);
+  float cos_a3 = cos(_a3);
+  float sin_a3 = sin(_a3);
+  float wheelScalar = 1/_r;
+  float wRadPerSec;
+  float angularComponent;
+
+  uint LastPackageTime = 0;
+
   uint led_timer = 0;
   while (1)
   {
 	  while_cnt++;
+	  if(irqRead(&hspi1)){
+		  LastPackageTime = HAL_GetTick();
+		  roboCallback(&hspi1, &dataStruct);
+		  if(dataStruct.robotID == address){
+			  HAL_GPIO_TogglePin(LD0_GPIO_Port,LD0_Pin);
+			  float magnitude = dataStruct.robotVelocity / 1000; //from mm/s to m/s;
+			  float direction = dataStruct.movingDirection * (2*M_PI/512);
+			  float cosDir = cos(direction);
+			  float sinDir = sin(direction);
+			  float xComponent = cosDir*magnitude;
+			  float yComponent = sinDir*magnitude;
+			  int rotSign;
+
+			  if(dataStruct.rotationDirection != 0){
+				  rotSign = -1;
+			  }else{
+				  rotSign = 1;
+			  }
+
+			  wRadPerSec = (dataStruct.angularVelocity/180.0)*PI;
+			  angularComponent = rotSign*_R*wRadPerSec;
+
+			  motorscommstruct.TX_message.wheel_speed[0] = ((-cos_a0*yComponent * 1.4 + sin_a0*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[1] = ((-cos_a1*yComponent * 1.4 + sin_a1*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[2] = ((-cos_a2*yComponent * 1.4 + sin_a2*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[3] = ((-cos_a3*yComponent * 1.4 + sin_a3*xComponent + angularComponent)*wheelScalar)/(30*8);
+		  }
+
+	  }else if (HAL_GetTick()-LastPackageTime > MAX_TIME_AFTER_LAST_MESSAGE){
+		  motorscommstruct.TX_message.wheel_speed[0] = 0;
+		  motorscommstruct.TX_message.wheel_speed[1] = 0;
+		  motorscommstruct.TX_message.wheel_speed[2] = 0;
+		  motorscommstruct.TX_message.wheel_speed[3] = 0;
+	  }
+
 	  switch(motorscomm_state){
 	  case motorscomm_Initialize:
 		  uprintf("motorscomm_Initialize\n\r");
