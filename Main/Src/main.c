@@ -38,7 +38,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f3xx_hal.h"
-#include "dma.h"
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
@@ -49,9 +48,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include "PuttyInterface/PuttyInterface.h"
+#include "myNRF24.h"
 #include "motorscomm/motorscomm.h"
 #include "ID/ReadId.h"
-#include "myNRF24.h"
+#include <math.h>
+>>>>>>> did some changes to the ioc
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -60,22 +61,11 @@
 /* Private variables ---------------------------------------------------------*/
 PuttyInterfaceTypeDef puttystruct;
 motorscomm_HandleTypeDef motorscommstruct = {
-		.huart = &huart3
+		/*.huart = &huart3*/
 };
 
-uint8_t address = 1;
+uint8_t address = -1;
 uint8_t freqChannel = 78;
-
-#define MAX_TIME_AFTER_LAST_MESSAGE 100
-
-const float _a0 = 60 * 3.1415/180.0; //240
-const float _a1 = 120 * 3.1415/180.0; //300
-const float _a2 = 240  * 3.1415/180.0; //60
-const float _a3 = 300 * 3.1415/180.0; //120
-
-#define _R   0.09f
-#define _r   0.0275f
-
 
 enum motorscomm_states{
 	motorscomm_Initialize,
@@ -88,7 +78,7 @@ int RX_err_count = 0;
 int RX_count = 0;
 int TX_count = 0;
 
-#define DEBUG 					0
+#define DEBUG 					1
 #define MAX_RAW_MESSAGE_SIZE 	2055
 
 /* Buffer used for reception */
@@ -98,9 +88,18 @@ uint8_t message_handled_flag = 0;
 float speed_x, speed_y;
 HAL_StatusTypeDef error_code;
 
-uint64_t while_cnt = 0;
-uint64_t while_cnt_cnt = 0;
-uint64_t while_avg = 0;
+uint while_cnt = 0;
+uint while_cnt_cnt = 0;
+uint while_avg = 0;
+
+#define MAX_TIME_AFTER_LAST_MESSAGE 1000
+
+const float _a0 = 60 * 3.1415/180.0; //240
+const float _a1 = 120 * 3.1415/180.0; //300
+const float _a2 = 240  * 3.1415/180.0; //60
+const float _a3 = 300 * 3.1415/180.0; //120
+#define _R   0.09f
+#define _r   0.0275f
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,12 +108,6 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void HandleCommand(char* input);
-void MTiPrintOutputConfig(struct XbusMessage const* message);
-void MTiErrorHandler(struct XbusMessage const* message);
-void printMessageData(struct XbusMessage const* message);
-void PrintUsartStatus(HAL_StatusTypeDef status);
-void HandleMessage();
-float calculateSpeed(float acc_x, float acc_y, float acc_z, int freq);
 
 /* USER CODE END PFP */
 
@@ -151,7 +144,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
   MX_SPI1_Init();
@@ -174,10 +166,12 @@ int main(void)
   motorscommstruct.TX_message.wheel_speed[1] = 0.5F;
   motorscommstruct.TX_message.wheel_speed[2] = 1.0F;
   motorscommstruct.TX_message.wheel_speed[3] = 2.0F;
-  MTi_Init();
   speed_x = 0;
   speed_y = 0;
   HAL_Delay(1000);
+  initRobo(&hspi1, freqChannel, address);
+  uint receptiontimer = 0xffff;
+  dataPacket dataStruct;
   // enable UART transmission timer
   /* USER CODE END 2 */
 
@@ -204,18 +198,21 @@ int main(void)
   uint led_timer = 0;
   while (1)
   {
-	  while_cnt++;
 	  if(irqRead(&hspi1)){
-		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi1, &dataStruct);
 		  if(dataStruct.robotID == address){
-			  HAL_GPIO_TogglePin(LD0_GPIO_Port,LD0_Pin);
+			  HAL_GPIO_TogglePin(LD0_GPIO_Port, LD0_Pin);
 			  float magnitude = dataStruct.robotVelocity / 1000; //from mm/s to m/s;
 			  float direction = dataStruct.movingDirection * (2*M_PI/512);
+			  uprintf("magnitude,direction [ %f, %f]\n\r", magnitude, direction );
 			  float cosDir = cos(direction);
 			  float sinDir = sin(direction);
 			  float xComponent = cosDir*magnitude;
 			  float yComponent = sinDir*magnitude;
+			  uprintf("xComponent, yComponent [ %f, %f]\n\r", xComponent, yComponent );
+			  float wRadPerSec;
+			  float wheelScalar = 1/_r;
+			  float angularComponent;
 			  int rotSign;
 
 			  if(dataStruct.rotationDirection != 0){
@@ -227,19 +224,20 @@ int main(void)
 			  wRadPerSec = (dataStruct.angularVelocity/180.0)*PI;
 			  angularComponent = rotSign*_R*wRadPerSec;
 
-			  motorscommstruct.TX_message.wheel_speed[0] = ((-cos_a0*yComponent * 1.4 + sin_a0*xComponent + angularComponent)*wheelScalar)/(30*8);
-			  motorscommstruct.TX_message.wheel_speed[1] = ((-cos_a1*yComponent * 1.4 + sin_a1*xComponent + angularComponent)*wheelScalar)/(30*8);
-			  motorscommstruct.TX_message.wheel_speed[2] = ((-cos_a2*yComponent * 1.4 + sin_a2*xComponent + angularComponent)*wheelScalar)/(30*8);
-			  motorscommstruct.TX_message.wheel_speed[3] = ((-cos_a3*yComponent * 1.4 + sin_a3*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[0] = ((-cos(_a0)*yComponent * 1.4 + sin(_a0)*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[1] = ((-cos(_a1)*yComponent * 1.4 + sin(_a1)*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[2] = ((-cos(_a2)*yComponent * 1.4 + sin(_a2)*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  motorscommstruct.TX_message.wheel_speed[3] = ((-cos(_a3)*yComponent * 1.4 + sin(_a3)*xComponent + angularComponent)*wheelScalar)/(30*8);
+			  uprintf("send wheel speeds are [ %f, %f, %f, %f]\n\r", motorscommstruct.TX_message.wheel_speed[0], motorscommstruct.TX_message.wheel_speed[1],motorscommstruct.TX_message.wheel_speed[2],motorscommstruct.TX_message.wheel_speed[3]);
+			  receptiontimer = HAL_GetTick();
 		  }
-
-	  }else if (HAL_GetTick()-LastPackageTime > MAX_TIME_AFTER_LAST_MESSAGE){
-		  motorscommstruct.TX_message.wheel_speed[0] = 0;
-		  motorscommstruct.TX_message.wheel_speed[1] = 0;
-		  motorscommstruct.TX_message.wheel_speed[2] = 0;
-		  motorscommstruct.TX_message.wheel_speed[3] = 0;
+	  }else if(HAL_GetTick() - MAX_TIME_AFTER_LAST_MESSAGE > receptiontimer){
+		motorscommstruct.TX_message.wheel_speed[0] = 0;
+		motorscommstruct.TX_message.wheel_speed[1] = 0;
+		motorscommstruct.TX_message.wheel_speed[2] = 0;
+		motorscommstruct.TX_message.wheel_speed[3] = 0;
 	  }
-
+	  while_cnt++;// counts how many times the while loop is passed
 	  switch(motorscomm_state){
 	  case motorscomm_Initialize:
 		  uprintf("motorscomm_Initialize\n\r");
@@ -254,21 +252,10 @@ int main(void)
 		  }
 		  break;
 	  case motorscomm_Failed:
-		  HAL_GPIO_WritePin(LD0_GPIO_Port, LD0_Pin, 1);
+		  //HAL_GPIO_WritePin(LD0_GPIO_Port, LD0_Pin, 1);
 		  break;
 	  }
 
-	  if(cplt_mess_stored_flag){
-			cplt_mess_stored_flag = 0;
-			if(DEBUG) TextOut("cplt_mess_stored_flag\n\r");
-			HandleMessage();
-			if(!stop_after_message_complete){
-				message_handled_flag = 0;
-				ReadNewMessage(0);
-			}
-		}
-
-		CheckWhatNeedsToBeDone();
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -276,13 +263,13 @@ int main(void)
 	  if(HAL_GetTick() > led_timer + 500 ){
 		  led_timer = HAL_GetTick();
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  uprintf("suc/err:TX[%d/%d];RX[%d/%d]\n\r", TX_count, TX_err_count, RX_count, RX_err_count);
-		  uprintf("Tx = [%f, %f, %f, %f]\n\r", motorscommstruct.TX_message.wheel_speed[0], motorscommstruct.TX_message.wheel_speed[1], motorscommstruct.TX_message.wheel_speed[2], motorscommstruct.TX_message.wheel_speed[3]);
-		  uint8_t* ptr = motorscommstruct.UART2RX_buf;
-		  uprintf("RX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++));
-		  ptr = motorscommstruct.UART2TX_buf;
-		  uprintf("TX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++));
-		  uprintf("avg n_whileloops = [%lu]\n\r", while_avg);
+//		  uprintf("suc/err:TX[%d/%d];RX[%d/%d]\n\r", TX_count, TX_err_count, RX_count, RX_err_count);
+//		  uprintf("Tx = [%f, %f, %f, %f]\n\r", motorscommstruct.TX_message.wheel_speed[0], motorscommstruct.TX_message.wheel_speed[1], motorscommstruct.TX_message.wheel_speed[2], motorscommstruct.TX_message.wheel_speed[3]);
+//		  uint8_t* ptr = motorscommstruct.UART2RX_buf;
+//		  uprintf("RX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++));
+//		  ptr = motorscommstruct.UART2TX_buf;
+//		  uprintf("TX in hex[%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]\n\r", *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++), *(ptr++));
+//		  uprintf("avg n_whileloops = [%lu]\n\r", while_avg);
 	  }
   }
   /* USER CODE END 3 */
@@ -383,8 +370,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 			uprintf("motorscomm_Failed from HAL_UART_RxCpltCallback\n\r");
 			motorscomm_state = motorscomm_Failed;
 		}
-	}else if(huart->Instance == huart2.Instance){
-		MT_HAL_UART_RxCpltCallback();
 	}
 
 }
@@ -406,8 +391,6 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
 			uprintf("motorscomm_Failed from HAL_UART_TxCpltCallback\n\r");
 			motorscomm_state = motorscomm_Failed;
 		}
-	}else if(huart->Instance == huart2.Instance){
-		MT_HAL_UART_TxCpltCallback();
 	}
 }
 
@@ -435,218 +418,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	}
 }
 
-void HandleMessage(){
-	if(ReceivedMessageStorage->mid == XMID_Error){
-		MTiErrorHandler(ReceivedMessageStorage);
-	}else if(ReceivedMessageStorage->mid == XMID_MTData2){
-		printMessageData(ReceivedMessageStorage);
-	}else if(ReceivedMessageStorage->mid == XMID_ReqOutputConfigurationAck){
-		MTiPrintOutputConfig(ReceivedMessageStorage);
-	}
-	message_handled_flag = 1;
-	DeallocateMem();
-}
-
-void MTiPrintOutputConfig(struct XbusMessage const* message){
-	if (!message)
-		return;
-	sprintf(smallStrBuffer,"MTiPrintOutputConfig:\n");
-	TextOut(smallStrBuffer);
-	uint8_t* rawptr = message->data;
-	uint16_t fptr[message->length];
-	sprintf(smallStrBuffer, "len = [%u]", message->length);
-	TextOut(smallStrBuffer);
-	for(uint16_t * i = fptr; i < fptr + (message->length)/2; i++){
-		rawptr = XbusUtility_readU16(i, rawptr);
-		sprintf(smallStrBuffer, "[%04x]", *i);
-		TextOut(smallStrBuffer);
-	}
-	sprintf(smallStrBuffer, "\n\r");
-	TextOut(smallStrBuffer);
-
-	uint16_t freq;
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Temperature, message))){
-		sprintf(smallStrBuffer,"XDI_Temperature:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_UtcTime, message))){
-		sprintf(smallStrBuffer,"XDI_UtcTime:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_PacketCounter, message))){
-		sprintf(smallStrBuffer,"XDI_PacketCounter:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeFine, message))){
-		sprintf(smallStrBuffer,"XDI_SampleTimeFine:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeCoarse, message))){
-		sprintf(smallStrBuffer,"XDI_SampleTimeCoarse:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Quaternion, message))){
-		sprintf(smallStrBuffer,"XDI_Quaternion:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RotationMatrix, message))){
-		sprintf(smallStrBuffer,"XDI_RotationMatrix:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_EulerAngles, message))){
-		sprintf(smallStrBuffer,"XDI_EulerAngles:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaV, message))){
-		sprintf(smallStrBuffer,"XDI_DeltaV:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Acceleration, message))){
-		sprintf(smallStrBuffer,"XDI_Acceleration:%x\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_FreeAcceleration, message))){
-			sprintf(smallStrBuffer,"XDI_FreeAcceleration:%u\n", freq);
-			TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_AccelerationHR, message))){
-		sprintf(smallStrBuffer,"XDI_AccelerationHR:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurn, message))){
-		sprintf(smallStrBuffer,"XDI_RateOfTurn:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaQ, message))){
-		sprintf(smallStrBuffer,"XDI_DeltaQ:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurnHR, message))){
-		sprintf(smallStrBuffer,"XDI_RateOfTurnHR:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_MagneticField, message))){
-		sprintf(smallStrBuffer,"XDI_MagneticField:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusByte, message))){
-		sprintf(smallStrBuffer,"XDI_StatusByte:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusWord, message))){
-		sprintf(smallStrBuffer,"XDI_StatusWord:%u\n", freq);
-		TextOut(smallStrBuffer);
-	}
-}
-void MTiErrorHandler(struct XbusMessage const* message){
-	if (!message)
-		return;
-	sprintf(smallStrBuffer,"ERROR: %02x\n", *(uint8_t *)(message->data));
-	TextOut(smallStrBuffer);
-}
-
-void printMessageData(struct XbusMessage const* message){
-	if (!message)
-		return;
-	sprintf(smallStrBuffer,"MTData2:");
-	TextOut(smallStrBuffer);
-	uint16_t counter;
-	if (XbusMessage_getDataItem(&counter, XDI_PacketCounter, message))
-	{
-		sprintf(smallStrBuffer, " Packet counter: %5d", counter);
-		TextOut(smallStrBuffer);
-	}
-	uint32_t SampleTimeFine;
-	if (XbusMessage_getDataItem(&SampleTimeFine, XDI_SampleTimeFine, message))
-	{
-		sprintf(smallStrBuffer, " SampleTimeFine: %lu", SampleTimeFine);
-		TextOut(smallStrBuffer);
-	}
-	float ori[4];
-	if (XbusMessage_getDataItem(ori, XDI_Quaternion, message))
-	{
-		sprintf(smallStrBuffer, " Orientation: (%.3f, %.3f, %.3f, %.3f)", ori[0], ori[1],
-				ori[2], ori[3]);
-		TextOut(smallStrBuffer);
-	}
-	float angles[3];
-	if (XbusMessage_getDataItem(angles, XDI_EulerAngles, message))
-	{
-		sprintf(smallStrBuffer, " EulerAngles: (%.3f, %.3f, %.3f)", angles[0], angles[1], angles[2]);
-		TextOut(smallStrBuffer);
-	}
-	float delta_v[3];
-	if (XbusMessage_getDataItem(delta_v, XDI_DeltaV, message))
-	{
-		sprintf(smallStrBuffer, " deltaV: (%.3f, %.3f, %.3f)", delta_v[0], delta_v[1], delta_v[2]);
-		TextOut(smallStrBuffer);
-	}
-	float acc[3];
-	if (XbusMessage_getDataItem(acc, XDI_Acceleration, message))
-	{
-		sprintf(smallStrBuffer, " Acceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
-		TextOut(smallStrBuffer);
-		sprintf(smallStrBuffer, "current speed = [%f].\n", calculateSpeed(acc[0], acc[1],acc[2], 100));
-		TextOut(smallStrBuffer);
-	}
-	float gyr[3];
-	if (XbusMessage_getDataItem(gyr, XDI_RateOfTurn, message))
-	{
-		sprintf(smallStrBuffer, " Rate Of Turn: (%.3f, %.3f, %.3f)", gyr[0], gyr[1], gyr[2]);
-		TextOut(smallStrBuffer);
-	}
-	float delta_q[4];
-	if (XbusMessage_getDataItem(delta_q, XDI_Quaternion, message))
-	{
-		sprintf(smallStrBuffer, " deltaQ: (%.3f, %.3f, %.3f, %.3f)", delta_q[0], delta_q[1],
-				delta_q[2], delta_q[3]);
-		TextOut(smallStrBuffer);
-	}
-	float mag[3];
-	if (XbusMessage_getDataItem(mag, XDI_MagneticField, message))
-	{
-		sprintf(smallStrBuffer, " Magnetic Field: (%.3f, %.3f, %.3f)", mag[0], mag[1], mag[2]);
-		TextOut(smallStrBuffer);
-	}
-	uint32_t status;
-	if (XbusMessage_getDataItem(&status, XDI_StatusWord, message))
-	{
-		sprintf(smallStrBuffer, " Status:%lX", status);
-		TextOut(smallStrBuffer);
-	}
-	TextOut(" \n\r");
-}
-
-void PrintUsartStatus(HAL_StatusTypeDef status){
-	if(DEBUG){
-		switch(status){
-			case HAL_OK:// no problem
-				//TextOut("HAL_OK\n\r");
-				break;
-			case HAL_BUSY:
-				TextOut("HAL_BUSY\n\r");
-				break;
-			case HAL_ERROR:
-				TextOut("HAL_ERROR\n\r");
-				break;
-			case HAL_TIMEOUT:
-				TextOut("HAL_TIMEOUT\n\r");
-				break;
-			default:
-				TextOut("Unknown HAL_StatusTypeDef\n\r");
-				break;
-		}
-	}
-}
-
-float calculateSpeed(float acc_x, float acc_y, float acc_z, int freq)
-{
-    float dt = 1/freq;
-    speed_x += acc_x + dt;
-    speed_y += acc_y + dt;
-    float speed_total = sqrt(speed_x*speed_x + speed_y*speed_y);
-    return speed_total;
-}
 /* USER CODE END 4 */
 
 /**
