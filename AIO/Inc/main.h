@@ -49,6 +49,7 @@
 /* USER CODE END Includes */
 
 /* Private define ------------------------------------------------------------*/
+#define MAX_PWM 2400
 
 #define FR_RB_Pin GPIO_PIN_4
 #define FR_RB_GPIO_Port GPIOE
