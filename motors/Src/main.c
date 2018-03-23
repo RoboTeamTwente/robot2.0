@@ -159,8 +159,7 @@ int main(void)
   motorscommstruct.TX_message.wheel_speed[2] = 1.1;
   motorscommstruct.TX_message.wheel_speed[3] = 0.0;
 
-//  HAL_TIM_Base_Start(&htim1);
-  HAL_TIM_Base_Start(&htim2);
+//  HAL_TIM_Base_Start(&htim1);\
   HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_4);
@@ -294,13 +293,13 @@ void ControlMotor(wheel_number wheel, float duty_cycle){
 		duty_cycle = 1;
 	}
 	switch(wheel){
-	case motorscomm_LB:
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (uint)(duty_cycle*MAX_PWM));
-		HAL_GPIO_WritePin(FR_LB_GPIO_Port, FR_LB_Pin, FR);
-		break;
 	case motorscomm_LF:
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (uint)(duty_cycle*MAX_PWM));
 		HAL_GPIO_WritePin(FR_LF_GPIO_Port, FR_LF_Pin, FR);
+		break;
+	case motorscomm_LB:
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (uint)(duty_cycle*MAX_PWM));
+		HAL_GPIO_WritePin(FR_LB_GPIO_Port, FR_LB_Pin, FR);
 		break;
 	case motorscomm_RB:
 		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint)(duty_cycle*MAX_PWM));
