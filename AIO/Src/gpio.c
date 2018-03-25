@@ -71,8 +71,7 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, FR_RB_Pin|LD5_Pin|LD4_Pin|LD3_Pin 
-                          |LD2_Pin|LD1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, FR_RB_Pin|LD5_Pin|LD3_Pin|LD1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, FR_RF_Pin|Charge_Pin, GPIO_PIN_RESET);
@@ -81,8 +80,13 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, Chip_Pin|Kick_Pin|LD6_Pin|FR_LB_Pin 
-                          |bs_nRST_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, Chip_Pin|Kick_Pin|FR_LB_Pin|bs_nRST_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOE, LD4_Pin|LD2_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, FR_LF_Pin|reserve0_Pin|reserve1_Pin|reserve2_Pin 

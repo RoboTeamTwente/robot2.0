@@ -45,14 +45,17 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
-
+#include <math.h>
+#include "PuttyInterface/PuttyInterface.h"
+#include "address/address.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+PuttyInterfaceTypeDef puttystruct;
+int8_t address = -1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,7 +63,12 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+void HandleCommand(char* input);
+/*
+ * uint is the value to display
+ * n_leds chooses bitwise which leds to show the uint on, 0 means no edit
+ */
+void Uint2Leds(uint8_t uint, uint8_t n_leds);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -109,7 +117,14 @@ int main(void)
   MX_SPI2_Init();
   MX_USART3_UART_Init();
   MX_TIM1_Init();
+  MX_TIM6_Init();
+  MX_TIM7_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
+  address = ReadAddress();
+  Uint2Leds(address, 0b00001111);
+  puttystruct.handle = HandleCommand;
+  PuttyInterface_Init(&puttystruct);
 
   /* USER CODE END 2 */
 
@@ -117,11 +132,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+	  if(!(HAL_GetTick() % 500)){
+		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+	  }
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
+	  PuttyInterface_Update(&puttystruct);
   }
   /* USER CODE END 3 */
 
@@ -145,12 +162,11 @@ void SystemClock_Config(void)
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = 16;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 16;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 8;
   RCC_OscInitStruct.PLL.PLLN = 192;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
@@ -186,7 +202,37 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HandleCommand(char* input){
+	if(!strcmp(input, "example1")){
+		uprintf("no u\n\r");
+	}else if(!strcmp(input, "example1")){
+		uprintf("stop!\n\r");
+	}
+}
 
+void Uint2Leds(uint8_t uint, uint8_t n_leds){
+	if(n_leds & 0b00000001) HAL_GPIO_WritePin(LD1_GPIO_Port,LD1_Pin, uint & 0b00000001);
+	if(n_leds & 0b00000010) HAL_GPIO_WritePin(LD2_GPIO_Port,LD2_Pin, uint & 0b00000010);
+	if(n_leds & 0b00000100) HAL_GPIO_WritePin(LD3_GPIO_Port,LD3_Pin, uint & 0b00000100);
+	if(n_leds & 0b00001000) HAL_GPIO_WritePin(LD4_GPIO_Port,LD4_Pin, uint & 0b00001000);
+	if(n_leds & 0b00010000) HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, uint & 0b00010000);
+	if(n_leds & 0b00100000) HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin, uint & 0b00100000);
+}
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
+	if(huart->Instance == huart3.Instance){
+		puttystruct.huart2_Rx_len = 1;
+		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
+	}else if(huart->Instance == huart3.Instance){
+
+	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
+	if(htim->Instance == htim6.Instance){
+
+	}
+}
 /* USER CODE END 4 */
 
 /**
