@@ -95,6 +95,7 @@
 #define ID0_GPIO_Port GPIOE
 #define SPI1_IRQ_Pin GPIO_PIN_11
 #define SPI1_IRQ_GPIO_Port GPIOB
+#define SPI1_IRQ_EXTI_IRQn EXTI15_10_IRQn
 #define FR_LB_Pin GPIO_PIN_13
 #define FR_LB_GPIO_Port GPIOB
 #define PWM_LB_Pin GPIO_PIN_14
@@ -121,18 +122,11 @@
 #define PC_RX_GPIO_Port GPIOC
 #define PC_RXC11_Pin GPIO_PIN_11
 #define PC_RXC11_GPIO_Port GPIOC
-#define reserve0_Pin GPIO_PIN_0
-#define reserve0_GPIO_Port GPIOD
-#define reserve1_Pin GPIO_PIN_1
-#define reserve1_GPIO_Port GPIOD
-#define reserve2_Pin GPIO_PIN_2
-#define reserve2_GPIO_Port GPIOD
-#define reserve3_Pin GPIO_PIN_3
-#define reserve3_GPIO_Port GPIOD
 #define empty_battery_Pin GPIO_PIN_4
 #define empty_battery_GPIO_Port GPIOD
 #define Geneva_cal_sens_Pin GPIO_PIN_5
 #define Geneva_cal_sens_GPIO_Port GPIOD
+#define Geneva_cal_sens_EXTI_IRQn EXTI9_5_IRQn
 #define Geneva_dir_A_Pin GPIO_PIN_6
 #define Geneva_dir_A_GPIO_Port GPIOD
 #define Geneva_dir_B_Pin GPIO_PIN_7
@@ -141,6 +135,7 @@
 #define Geneva_CHB_GPIO_Port GPIOB
 #define bs_EXTI_Pin GPIO_PIN_4
 #define bs_EXTI_GPIO_Port GPIOB
+#define bs_EXTI_EXTI_IRQn EXTI4_IRQn
 #define bs_nRST_Pin GPIO_PIN_5
 #define bs_nRST_GPIO_Port GPIOB
 #define Geneva_PWM_Pin GPIO_PIN_8

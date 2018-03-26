@@ -205,12 +205,13 @@ void SystemClock_Config(void)
 void HandleCommand(char* input){
 	if(!strcmp(input, "example1")){
 		uprintf("no u\n\r");
-	}else if(!strcmp(input, "example1")){
+	}else if(!strcmp(input, "example2")){
 		uprintf("stop!\n\r");
 	}
 }
 
 void Uint2Leds(uint8_t uint, uint8_t n_leds){
+	if(!n_leds) n_leds = 0xff;
 	if(n_leds & 0b00000001) HAL_GPIO_WritePin(LD1_GPIO_Port,LD1_Pin, uint & 0b00000001);
 	if(n_leds & 0b00000010) HAL_GPIO_WritePin(LD2_GPIO_Port,LD2_Pin, uint & 0b00000010);
 	if(n_leds & 0b00000100) HAL_GPIO_WritePin(LD3_GPIO_Port,LD3_Pin, uint & 0b00000100);
@@ -218,19 +219,30 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds){
 	if(n_leds & 0b00010000) HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, uint & 0b00010000);
 	if(n_leds & 0b00100000) HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin, uint & 0b00100000);
 }
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	HAL_GPIO_TogglePin(LD3_GPIO_Port,LD3_Pin);
-	if(huart->Instance == huart3.Instance){
+	if(huart->Instance == huart3.Instance){//input from the PC
 		puttystruct.huart2_Rx_len = 1;
 		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
-	}else if(huart->Instance == huart3.Instance){
+	}else if(huart->Instance == huart3.Instance){// Input from the Xsens
 
 	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
+		// Geneva Pid
+	}else if(htim->Instance == htim7.Instance){
+		// Jelles control
+	}
+}
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(GPIO_Pin == SPI1_IRQ_Pin){
+		//wireless message received
+	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
+		// calibration  of the geneva drive finished
 	}
 }
 /* USER CODE END 4 */
