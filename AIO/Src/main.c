@@ -48,14 +48,40 @@
 #include <math.h>
 #include "PuttyInterface/PuttyInterface.h"
 #include "address/address.h"
+#include "pid/pid.h"
+#include "DO/DO.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+#define GENEVA_CAL_SENS_CNT 750
+enum geneva_states{
+	setup,// at startup it will try to find the edge sensor
+	too_close,// Thegeneva drive started too close to the sensor and needs to move away
+	returning,// when moving back to the initial/zero position
+	running	// when being operational
+}geneva_state = setup;
+
 PuttyInterfaceTypeDef puttystruct;
 int8_t address = -1;
+
+PID_controller_HandleTypeDef Geneva_pid = {
+		.pid = {0,0,0},
+		.K_terms = {10.0F, 0.0F, 0.0F},
+		.ref = 0.0F,
+		.timestep = 0.0F,
+		.actuator = &htim1,
+		.actuator_channel = TIM_CHANNEL_1,
+		.CallbackTimer = &htim6,
+		.CLK_FREQUENCY = 96000000.0F,
+		.current_pwm = 0,
+		.dir[0] = Geneva_dir_B_Pin,
+		.dir[1] = Geneva_dir_A_Pin,
+		.dir_Port[0] = Geneva_dir_B_GPIO_Port,
+		.dir_Port[1] = Geneva_dir_A_GPIO_Port,
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -125,13 +151,45 @@ int main(void)
   Uint2Leds(address, 0b00001111);
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
-
+  pid_Init(&Geneva_pid);
+  HAL_TIM_Base_Start(&htim2);
+  DO_Init();
+  uint geneva_cnt = HAL_GetTick();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  switch(geneva_state){
+	  case setup:// While in setup, slowly move towards the sensor
+		  if(HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
+			  if((HAL_GetTick() - geneva_cnt) < 100){
+				  geneva_state = too_close;
+			  }else{
+				  HAL_GPIO_EXTI_Callback(Geneva_cal_sens_Pin);
+			  }
+		  }else{
+			  Geneva_pid.ref = (HAL_GetTick() - geneva_cnt)*2;
+		  }
+		  break;
+	  case too_close:
+		  if(HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
+			  Geneva_pid.ref = -200;
+		  }else{
+			  geneva_state = setup;
+		  }
+		  break;
+	  case returning:// while returning move to the middle position
+		  if(50 > (__HAL_TIM_GetCounter(&htim2))){
+			  geneva_state = running;
+		  }else{
+			  Geneva_pid.ref = 0;
+		  }
+		  break;
+	  case running:
+		  break;
+	  }
 	  if(!(HAL_GetTick() % 500)){
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 	  }
@@ -230,10 +288,23 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
+	static enum control_states{
+		DO,
+		Geneva
+	}control_state = DO;
 	if(htim->Instance == htim6.Instance){
-		// Geneva Pid
+		switch(control_state){
+		case DO:
+			control_state = Geneva;
+			pid_Control(__HAL_TIM_GetCounter(&htim2),&Geneva_pid);
+			break;
+		case Geneva:
+			control_state = DO;
+			DO_update();
+			break;
+		}
 	}else if(htim->Instance == htim7.Instance){
-		// Jelles control
+
 	}
 }
 
@@ -243,6 +314,19 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		//wireless message received
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
+		switch(geneva_state){
+		case setup:
+			__HAL_TIM_SET_COUNTER(&htim2, GENEVA_CAL_SENS_CNT);
+			Geneva_pid.ref = 0;
+			geneva_state = returning;
+			break;
+		case too_close:
+			break;
+		case returning:
+			break;
+		case running:
+			break;
+		}
 	}
 }
 /* USER CODE END 4 */
