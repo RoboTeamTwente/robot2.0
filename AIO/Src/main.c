@@ -51,6 +51,7 @@
 #include "address/address.h"
 #include "geneva/geneva.h"
 #include "DO/DO.h"
+#include "Ballsensor/ballsensor.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -138,6 +139,7 @@ int main(void)
   geneva_Init();
   DO_Init();
   dribbler_Init();
+  ballsensorInit();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -145,9 +147,7 @@ int main(void)
   while (1)
   {
 
-	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
-		  // handle the message
-	  }
+	  ballsensorMeasurementLoop();
 	  geneva_Update();
 	  if(!(HAL_GetTick() % 500)){
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
