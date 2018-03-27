@@ -51,16 +51,19 @@
 #include "address/address.h"
 #include "geneva/geneva.h"
 #include "DO/DO.h"
+#include "myNRF24.h"
+#include"wheels/wheels.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+#define STOP_AFTER 250 //ms
 
 PuttyInterfaceTypeDef puttystruct;
 int8_t address = -1;
+uint8_t freqChannel = 78;
 
 
 /* USER CODE END PV */
@@ -138,12 +141,39 @@ int main(void)
   geneva_Init();
   DO_Init();
   dribbler_Init();
+
+  nssHigh(&hspi2);
+  initRobo(&hspi2, freqChannel, address);
+  dataPacket dataStruct;
+  uint LastPackageTime = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(irqRead(&hspi2)){
+		  LastPackageTime = HAL_GetTick();
+		  roboCallback(&hspi2, &dataStruct);
+		  if(dataStruct.robotID == address){
+			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+			  //calcMotorSpeed(&dataStruct, &wheely, &prevWheelCommand);
+
+			  //dribbler
+			  dribbler_SetSpeed((dataStruct.driblerSpeed*100)/7);
+
+			  //kicker
+			  if (dataStruct.kickForce != 0){
+
+			  }
+		  }
+
+	  }else if(LastPackageTime > HAL_GetTick() - STOP_AFTER){
+		  wheels_SetOutput(wheels_RF, 0);
+		  wheels_SetOutput(wheels_RB, 0);
+		  wheels_SetOutput(wheels_LB, 0);
+		  wheels_SetOutput(wheels_RF, 0);
+	  }
 
 	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
 		  // handle the message
