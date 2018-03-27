@@ -265,23 +265,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
-	static enum control_states{
-		DO,
-		Geneva
-	}control_state = DO;
 	if(htim->Instance == htim6.Instance){
-		switch(control_state){
-		case DO:
-			control_state = Geneva;
-			DO_Control();
-			break;
-		case Geneva:
-			control_state = DO;
-			geneva_Control();
-			break;
-		}
+		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
-
+		DO_Control();
 	}
 }
 
