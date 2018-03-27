@@ -20,13 +20,7 @@ PuttyInterfaceTypeDef puttystruct;
   uint8_t next_message_length;
   uint error;
 
-enum zForceStates{
-	zForce_RST,
-	zForce_WaitForDR,
-	zForce_DecodeMessage,
-	zForce_ReadMessage,
-	zForce_EnableDevice
-}zForceState = zForce_RST;
+
 
 uint8_t enable_command[13];
 uint8_t enable_response[11];
