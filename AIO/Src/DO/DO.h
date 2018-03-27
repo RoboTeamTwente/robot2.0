@@ -15,6 +15,6 @@ typedef enum {
 
 DO_States DO_Init();
 
-DO_States DO_Update();
+DO_States DO_Control();
 
 #endif /* DO_DO_H_ */

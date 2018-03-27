@@ -32,7 +32,7 @@ void pid_SetOutput(int pwm, PID_controller_HandleTypeDef* pc){
 	}
 	pwm = abs(pwm);
 	pc->current_pwm = ClipInt(pwm, 0, pc->actuator->Init.Period/MAX_DUTY_CYCLE_INVERSE_FRACTION);// Power limited by having maximum duty cycle
-	__HAL_TIM_SET_COMPARE(pc->actuator, TIM_CHANNEL_1, pc->current_pwm);
+	__HAL_TIM_SET_COMPARE(pc->actuator, pc->actuator_channel, pc->current_pwm);
 }
 int16_t pid_GetCurrentOutput(PID_controller_HandleTypeDef* pc){
 	return pc->current_pwm;
