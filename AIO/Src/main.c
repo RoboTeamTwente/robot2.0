@@ -148,7 +148,6 @@ int main(void)
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
   address = ReadAddress();
-  Uint2Leds(address, 0b00001111);
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
   pid_Init(&Geneva_pid);
@@ -161,6 +160,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
+		  // handle the message
+	  }
 	  switch(geneva_state){
 	  case setup:// While in setup, slowly move towards the sensor
 		  if(HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
@@ -296,11 +298,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		switch(control_state){
 		case DO:
 			control_state = Geneva;
-			pid_Control(__HAL_TIM_GetCounter(&htim2),&Geneva_pid);
+			DO_update();
 			break;
 		case Geneva:
 			control_state = DO;
-			DO_update();
+			pid_Control(__HAL_TIM_GetCounter(&htim2),&Geneva_pid);
 			break;
 		}
 	}else if(htim->Instance == htim7.Instance){
