@@ -10,3 +10,7 @@ Main/Release/
 Main/\.settings/
 
 AIO/\.settings/
+
+temp\.c
+
+Main/
