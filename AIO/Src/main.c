@@ -51,17 +51,21 @@
 #include "address/address.h"
 #include "geneva/geneva.h"
 #include "DO/DO.h"
+#include "myNRF24.h"
+#include "wheels/wheels.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+#define STOP_AFTER 250 //ms
 
 PuttyInterfaceTypeDef puttystruct;
 int8_t address = -1;
-
+uint8_t freqChannel = 78;
+bool battery_empty = false;
+bool user_control = false;
 
 /* USER CODE END PV */
 
@@ -135,21 +139,59 @@ int main(void)
   address = ReadAddress();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
-  geneva_Init();
-  DO_Init();
-  dribbler_Init();
+//  geneva_Init();
+//  DO_Init();
+//  dribbler_Init();
+  wheels_Init();
+  nssHigh(&hspi2);
+  initRobo(&hspi2, freqChannel, address);
+  dataPacket dataStruct;
+  uint LastPackageTime = 0;
+  uint printtime = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(irqRead(&hspi2)){
+		  LastPackageTime = HAL_GetTick();
+		  roboCallback(&hspi2, &dataStruct);
+		  if(dataStruct.robotID == address){
+			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+			  float wheels[4];
+			  int rotSign = 1;
+			  if(dataStruct.rotationDirection){
+				  rotSign = -1;
+			  }
+			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
+			  uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
+			  wheels_SetOutput(wheels);
+			  //dribbler
+			  dribbler_SetSpeed((dataStruct.driblerSpeed*100)/7);
 
+			  //kicker
+			  if (dataStruct.kickForce != 0){
+
+			  }
+		  }
+
+	  }else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
+	  	  float wheel_powers[4] = {0, 0, 0, 0};
+		  wheels_SetOutput(wheel_powers);
+	  }
+	  if(!HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
+		  // BATTERY IS ALMOST EMPTY!!!!!
+		  battery_empty = true;
+		  dribbler_SetSpeed(0);
+	  }
 	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
 		  // handle the message
 	  }
 	  geneva_Update();
-	  if(!(HAL_GetTick() % 500)){
+	  if((HAL_GetTick() - printtime > 500)){
+		  printtime = HAL_GetTick();
+		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 	  }
   /* USER CODE END WHILE */
@@ -220,8 +262,8 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HandleCommand(char* input){
-	if(!strcmp(input, "example1")){
-		uprintf("no u\n\r");
+	if(!strcmp(input, "address")){
+		uprintf("address = [%d]\n\r", ReadAddress());
 	}else if(!strcmp(input, "example2")){
 		uprintf("stop!\n\r");
 	}else if(!strcmp(input, "geneva")){
@@ -230,6 +272,8 @@ void HandleCommand(char* input){
 		geneva_SetState(geneva_idle);
 	}else if(!memcmp(input, "geneva" , strlen("geneva"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
+	}else if(!memcmp(input, "control" , strlen("control"))){
+		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
 	}
 }
 
@@ -255,6 +299,7 @@ void dribbler_Init(){
 	dribbler_SetSpeed(0);
 }
 
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart3.Instance){//input from the PC
 		puttystruct.huart2_Rx_len = 1;
@@ -265,23 +310,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
-	static enum control_states{
-		DO,
-		Geneva
-	}control_state = DO;
 	if(htim->Instance == htim6.Instance){
-		switch(control_state){
-		case DO:
-			control_state = Geneva;
-			DO_Control();
-			break;
-		case Geneva:
-			control_state = DO;
-			geneva_Control();
-			break;
-		}
+		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
-
+		DO_Control();
 	}
 }
 
