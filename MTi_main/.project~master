@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
+<<<<<<< HEAD:MTi_main/.project~master
 	<name>MTi_main</name>
+=======
+	<name>Main2</name>
+>>>>>>> master:Main2/.project
 	<comment></comment>
 	<projects>
 	</projects>
