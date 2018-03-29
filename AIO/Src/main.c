@@ -53,6 +53,7 @@
 #include "DO/DO.h"
 #include "myNRF24.h"
 #include "wheels/wheels.h"
+#include "MTi/MTiControl.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -66,6 +67,7 @@ int8_t address = -1;
 uint8_t freqChannel = 78;
 bool battery_empty = false;
 bool user_control = false;
+bool print_encoder = false;
 
 /* USER CODE END PV */
 
@@ -139,9 +141,9 @@ int main(void)
   address = ReadAddress();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
-//  geneva_Init();
-//  DO_Init();
-//  dribbler_Init();
+  geneva_Init();
+  DO_Init();
+  dribbler_Init();
   wheels_Init();
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
@@ -191,7 +193,7 @@ int main(void)
 	  geneva_Update();
 	  if((HAL_GetTick() - printtime > 500)){
 		  printtime = HAL_GetTick();
-		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+		  if(print_encoder) uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 	  }
   /* USER CODE END WHILE */
@@ -274,6 +276,8 @@ void HandleCommand(char* input){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
+	}else if(!strcmp(input, "encoder")){
+		print_encoder = !print_encoder;
 	}
 }
 
@@ -299,12 +303,11 @@ void dribbler_Init(){
 	dribbler_SetSpeed(0);
 }
 
-
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart3.Instance){//input from the PC
-		puttystruct.huart2_Rx_len = 1;
+		puttystruct.huart_Rx_len = 1;
 		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
-	}else if(huart->Instance == huart3.Instance){// Input from the Xsens
+	}else if(huart->Instance == huartMT.Instance){// Input from the Xsens
 
 	}
 }
