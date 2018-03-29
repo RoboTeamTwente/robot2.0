@@ -8,6 +8,8 @@
 #ifndef WHEELS_WHEELS_H_
 #define WHEELS_WHEELS_H_
 
+#include <stdint.h>
+
 typedef enum {
 	wheels_RF,
 	wheels_RB,
@@ -16,8 +18,9 @@ typedef enum {
 }wheels_handles;
 
 void wheels_Init();
-void wheels_SetOutput(wheels_handles wheel, float power);
-int wheels_GetEncoder(wheels_handles wheel);
+void calcMotorSpeed (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]);
+void wheels_SetOutput(float power[4]);
+int16_t wheels_GetEncoder(wheels_handles wheel);
 float wheels_GetSpeed(wheels_handles wheel);
 
 #endif /* WHEELS_WHEELS_H_ */

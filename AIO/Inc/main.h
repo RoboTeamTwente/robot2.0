@@ -96,6 +96,8 @@
 #define SPI1_IRQ_Pin GPIO_PIN_11
 #define SPI1_IRQ_GPIO_Port GPIOB
 #define SPI1_IRQ_EXTI_IRQn EXTI15_10_IRQn
+#define SPI2_CS_Pin GPIO_PIN_12
+#define SPI2_CS_GPIO_Port GPIOB
 #define FR_LB_Pin GPIO_PIN_13
 #define FR_LB_GPIO_Port GPIOB
 #define PWM_LB_Pin GPIO_PIN_14
