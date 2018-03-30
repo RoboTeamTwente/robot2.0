@@ -69,6 +69,9 @@ bool battery_empty = false;
 bool user_control = false;
 bool print_encoder = false;
 
+uint8_t message_handled_flag = 0;
+uint8_t stop_after_message_complete = 1;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,6 +88,11 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds);
 
 void dribbler_SetSpeed(uint8_t percentage);
 void dribbler_Init();
+
+void HandleMessage();
+void MTiPrintOutputConfig(struct XbusMessage const* message);
+void MTiErrorHandler(struct XbusMessage const* message);
+void printMessageData(struct XbusMessage const* message);
 
 /* USER CODE END PFP */
 
@@ -145,6 +153,8 @@ int main(void)
   DO_Init();
   dribbler_Init();
   wheels_Init();
+  MTi_Init();
+
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
   dataPacket dataStruct;
@@ -191,6 +201,17 @@ int main(void)
 		  // handle the message
 	  }
 	  geneva_Update();
+
+	if(cplt_mess_stored_flag){
+		cplt_mess_stored_flag = 0;
+		HandleMessage();
+		if(!stop_after_message_complete){
+			message_handled_flag = 0;
+			ReadNewMessage(0);
+		}
+	}
+
+	  CheckWhatNeedsToBeDone();
 	  if((HAL_GetTick() - printtime > 500)){
 		  printtime = HAL_GetTick();
 		  if(print_encoder) uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
@@ -264,7 +285,97 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HandleCommand(char* input){
-	if(!strcmp(input, "address")){
+	if(strcmp(input, "start") == 0){
+		TextOut("Starting device MTi\n\r");
+		HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 1);
+		if(WaitForAck(XMID_WakeUp)){
+			SendWakeUpAck();
+			TextOut("Communication with MTi started, in config state.\n\r");
+		}else{
+			TextOut("No communication with MTi!\n\r");
+		}
+	}else if(strcmp(input, "start2") == 0){
+		TextOut("Starting device MTi\n\r");
+		HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 1);
+		if(WaitForAck(XMID_WakeUp)){
+			TextOut("Communication with MTi started, going to measure state in .5 seconds.\n\r");
+		}else{
+			TextOut("No communication with MTi!\n\r");
+		}
+	}else if(strcmp(input, "config") == 0){
+		struct XbusMessage mess = { .mid = XMID_GoToConfig,
+									.data = NULL,
+									.length = 0};
+
+		uint8_t cnt = 0;
+		while(!WaitForAck(XMID_GoToConfigAck) && cnt < 20 ){
+			SendXbusMessage(mess);
+			cnt++;
+		}
+		if(cnt < 20){
+			TextOut("In config state.\n\r");
+		}else{
+			TextOut("No GoToConfigAck received.\n\r");
+		}
+	}else if(strcmp(input, "measure") == 0){
+		struct XbusMessage mess = { .mid = XMID_GoToMeasurement,
+									.data = NULL,
+									.length = 0};
+		SendXbusMessage(mess);
+		if(WaitForAck(XMID_GoToMeasurementAck)){
+			TextOut("In measurement state.\n\r");
+		}else{
+			TextOut("No GoToMeasurementAck received.\n\r");
+		}
+
+	}else if(strcmp(input, "reqdata") == 0){
+		TextOut("Sending request data message.\n\r");
+		struct XbusMessage mess = { .mid = XMID_ReqData,
+									.length = 0,
+									.data = NULL};
+		SendXbusMessage(mess);
+		ReadNewMessage(0);
+	}else if(strcmp(input, "factoryreset") == 0){
+		TextOut("Resetting the configuration.\n\r");
+		struct XbusMessage mess = { .mid = XMID_RestoreFactoryDef,
+									.length = 0,
+									.data = NULL};
+		SendXbusMessage(mess);
+	}else if(strcmp(input, "readcontinue") == 0){
+		TextOut("Reading continuously till readstop command\n\r");
+		stop_after_message_complete = 0;
+		ReadNewMessage(0);
+	}else if(strcmp(input, "readstop") == 0){
+		stop_after_message_complete = 1;
+	}else if(memcmp(input, "setconfig", strlen("setconfig")) == 0){
+		uint8_t n_configs = 2;
+		uint16_t frequency = 60;
+		TextOut("Setting the preset configuration.\n\r");
+		struct OutputConfiguration config[n_configs];
+		config[0].dtype = XDI_PacketCounter;
+		config[0].freq =  frequency;
+		config[1].dtype = XDI_Acceleration;
+		config[1].freq =  frequency;
+		struct XbusMessage mess;
+		mess.mid = XMID_SetOutputConfiguration;
+		mess.length = n_configs;
+		mess.data = &config;
+		uint16_t* mdptr = mess.data;
+		uprintf( "[%x %x] [%x %x] [%x %x]\n", *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++);
+		SendXbusMessage(mess);
+		ReadNewMessage(0);
+	}else if(strcmp(input, "reqconfig\n") == 0){
+		TextOut("requesting output configuration mode\n\r");
+		struct XbusMessage mess = { .mid = XMID_ReqOutputConfiguration,
+									.data = NULL,
+									.length = 0};
+		SendXbusMessage(mess);
+		ReadNewMessage(0);
+	}
+
+
+
+	else if(!strcmp(input, "address")){
 		uprintf("address = [%d]\n\r", ReadAddress());
 	}else if(!strcmp(input, "example2")){
 		uprintf("stop!\n\r");
@@ -278,6 +389,9 @@ void HandleCommand(char* input){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
 	}else if(!strcmp(input, "encoder")){
 		print_encoder = !print_encoder;
+	}else if(!strcmp(input, "receive")){
+		TextOut("receiving a message in interrupt mode\n\r");
+		ReadNewMessage(0);
 	}
 }
 
@@ -308,7 +422,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		puttystruct.huart_Rx_len = 1;
 		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
 	}else if(huart->Instance == huartMT.Instance){// Input from the Xsens
+		MTi_UART_RxCpltCallback();
+	}
+}
 
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+	if(huart->Instance == huart3.Instance){
+
+	}else if(huart->Instance == huartMT.Instance){
+		MTi_UART_TxCpltCallback();
 	}
 }
 
@@ -320,14 +442,193 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == SPI1_IRQ_Pin){
 		//wireless message received
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
 		geneva_SensorCallback();
 	}
+}
+
+
+void HandleMessage(){
+	if(ReceivedMessageStorage->mid == XMID_Error){
+		MTiErrorHandler(ReceivedMessageStorage);
+	}else if(ReceivedMessageStorage->mid == XMID_MTData2){
+		printMessageData(ReceivedMessageStorage);
+	}else if(ReceivedMessageStorage->mid == XMID_ReqOutputConfigurationAck){
+		MTiPrintOutputConfig(ReceivedMessageStorage);
+	}
+	message_handled_flag = 1;
+	DeallocateMem();
+}
+void MTiPrintOutputConfig(struct XbusMessage const* message){
+	if (!message)
+		return;
+	uprintf("MTiPrintOutputConfig:\n");
+
+	uint8_t* rawptr = message->data;
+	uint16_t fptr[message->length];
+	uprintf( "len = [%u]", message->length);
+
+	for(uint16_t * i = fptr; i < fptr + (message->length)/2; i++){
+		rawptr = XbusUtility_readU16(i, rawptr);
+		uprintf( "[%04x]", *i);
+
+	}
+	uprintf( "\n\r");
+
+
+	uint16_t freq;
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Temperature, message))){
+		uprintf("XDI_Temperature:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_UtcTime, message))){
+		uprintf("XDI_UtcTime:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_PacketCounter, message))){
+		uprintf("XDI_PacketCounter:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeFine, message))){
+		uprintf("XDI_SampleTimeFine:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeCoarse, message))){
+		uprintf("XDI_SampleTimeCoarse:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Quaternion, message))){
+		uprintf("XDI_Quaternion:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RotationMatrix, message))){
+		uprintf("XDI_RotationMatrix:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_EulerAngles, message))){
+		uprintf("XDI_EulerAngles:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaV, message))){
+		uprintf("XDI_DeltaV:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Acceleration, message))){
+		uprintf("XDI_Acceleration:%x\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_FreeAcceleration, message))){
+			uprintf("XDI_FreeAcceleration:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_AccelerationHR, message))){
+		uprintf("XDI_AccelerationHR:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurn, message))){
+		uprintf("XDI_RateOfTurn:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaQ, message))){
+		uprintf("XDI_DeltaQ:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurnHR, message))){
+		uprintf("XDI_RateOfTurnHR:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_MagneticField, message))){
+		uprintf("XDI_MagneticField:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusByte, message))){
+		uprintf("XDI_StatusByte:%u\n", freq);
+
+	}
+	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusWord, message))){
+		uprintf("XDI_StatusWord:%u\n", freq);
+
+	}
+}
+void MTiErrorHandler(struct XbusMessage const* message){
+	if (!message)
+		return;
+	uprintf("ERROR: %02x\n\r", *(uint8_t *)(message->data));
+
+}
+
+void printMessageData(struct XbusMessage const* message){
+	if (!message)
+		return;
+	uprintf("MTData2:");
+
+	uint16_t counter;
+	if (XbusMessage_getDataItem(&counter, XDI_PacketCounter, message))
+	{
+		uprintf( " Packet counter: %5d", counter);
+
+	}
+	uint32_t SampleTimeFine;
+	if (XbusMessage_getDataItem(&SampleTimeFine, XDI_SampleTimeFine, message))
+	{
+		uprintf( " SampleTimeFine: %lu", SampleTimeFine);
+
+	}
+	float ori[4];
+	if (XbusMessage_getDataItem(ori, XDI_Quaternion, message))
+	{
+		uprintf( " Orientation: (%.3f, %.3f, %.3f, %.3f)", ori[0], ori[1],
+				ori[2], ori[3]);
+
+	}
+	float angles[3];
+	if (XbusMessage_getDataItem(angles, XDI_EulerAngles, message))
+	{
+		uprintf( " EulerAngles: (%.3f, %.3f, %.3f)", angles[0], angles[1], angles[2]);
+
+	}
+	float delta_v[3];
+	if (XbusMessage_getDataItem(delta_v, XDI_DeltaV, message))
+	{
+		uprintf( " deltaV: (%.3f, %.3f, %.3f)", delta_v[0], delta_v[1], delta_v[2]);
+
+	}
+	float acc[3];
+	if (XbusMessage_getDataItem(acc, XDI_Acceleration, message))
+	{
+		uprintf( " Acceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
+
+	}
+	float gyr[3];
+	if (XbusMessage_getDataItem(gyr, XDI_RateOfTurn, message))
+	{
+		uprintf( " Rate Of Turn: (%.3f, %.3f, %.3f)", gyr[0], gyr[1], gyr[2]);
+
+	}
+	float delta_q[4];
+	if (XbusMessage_getDataItem(delta_q, XDI_Quaternion, message))
+	{
+		uprintf( " deltaQ: (%.3f, %.3f, %.3f, %.3f)", delta_q[0], delta_q[1],
+				delta_q[2], delta_q[3]);
+
+	}
+	float mag[3];
+	if (XbusMessage_getDataItem(mag, XDI_MagneticField, message))
+	{
+		uprintf( " Magnetic Field: (%.3f, %.3f, %.3f)", mag[0], mag[1], mag[2]);
+
+	}
+	uint32_t status;
+	if (XbusMessage_getDataItem(&status, XDI_StatusWord, message))
+	{
+		uprintf( " Status:%lX", status);
+
+	}
+	TextOut(" \n\r");
 }
 /* USER CODE END 4 */
 

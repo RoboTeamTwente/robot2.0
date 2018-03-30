@@ -37,5 +37,9 @@ void ReadNewMessage(uint8_t cancel_previous);
 void StoreReceivedBytes();
 void CheckWhatNeedsToBeDone();
 void DeallocateMem();
+// Callback is called when the HAL_Uart application is finished transmitting its bytes
+void MTi_UART_TxCpltCallback();
+// Callback is called when the HAL_Uart received its wanted amount of bytes
+void MTi_UART_RxCpltCallback();
 
 #endif /* MTICONTROL_H_ */
