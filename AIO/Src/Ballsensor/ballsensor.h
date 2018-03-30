@@ -26,6 +26,7 @@ uint8_t enable_command[13];
 uint8_t enable_response[11];
 uint8_t bootcomplete_response[19];
 
+void parseMessage();
 void ballsensorInit();
 void ballsensorMeasurementLoop();
 
