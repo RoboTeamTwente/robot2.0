@@ -167,8 +167,9 @@ int main(void)
 			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
 			  uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 			  wheels_SetOutput(wheels);
+
 			  //dribbler
-			  dribbler_SetSpeed((dataStruct.driblerSpeed*100)/7);
+			  dribbler_SetSpeed(dataStruct.driblerSpeed);
 
 			  //kicker
 			  if (dataStruct.kickForce != 0){
@@ -287,11 +288,11 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds){
 	if(n_leds & 0b00100000) HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin, uint & 0b00100000);
 }
 
-void dribbler_SetSpeed(uint8_t percentage){
-	if(percentage > 100){
-		percentage = 100;
+void dribbler_SetSpeed(uint8_t speed){
+	if(speed > 7){
+		speed = 7;
 	}
-	__HAL_TIM_SET_COMPARE(&htim11, TIM_CHANNEL_1, (100 - percentage) * MAX_PWM);
+	__HAL_TIM_SET_COMPARE(&htim11, TIM_CHANNEL_1, (7 - speed) * MAX_PWM);
 }
 
 void dribbler_Init(){
