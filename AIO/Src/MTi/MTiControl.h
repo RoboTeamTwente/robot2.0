@@ -12,34 +12,28 @@
 #include "main.h"
 #include "usart.h"
 #include "stdint.h"
-#include "xbusmessage.h"
-#include "xbusparser.h"
-#include "xbusutility.h"
-#include "xsdeviceid.h"
+#include "xbus/xbusparser.h"
+#include "xbus/xbusutility.h"
+#include "xbus/xsdeviceid.h"
 
 #define MAX_RAW_MESSAGE_SIZE 	2055
 #define huartMT huart2
 
-extern uint8_t cplt_mess_stored_flag;
-extern struct XbusMessage* ReceivedMessageStorage;
+/*extern */uint8_t MT_cplt_mess_stored_flag;
+/*extern */struct XbusMessage* MT_ReceivedMessageStorage;
 
-void XBP_handleMessage(struct XbusMessage const* message);
-void* XBP_allocateBuffer(size_t bufSize);
-void XBP_deallocateBuffer(void const* buffer);
-void CancelMtiOperation();
-void MtiReset();
-void SendWakeUpAck();
-int WaitForAck(enum XsMessageId XMID);
-HAL_StatusTypeDef Usart3ReceiveMessage_IT(uint8_t* message, uint16_t size);
-void MTi_Init();
-void SendXbusMessage(struct XbusMessage XbusMessage);
-void ReadNewMessage(uint8_t cancel_previous);
-void StoreReceivedBytes();
-void CheckWhatNeedsToBeDone();
-void DeallocateMem();
+void MT_Init();
+void MT_Update();
+void Mt_CancelOperation();
+void MT_SendWakeUpAck();
+int  MT_WaitForAck(enum XsMessageId XMID);
+void MT_SendXbusMessage(struct XbusMessage XbusMessage);
+void MT_ReadNewMessage(uint8_t cancel_previous);
+void MT_HandleMessage(struct XbusMessage* RX_message);
+void MT_ReadContinuously(bool par);
 // Callback is called when the HAL_Uart application is finished transmitting its bytes
-void MTi_UART_TxCpltCallback();
+void MT_UART_TxCpltCallback();
 // Callback is called when the HAL_Uart received its wanted amount of bytes
-void MTi_UART_RxCpltCallback();
+void MT_UART_RxCpltCallback();
 
 #endif /* MTICONTROL_H_ */

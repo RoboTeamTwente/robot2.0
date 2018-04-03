@@ -20,7 +20,6 @@
 #include "xbusutility.h"
 #include <stdlib.h>
 #include <string.h>
-#include "../PuttyInterface/PuttyInterface.h"
 
 /*! \brief XbusParser states. */
 enum XbusParserState

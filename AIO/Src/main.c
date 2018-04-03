@@ -69,9 +69,6 @@ bool battery_empty = false;
 bool user_control = false;
 bool print_encoder = false;
 
-uint8_t message_handled_flag = 0;
-uint8_t stop_after_message_complete = 1;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -89,7 +86,6 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds);
 void dribbler_SetSpeed(uint8_t percentage);
 void dribbler_Init();
 
-void HandleMessage();
 void MTiPrintOutputConfig(struct XbusMessage const* message);
 void MTiErrorHandler(struct XbusMessage const* message);
 void printMessageData(struct XbusMessage const* message);
@@ -153,7 +149,7 @@ int main(void)
   DO_Init();
   dribbler_Init();
   wheels_Init();
-  MTi_Init();
+  MT_Init();
 
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
@@ -202,16 +198,7 @@ int main(void)
 	  }
 	  geneva_Update();
 
-	if(cplt_mess_stored_flag){
-		cplt_mess_stored_flag = 0;
-		HandleMessage();
-		if(!stop_after_message_complete){
-			message_handled_flag = 0;
-			ReadNewMessage(0);
-		}
-	}
-
-	  CheckWhatNeedsToBeDone();
+	  MT_Update();
 	  if((HAL_GetTick() - printtime > 500)){
 		  printtime = HAL_GetTick();
 		  if(print_encoder) uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
@@ -288,8 +275,8 @@ void HandleCommand(char* input){
 	if(strcmp(input, "start") == 0){
 		TextOut("Starting device MTi\n\r");
 		HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 1);
-		if(WaitForAck(XMID_WakeUp)){
-			SendWakeUpAck();
+		if(MT_WaitForAck(XMID_WakeUp)){
+			MT_SendWakeUpAck();
 			TextOut("Communication with MTi started, in config state.\n\r");
 		}else{
 			TextOut("No communication with MTi!\n\r");
@@ -297,7 +284,7 @@ void HandleCommand(char* input){
 	}else if(strcmp(input, "start2") == 0){
 		TextOut("Starting device MTi\n\r");
 		HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 1);
-		if(WaitForAck(XMID_WakeUp)){
+		if(MT_WaitForAck(XMID_WakeUp)){
 			TextOut("Communication with MTi started, going to measure state in .5 seconds.\n\r");
 		}else{
 			TextOut("No communication with MTi!\n\r");
@@ -308,8 +295,8 @@ void HandleCommand(char* input){
 									.length = 0};
 
 		uint8_t cnt = 0;
-		while(!WaitForAck(XMID_GoToConfigAck) && cnt < 20 ){
-			SendXbusMessage(mess);
+		while(!MT_WaitForAck(XMID_GoToConfigAck) && cnt < 20 ){
+			MT_SendXbusMessage(mess);
 			cnt++;
 		}
 		if(cnt < 20){
@@ -321,8 +308,8 @@ void HandleCommand(char* input){
 		struct XbusMessage mess = { .mid = XMID_GoToMeasurement,
 									.data = NULL,
 									.length = 0};
-		SendXbusMessage(mess);
-		if(WaitForAck(XMID_GoToMeasurementAck)){
+		MT_SendXbusMessage(mess);
+		if(MT_WaitForAck(XMID_GoToMeasurementAck)){
 			TextOut("In measurement state.\n\r");
 		}else{
 			TextOut("No GoToMeasurementAck received.\n\r");
@@ -333,20 +320,20 @@ void HandleCommand(char* input){
 		struct XbusMessage mess = { .mid = XMID_ReqData,
 									.length = 0,
 									.data = NULL};
-		SendXbusMessage(mess);
-		ReadNewMessage(0);
+		MT_SendXbusMessage(mess);
+		MT_ReadNewMessage(0);
 	}else if(strcmp(input, "factoryreset") == 0){
 		TextOut("Resetting the configuration.\n\r");
 		struct XbusMessage mess = { .mid = XMID_RestoreFactoryDef,
 									.length = 0,
 									.data = NULL};
-		SendXbusMessage(mess);
+		MT_SendXbusMessage(mess);
 	}else if(strcmp(input, "readcontinue") == 0){
 		TextOut("Reading continuously till readstop command\n\r");
-		stop_after_message_complete = 0;
-		ReadNewMessage(0);
+		MT_ReadContinuously(0);
+		MT_ReadNewMessage(0);
 	}else if(strcmp(input, "readstop") == 0){
-		stop_after_message_complete = 1;
+		MT_ReadContinuously(1);
 	}else if(memcmp(input, "setconfig", strlen("setconfig")) == 0){
 		uint8_t n_configs = 2;
 		uint16_t frequency = 60;
@@ -362,15 +349,15 @@ void HandleCommand(char* input){
 		mess.data = &config;
 		uint16_t* mdptr = mess.data;
 		uprintf( "[%x %x] [%x %x] [%x %x]\n", *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++);
-		SendXbusMessage(mess);
-		ReadNewMessage(0);
+		MT_SendXbusMessage(mess);
+		MT_ReadNewMessage(0);
 	}else if(strcmp(input, "reqconfig\n") == 0){
 		TextOut("requesting output configuration mode\n\r");
 		struct XbusMessage mess = { .mid = XMID_ReqOutputConfiguration,
 									.data = NULL,
 									.length = 0};
-		SendXbusMessage(mess);
-		ReadNewMessage(0);
+		MT_SendXbusMessage(mess);
+		MT_ReadNewMessage(0);
 	}
 
 
@@ -391,7 +378,7 @@ void HandleCommand(char* input){
 		print_encoder = !print_encoder;
 	}else if(!strcmp(input, "receive")){
 		TextOut("receiving a message in interrupt mode\n\r");
-		ReadNewMessage(0);
+		MT_ReadNewMessage(0);
 	}
 }
 
@@ -422,7 +409,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		puttystruct.huart_Rx_len = 1;
 		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
 	}else if(huart->Instance == huartMT.Instance){// Input from the Xsens
-		MTi_UART_RxCpltCallback();
+		MT_UART_RxCpltCallback();
 	}
 }
 
@@ -430,7 +417,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart3.Instance){
 
 	}else if(huart->Instance == huartMT.Instance){
-		MTi_UART_TxCpltCallback();
+		MT_UART_TxCpltCallback();
 	}
 }
 
@@ -451,17 +438,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	}
 }
 
-
-void HandleMessage(){
-	if(ReceivedMessageStorage->mid == XMID_Error){
-		MTiErrorHandler(ReceivedMessageStorage);
-	}else if(ReceivedMessageStorage->mid == XMID_MTData2){
-		printMessageData(ReceivedMessageStorage);
-	}else if(ReceivedMessageStorage->mid == XMID_ReqOutputConfigurationAck){
-		MTiPrintOutputConfig(ReceivedMessageStorage);
+void MT_HandleMessage(struct XbusMessage* RX_message){
+	if(MT_ReceivedMessageStorage->mid == XMID_Error){
+		MTiErrorHandler(MT_ReceivedMessageStorage);
+	}else if(MT_ReceivedMessageStorage->mid == XMID_MTData2){
+		printMessageData(MT_ReceivedMessageStorage);
+	}else if(MT_ReceivedMessageStorage->mid == XMID_ReqOutputConfigurationAck){
+		MTiPrintOutputConfig(MT_ReceivedMessageStorage);
 	}
-	message_handled_flag = 1;
-	DeallocateMem();
 }
 void MTiPrintOutputConfig(struct XbusMessage const* message){
 	if (!message)
