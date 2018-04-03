@@ -19,18 +19,21 @@
 #define MAX_RAW_MESSAGE_SIZE 	2055
 #define huartMT huart2
 
-/*extern */uint8_t MT_cplt_mess_stored_flag;
-/*extern */struct XbusMessage* MT_ReceivedMessageStorage;
+typedef enum {
+	MT_succes,
+	MT_failed
+}MT_StatusTypeDef;
 
 void MT_Init();
-void MT_Update();
+MT_StatusTypeDef MT_Update();
+MT_StatusTypeDef MT_StartOperation();
 void Mt_CancelOperation();
 void MT_SendWakeUpAck();
-int  MT_WaitForAck(enum XsMessageId XMID);
+MT_StatusTypeDef MT_WaitForAck(enum XsMessageId XMID);
 void MT_SendXbusMessage(struct XbusMessage XbusMessage);
 void MT_ReadNewMessage(uint8_t cancel_previous);
 void MT_HandleMessage(struct XbusMessage* RX_message);
-void MT_ReadContinuously(bool par);
+void MT_ReadContinuously(bool yes);
 // Callback is called when the HAL_Uart application is finished transmitting its bytes
 void MT_UART_TxCpltCallback();
 // Callback is called when the HAL_Uart received its wanted amount of bytes

@@ -1,3 +1,4 @@
+
 /**
   ******************************************************************************
   * @file           : main.c
@@ -274,9 +275,7 @@ void SystemClock_Config(void)
 void HandleCommand(char* input){
 	if(strcmp(input, "start") == 0){
 		TextOut("Starting device MTi\n\r");
-		HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 1);
-		if(MT_WaitForAck(XMID_WakeUp)){
-			MT_SendWakeUpAck();
+		if(MT_succes == MT_StartOperation()){
 			TextOut("Communication with MTi started, in config state.\n\r");
 		}else{
 			TextOut("No communication with MTi!\n\r");
@@ -439,12 +438,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 }
 
 void MT_HandleMessage(struct XbusMessage* RX_message){
-	if(MT_ReceivedMessageStorage->mid == XMID_Error){
-		MTiErrorHandler(MT_ReceivedMessageStorage);
-	}else if(MT_ReceivedMessageStorage->mid == XMID_MTData2){
-		printMessageData(MT_ReceivedMessageStorage);
-	}else if(MT_ReceivedMessageStorage->mid == XMID_ReqOutputConfigurationAck){
-		MTiPrintOutputConfig(MT_ReceivedMessageStorage);
+	if(RX_message->mid == XMID_Error){
+		MTiErrorHandler(RX_message);
+	}else if(RX_message->mid == XMID_MTData2){
+		printMessageData(RX_message);
+	}else if(RX_message->mid == XMID_ReqOutputConfigurationAck){
+		MTiPrintOutputConfig(RX_message);
 	}
 }
 void MTiPrintOutputConfig(struct XbusMessage const* message){
