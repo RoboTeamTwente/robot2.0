@@ -49,22 +49,32 @@ void calcMotorSpeed (float magnitude, float direction, int rotSign, float wRadPe
 }
 
 void wheels_SetOutput(float power[4]){
-	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, 0);
-	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, 0);
-	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, 0);
-	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
 
-	uint8_t reverse[4] = {0};
+	static uint8_t reverse[4] = {0};
 	for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-		if(power[i] < 0 ){
+		if(power[i] < -0.1 ){
 			power[i] = -power[i];
 			reverse[i] = 1;
+		}else if(power[i] > 0.1 ){
+			reverse[i] = 0;
 		}
 		if(power[i] > 100){
 			power[i] = 100;
 		}
 	}
-	HAL_Delay(1);
+//	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, 0);
+//	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, 0);
+//	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, 0);
+//	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
+//	HAL_GPIO_WritePin(FR_RF_GPIO_Port,FR_RF_Pin, reverse[wheels_RF]);
+//	HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, reverse[wheels_RB]);
+//	HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, reverse[wheels_LB]);
+//	HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, reverse[wheels_LF]);
+//
+//
+//	HAL_Delay(1);
+
+
 	HAL_GPIO_WritePin(FR_RF_GPIO_Port,FR_RF_Pin, reverse[wheels_RF]);
 	__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, power[wheels_RF] / 100 * MAX_PWM);
 	HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, reverse[wheels_RB]);
