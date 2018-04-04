@@ -38,7 +38,6 @@ void kick_ChargeUpdate()
 {
 	if(chargeBlock == 0)			// If charging is allowed
 	{
-
 		if(HAL_GetTick()%1000>900) // If between 0.9 an 1.0 of each second
 		{
 			if(HAL_GPIO_ReadPin(Charge_done_GPIO_Port, Charge_done_Pin))			// If the charger has reached 300V in the past second

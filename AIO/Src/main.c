@@ -157,6 +157,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  kick_ChargeUpdate();	//Check if charging should be on.
 	  if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
@@ -277,7 +278,12 @@ void HandleCommand(char* input){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
+	}else if(!memcmp(input, "kick" , strlen("kick"))){
+		kick_Kick(60);
+	}else if(!memcmp(input, "chip" , strlen("chip"))){
+		kick_Chip(60);
 	}
+
 }
 
 void Uint2Leds(uint8_t uint, uint8_t n_leds){
