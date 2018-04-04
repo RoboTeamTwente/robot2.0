@@ -1,3 +1,4 @@
+
 /**
   ******************************************************************************
   * @file           : main.c
@@ -53,6 +54,7 @@
 #include "DO/DO.h"
 #include "myNRF24.h"
 #include "wheels/wheels.h"
+#include "kickchip/kickchip.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -135,6 +137,7 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM5_Init();
+  MX_TIM13_Init();
   /* USER CODE BEGIN 2 */
   address = ReadAddress();
   puttystruct.handle = HandleCommand;
@@ -314,6 +317,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
 		DO_Control();
+	}else if(htim->Instance == htim13.Instance){
+		kick_Callback();
 	}
 }
 
