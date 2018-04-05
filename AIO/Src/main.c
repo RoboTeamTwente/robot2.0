@@ -334,21 +334,20 @@ void HandleCommand(char* input){
 									.length = 0,
 									.data = NULL};
 		MT_SendXbusMessage(mess);
-	}else if(strcmp(input, "readcontinue") == 0){
-		TextOut("Reading continuously till readstop command\n\r");
-		MT_ReadContinuously(0);
+	}else if(strcmp(input, "readMT") == 0){
+		TextOut("Reading MT messages\n\r");
 		MT_ReadNewMessage(0);
-	}else if(strcmp(input, "readstop") == 0){
-		MT_ReadContinuously(1);
 	}else if(memcmp(input, "setconfig", strlen("setconfig")) == 0){
-		uint8_t n_configs = 2;
-		uint16_t frequency = 60;
+		uint8_t n_configs = 3;
+		uint16_t frequency = 100;
 		TextOut("Setting the preset configuration.\n\r");
 		struct OutputConfiguration config[n_configs];
 		config[0].dtype = XDI_PacketCounter;
 		config[0].freq =  frequency;
-		config[1].dtype = XDI_Acceleration;
+		config[1].dtype = XDI_FreeAcceleration;
 		config[1].freq =  frequency;
+		config[2].dtype = XDI_EulerAngles;
+		config[2].freq =  frequency;
 		struct XbusMessage mess;
 		mess.mid = XMID_SetOutputConfiguration;
 		mess.length = n_configs;

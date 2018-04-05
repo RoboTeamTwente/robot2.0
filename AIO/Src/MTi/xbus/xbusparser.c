@@ -21,35 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-/*! \brief XbusParser states. */
-enum XbusParserState
-{
-	XBPS_Preamble,          /*!< \brief Looking for preamble. */
-	XBPS_BusId,             /*!< \brief Waiting for bus ID. */
-	XBPS_MessageId,         /*!< \brief Waiting for message ID. */
-	XBPS_Length,            /*!< \brief Waiting for length. */
-	XBPS_ExtendedLengthMsb, /*!< \brief Waiting for extended length MSB*/
-	XBPS_ExtendedLengthLsb, /*!< \brief Waiting for extended length LSB*/
-	XBPS_Payload,           /*!< \brief Reading payload. */
-	XBPS_Checksum           /*!< \brief Waiting for checksum. */
-};
 
-/*!
- * \brief Xbus Parser state structure.
- */
-struct XbusParser
-{
-	/*! \brief Callbacks for memory management, and message handling. */
-	struct XbusParserCallback callbacks;
-	/*! \brief Storage for the current message being received. */
-	struct XbusMessage currentMessage;
-	/*! \brief The number of bytes of payload received for the current message. */
-	uint16_t payloadReceived;
-	/*! \brief The calculated checksum for the current message. */
-	uint8_t checksum;
-	/*! \brief The state of the parser. */
-	enum XbusParserState state;
-};
+
+
 
 /*!
  * \brief Get the amount of memory needed for the XbusParser structure.

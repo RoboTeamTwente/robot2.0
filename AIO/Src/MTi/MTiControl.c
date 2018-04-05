@@ -13,7 +13,6 @@ struct XbusParser * XBParser;
 uint8_t RxCpltCallback_flag = 0;
 uint8_t HAL_UART_ErrorCallback_flag = 0;
 uint8_t bytes_received[MAX_RAW_MESSAGE_SIZE];
-uint8_t stop_after_message_complete = 1;
 // When XBP_Handlemessage is called, this value is set true
 uint8_t cplt_mess_stored_flag;
 struct XbusMessage* ReceivedMessageStorage;
@@ -52,9 +51,7 @@ MT_StatusTypeDef MT_Update(){
 			cplt_mess_stored_flag = 0;
 			MT_HandleMessage(ReceivedMessageStorage);
 			TheAlligator(XBParser);
-			if(!stop_after_message_complete){
-				MT_ReadNewMessage(0);
-			}
+			MT_ReadNewMessage(0);
 		}else{
 			switch(reception_state){
 			case receive_5:
@@ -97,10 +94,11 @@ void MT_CancelOperation(){
 void MT_UART_RxCpltCallback(){
 	switch(reception_state){
 	case receive_5:
-		XbusParser_parseBuffer(aRxBuffer, 5);
+		XbusParser_parseBuffer(XBParser, aRxBuffer, 5);
 		break;
 	case receive_rest:
-		XbusParser_parseBuffer(aRxBuffer, XBParser->currentMessage.length);
+		XbusParser_parseBuffer(XBParser, aRxBuffer, XBParser->currentMessage.length);
+		reception_state = receive_5;
 		break;
 	}
 	RxCpltCallback_flag = 1;
@@ -114,19 +112,23 @@ void MT_SendXbusMessage(struct XbusMessage XbusMessage){
 	uint8_t raw[128];
 	size_t XbusMes_size =  XbusMessage_format(raw, (struct XbusMessage const*)&XbusMessage, XLLF_Uart);
 	HAL_UART_Transmit_IT(&huartMT, raw, XbusMes_size);
+	for(uint i = 0; i < XbusMes_size; i++){
+		uprintf("[%02x]", raw[i]);
+	}
+	uprintf("\n\r");
 }
 
 // Wait till a certain message type is received from MTi over usart
 MT_StatusTypeDef MT_WaitForAck(enum XsMessageId XMID){
-	uint8_t buf[5];
-	HAL_UART_Receive(&huartMT, buf, 5, 500);
-	XbusParser_parseBuffer(XBParser, buf, 5);
-	if(cplt_mess_stored_flag){
-		if(ReceivedMessageStorage->mid == XMID){
-			return MT_succes;
-		}else{
-			return MT_failed;
-		}
+	uint timeout = 0;
+	bool timedout = false;
+	MT_ReadNewMessage(0);
+	timeout = HAL_GetTick();
+	while(ReceivedMessageStorage->mid != XMID && (timedout = ((HAL_GetTick() - timeout) < 500U))){
+		MT_Update();
+	}
+	if(timedout){
+		return MT_succes;
 	}else{
 		return MT_failed;
 	}
@@ -139,10 +141,6 @@ void MT_ReadNewMessage(uint8_t cancel_previous){
 		HAL_UART_AbortReceive(&huartMT);
 	}
 	HAL_UART_Receive_IT(&huartMT, (uint8_t *)aRxBuffer, 5);
-}
-
-void MT_ReadContinuously(bool yes){
-	stop_after_message_complete = yes;
 }
 
 __weak void MT_HandleMessage(struct XbusMessage* RX_message){
@@ -169,7 +167,5 @@ static void XBP_deallocateBuffer(void const* buffer){
 //param  None
 static void SendWakeUpAck(){
 	struct XbusMessage XbusMes = { XMID_WakeUpAck};
-	uint8_t raw[128];
-	size_t XbusMes_size =  XbusMessage_format(raw, (struct XbusMessage const*)&XbusMes, XLLF_Uart);
-	HAL_UART_Transmit_IT(&huartMT, raw, XbusMes_size);
+	MT_SendXbusMessage(XbusMes);
 }

@@ -141,7 +141,7 @@ enum XsDataIdentifier
 	XDI_RotationMatrix	= 0x2020,// not on MTi 1
 	XDI_EulerAngles		= 0x2030,// not on MTi 1
 	XDI_DeltaV			= 0x4010,
-	XDI_Acceleration	= (0x4020),
+	XDI_Acceleration	= 0x4020,
 	XDI_FreeAcceleration= 0x4030,
 	XDI_AccelerationHR	= 0x4040,
 	XDI_RateOfTurn		= 0x8020,
@@ -160,7 +160,7 @@ enum XsFormatPrecision{
 };
 
 enum XsFormatCoordinateSystem{
-	XDI_ENU		= 0x0,
+	XDI_ENU		= 0x0,//use this one
 	XDI_NED		= 0x4,
 	XDI_NWU		= 0x8
 };
