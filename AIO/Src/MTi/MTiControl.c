@@ -7,19 +7,21 @@
 #include "MTiControl.h"
 #include <string.h>
 #include "../PuttyInterface/PuttyInterface.h"
-#define RECEPTION_SIZE  1
 
-uint8_t aRxBuffer[RECEPTION_SIZE];
+uint8_t aRxBuffer[2055];
 struct XbusParser * XBParser;
 uint8_t RxCpltCallback_flag = 0;
 uint8_t HAL_UART_ErrorCallback_flag = 0;
 uint8_t bytes_received[MAX_RAW_MESSAGE_SIZE];
-uint16_t bytes_received_cnt = 0;
 uint8_t stop_after_message_complete = 1;
 // When XBP_Handlemessage is called, this value is set true
 uint8_t cplt_mess_stored_flag;
 struct XbusMessage* ReceivedMessageStorage;
 
+enum reception_states{
+	receive_5,
+	receive_rest
+}reception_state = receive_5;
 /*
  * static function prototypes
  */
@@ -44,15 +46,9 @@ void MT_Init(){
 }
 
 MT_StatusTypeDef MT_Update(){
-	static uint16_t bytes_parsed = 0;
 	if(RxCpltCallback_flag != 0){
 		RxCpltCallback_flag = 0;
-		while(bytes_parsed < bytes_received_cnt){
-			XbusParser_parseByte(XBParser, bytes_received[bytes_parsed++]);
-		}
 		if(cplt_mess_stored_flag){
-			bytes_parsed = 0;
-			bytes_received_cnt = 0;
 			cplt_mess_stored_flag = 0;
 			MT_HandleMessage(ReceivedMessageStorage);
 			TheAlligator(XBParser);
@@ -60,9 +56,20 @@ MT_StatusTypeDef MT_Update(){
 				MT_ReadNewMessage(0);
 			}
 		}else{
-			MT_ReadNewMessage(0);
+			switch(reception_state){
+			case receive_5:
+				if(XBParser->currentMessage.length){
+					reception_state = receive_rest;
+					HAL_UART_Receive_IT(&huartMT, (uint8_t *)aRxBuffer, XBParser->currentMessage.length);
+				}
+				break;
+			case receive_rest:
+
+				break;
+			}
 		}
 	}
+
 	if(HAL_UART_ErrorCallback_flag != 0){
 		HAL_UART_ErrorCallback_flag = 0;
 		return MT_failed;
@@ -88,8 +95,14 @@ void MT_CancelOperation(){
 }
 // Callback is called when the HAL_Uart received its wanted amount of bytes
 void MT_UART_RxCpltCallback(){
-	memcpy(&bytes_received[bytes_received_cnt], aRxBuffer, RECEPTION_SIZE);
-	bytes_received_cnt += RECEPTION_SIZE;
+	switch(reception_state){
+	case receive_5:
+		XbusParser_parseBuffer(aRxBuffer, 5);
+		break;
+	case receive_rest:
+		XbusParser_parseBuffer(aRxBuffer, XBParser->currentMessage.length);
+		break;
+	}
 	RxCpltCallback_flag = 1;
 }
 // Callback is called when the HAL_Uart application returns an error
@@ -125,7 +138,7 @@ void MT_ReadNewMessage(uint8_t cancel_previous){
 	if(cancel_previous){
 		HAL_UART_AbortReceive(&huartMT);
 	}
-	HAL_UART_Receive_IT(&huartMT, (uint8_t *)aRxBuffer, RECEPTION_SIZE);
+	HAL_UART_Receive_IT(&huartMT, (uint8_t *)aRxBuffer, 5);
 }
 
 void MT_ReadContinuously(bool yes){
