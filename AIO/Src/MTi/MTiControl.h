@@ -26,16 +26,13 @@ typedef enum {
 
 void MT_Init();
 MT_StatusTypeDef MT_Update();
-MT_StatusTypeDef MT_StartOperation();
-void Mt_CancelOperation();
-void MT_SendWakeUpAck();
+MT_StatusTypeDef MT_StartOperation(bool to_config);
+void MT_CancelOperation();
 MT_StatusTypeDef MT_WaitForAck(enum XsMessageId XMID);
 void MT_SendXbusMessage(struct XbusMessage XbusMessage);
 void MT_ReadNewMessage(uint8_t cancel_previous);
 void MT_HandleMessage(struct XbusMessage* RX_message);
 void MT_ReadContinuously(bool yes);
-// Callback is called when the HAL_Uart application is finished transmitting its bytes
-void MT_UART_TxCpltCallback();
 // Callback is called when the HAL_Uart received its wanted amount of bytes
 void MT_UART_RxCpltCallback();
 

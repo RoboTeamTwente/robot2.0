@@ -119,14 +119,14 @@ enum XsMessageId
 	XMID_ReqFilterProfileAck 		= 101,//0x65) To host Device return current filter profile
 	XMID_SetFilterProfile 			= 100,//0x64) To MT Host set current filter profile
 	XMID_SetFilterProfileAck 		= 101,//0x65) To host Device acknowledges SetFilterProfile
-	XMID_ReqLatLonAlt = 110,//0x6E) To MT Requests the latitude, longitude and altitude that is stored in the device
-	XMID_ReqLatLonAltAck = 111,//0x6F) To host Returns the latitude, longitude and altitude that is stored in the device
-	XMID_SetLatLonAlt = 110,//0x6E) To host Sets latitude, longitude and altitude in the device
-	XMID_SetLatLonAltAck = 111,//0x6F) To MT Device acknowledges SetLatLonAlt
-	XMID_SetNoRotation = 34,//0x22) To MT Initiates ‘no rotation’ update procedure
-	XMID_SetNoRotationAck = 35,//0x23) To host Device acknowledges SetNoRotation XMID_message
-	XMID_IccCommand = 116,//0x74) To MT
-	XMID_IccCommandAck = 117//0x75) To host
+	XMID_ReqLatLonAlt 				= 110,//0x6E) To MT Requests the latitude, longitude and altitude that is stored in the device
+	XMID_ReqLatLonAltAck 			= 111,//0x6F) To host Returns the latitude, longitude and altitude that is stored in the device
+	XMID_SetLatLonAlt 				= 110,//0x6E) To host Sets latitude, longitude and altitude in the device
+	XMID_SetLatLonAltAck 			= 111,//0x6F) To MT Device acknowledges SetLatLonAlt
+	XMID_SetNoRotation 				= 34,//0x22) To MT Initiates ‘no rotation’ update procedure
+	XMID_SetNoRotationAck 			= 35,//0x23) To host Device acknowledges SetNoRotation XMID_message
+	XMID_IccCommand 				= 116,//0x74) To MT
+	XMID_IccCommandAck 				= 117//0x75) To host
 };
 
 /*! \brief Xbus data message type IDs. */
@@ -141,7 +141,7 @@ enum XsDataIdentifier
 	XDI_RotationMatrix	= 0x2020,// not on MTi 1
 	XDI_EulerAngles		= 0x2030,// not on MTi 1
 	XDI_DeltaV			= 0x4010,
-	XDI_Acceleration	= 0x4020,
+	XDI_Acceleration	= (0x4020),
 	XDI_FreeAcceleration= 0x4030,
 	XDI_AccelerationHR	= 0x4040,
 	XDI_RateOfTurn		= 0x8020,
