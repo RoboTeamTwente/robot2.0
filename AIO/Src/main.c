@@ -158,6 +158,8 @@ int main(void)
   while (1)
   {
 	  kick_ChargeUpdate();	//Check if charging should be on.
+	  kick_Kick(60);
+	  HAL_Delay(1000);
 	  if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
@@ -195,7 +197,7 @@ int main(void)
 	  geneva_Update();
 	  if((HAL_GetTick() - printtime > 500)){
 		  printtime = HAL_GetTick();
-		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 	  }
   /* USER CODE END WHILE */
@@ -282,6 +284,10 @@ void HandleCommand(char* input){
 		kick_Kick(60);
 	}else if(!memcmp(input, "chip" , strlen("chip"))){
 		kick_Chip(60);
+	}else if(!memcmp(input, "charge" , strlen("charge"))){
+		kick_ChargeUpdate();
+	}else if(!memcmp(input, "block" , strlen("block"))){
+		kick_printblock();
 	}
 
 }

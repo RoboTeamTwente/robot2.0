@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include "tim.h"
 #include "kickchip.h"
+#include "../PuttyInterface/PuttyInterface.h"
 
 bool chargeBlock = 0;
 
@@ -12,8 +13,11 @@ void kick_Kick(int percentage)
 	chargeBlock = 1;													// Block charging
 	HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_SET); 			// Kick on
 	htim13.Init.Period = percentage;
-	HAL_TIM_Base_Start_IT(&htim13);   									// Start timer for kick off
-
+	HAL_TIM_Base_Start(&htim13);   									// Start timer for kick off
+//	HAL_Delay(8);
+//	HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_RESET);		// Kick off
+//	chargeBlock = 0;
+//	HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);
 }
 
 void kick_Chip(int percentage)
@@ -22,7 +26,7 @@ void kick_Chip(int percentage)
 	chargeBlock = 1;													// Block charging
 	HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_SET); 			// Chip on
 	htim13.Init.Period = percentage;
-	HAL_TIM_Base_Start_IT(&htim13);   									// Start timer for chip off
+	HAL_TIM_Base_Start(&htim13);   									// Start timer for chip off
 
 }
 
@@ -31,6 +35,8 @@ void kick_Callback()
 	HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_RESET);		// Kick off
 	HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_RESET);		// Chip off
 	chargeBlock = 0;
+	HAL_TIM_Base_Stop(&htim13);
+	uprintf("Holabola = [%d]\n\r", chargeBlock);
 }
 
 
@@ -49,4 +55,9 @@ void kick_ChargeUpdate()
 		}
 	}
 
+}
+
+void kick_printblock()
+{
+	uprintf("Block = [%d]\n\r", chargeBlock);
 }
