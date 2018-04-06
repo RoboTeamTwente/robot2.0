@@ -195,10 +195,12 @@ int main(void)
 		  // handle the message
 	  }
 	  geneva_Update();
-	  if((HAL_GetTick() - printtime > 500)){
+	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
 		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+		  //kick_Kick(HAL_GetTick() % 90 + 10);
+		  //uprintf("kicked at [%lu]\n\r", HAL_GetTick() % 90 + 10);
 	  }
   /* USER CODE END WHILE */
 
