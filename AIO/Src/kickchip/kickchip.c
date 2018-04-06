@@ -12,12 +12,10 @@ void kick_Kick(int percentage)
 	HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET); 	// Disable charging
 	chargeBlock = 1;													// Block charging
 	HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_SET); 			// Kick on
-	htim13.Init.Period = percentage;
-	HAL_TIM_Base_Start(&htim13);   									// Start timer for kick off
-//	HAL_Delay(8);
-//	HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_RESET);		// Kick off
-//	chargeBlock = 0;
-//	HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);
+	__HAL_TIM_CLEAR_IT(&htim13,TIM_IT_UPDATE);							// Clear timer
+	__HAL_TIM_SET_AUTORELOAD(&htim13, percentage);						// Set kick time
+	HAL_TIM_Base_Start_IT(&htim13);   									// Start timer for kick off
+
 }
 
 void kick_Chip(int percentage)
@@ -25,8 +23,9 @@ void kick_Chip(int percentage)
 	HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET); 	// Disable charging
 	chargeBlock = 1;													// Block charging
 	HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_SET); 			// Chip on
-	htim13.Init.Period = percentage;
-	HAL_TIM_Base_Start(&htim13);   									// Start timer for chip off
+	__HAL_TIM_CLEAR_IT(&htim13,TIM_IT_UPDATE);							// Clear timer
+	__HAL_TIM_SET_AUTORELOAD(&htim13, percentage);						// Set kick time
+	HAL_TIM_Base_Start_IT(&htim13);   									// Start timer for kick off
 
 }
 

@@ -158,8 +158,8 @@ int main(void)
   while (1)
   {
 	  kick_ChargeUpdate();	//Check if charging should be on.
-	  kick_Kick(60);
-	  HAL_Delay(1000);
+	  //kick_Kick(60);
+	  //HAL_Delay(1000);
 	  if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
