@@ -291,36 +291,9 @@ void HandleCommand(char* input){
 			TextOut("No communication with MTi!\n\r");
 		}
 	}else if(strcmp(input, "config") == 0){
-		struct XbusMessage mess = { .mid = XMID_GoToConfig,
-									.data = NULL,
-									.length = 0};
-		uint8_t cnt = 0;
-		do{
-			MT_SendXbusMessage(mess);
-			cnt++;
-		}while(MT_WaitForAck(XMID_GoToConfigAck) != MT_succes && cnt < 20 );
-		uprintf("cnt = %d\n\r",  cnt);
-		if(cnt < 20){
-			TextOut("In config state.\n\r");
-		}else{
-			TextOut("No GoToConfigAck received.\n\r");
-		}
+		MT_GoToConfig();
 	}else if(!strcmp(input, "measure")){
-		struct XbusMessage mess = { .mid = XMID_GoToMeasurement,
-									.data = NULL,
-									.length = 0};
-		uint8_t cnt = 0;
-		do {
-			MT_SendXbusMessage(mess);
-			cnt++;
-		}while(MT_WaitForAck(XMID_GoToMeasurementAck) != MT_succes && cnt < 20 );
-		uprintf("cnt = %d\n\r",  cnt);
-		if(cnt < 20){
-			TextOut("In measurement state.\n\r");
-		}else{
-			TextOut("No GoToMeasurementAck received.\n\r");
-		}
-
+		MT_GoToMeasure();
 	}else if(strcmp(input, "reqdata") == 0){
 		TextOut("Sending request data message.\n\r");
 		struct XbusMessage mess = { .mid = XMID_ReqData,
@@ -334,37 +307,16 @@ void HandleCommand(char* input){
 									.length = 0,
 									.data = NULL};
 		MT_SendXbusMessage(mess);
-	}else if(strcmp(input, "readMT") == 0){
-		TextOut("Reading MT messages\n\r");
-		MT_ReadNewMessage(0);
 	}else if(memcmp(input, "setconfig", strlen("setconfig")) == 0){
-		uint8_t n_configs = 3;
-		uint16_t frequency = 100;
-		TextOut("Setting the preset configuration.\n\r");
-		struct OutputConfiguration config[n_configs];
-		config[0].dtype = XDI_PacketCounter;
-		config[0].freq =  frequency;
-		config[1].dtype = XDI_FreeAcceleration;
-		config[1].freq =  frequency;
-		config[2].dtype = XDI_EulerAngles;
-		config[2].freq =  frequency;
-		struct XbusMessage mess;
-		mess.mid = XMID_SetOutputConfiguration;
-		mess.length = n_configs;
-		mess.data = &config;
-		uint16_t* mdptr = mess.data;
-		uprintf( "[%x %x] [%x %x] [%x %x]\n\r", *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++);
-		MT_SendXbusMessage(mess);
-		MT_ReadNewMessage(0);
+		MT_BuildConfig(XDI_PacketCounter, 100, false);
+		MT_BuildConfig(XDI_Acceleration, 100, false);
+		MT_BuildConfig(XDI_EulerAngles, 100, true);
 	}else if(strcmp(input, "reqconfig") == 0){
 		TextOut("requesting output configuration mode\n\r");
 		struct XbusMessage mess = { .mid = XMID_ReqOutputConfiguration,
 									.data = NULL,
 									.length = 0};
 		MT_SendXbusMessage(mess);
-		MT_ReadNewMessage(0);
-	}else if(!strcmp(input, "receive")){
-		TextOut("receiving a message in interrupt mode\n\r");
 		MT_ReadNewMessage(0);
 	}else if(!strcmp(input, "reset")){
 		uprintf("resetting the MTi.\n\r");
@@ -553,67 +505,72 @@ void MTiErrorHandler(struct XbusMessage const* message){
 
 void printMessageData(struct XbusMessage const* message){
 	int bytes = message->length;
+//	uint8_t* rawptr = message->data;
+//	for(uint i = 0; i < bytes; i++){
+//		uprintf("[%02x]", rawptr[i]);
+//	}
+//	uprintf("\n\r");
 	if (!message)
 		return;
-	uprintf("MTData2:");
+	uprintf("MT:");
 
 	uint16_t counter;
 	if (XbusMessage_getDataItem(&counter, XDI_PacketCounter, message)){
-		uprintf( " Packet counter: %5d", counter);
-		bytes -= 2 + 2;
+		uprintf( " Packet cnt: %5d", counter);
+		bytes -= 1 + 2 + 2;
 	}
 	uint32_t SampleTimeFine;
 	if (XbusMessage_getDataItem(&SampleTimeFine, XDI_SampleTimeFine, message)){
 		uprintf( " SampleTimeFine: %lu", SampleTimeFine);
-		bytes -= 2 + 4;
+		bytes -= 1 + 2 + 4;
 	}
 	float ori[4];
 	if (XbusMessage_getDataItem(ori, XDI_Quaternion, message)){
 		uprintf( " Orientation: (%.3f, %.3f, %.3f, %.3f)", ori[0], ori[1],
 				ori[2], ori[3]);
-		bytes -= 4 * 4 + 2;
+		bytes -= 1 + 4 * 4 + 2;
 
 	}
 	float angles[3];
 	if (XbusMessage_getDataItem(angles, XDI_EulerAngles, message)){
 		uprintf( " EulerAngles: (%.3f, %.3f, %.3f)", angles[0], angles[1], angles[2]);
-		bytes -= 3 * 4 + 2;
+		bytes -= 1 + 3 * 4 + 2;
 
 	}
 	float delta_v[3];
 	if (XbusMessage_getDataItem(delta_v, XDI_DeltaV, message)){
 		uprintf( " deltaV: (%.3f, %.3f, %.3f)", delta_v[0], delta_v[1], delta_v[2]);
-		bytes -= 3 * 4 + 2;
+		bytes -= 1 + 3 * 4 + 2;
 	}
 	float acc[3];
 	if (XbusMessage_getDataItem(acc, XDI_Acceleration, message)){
 		uprintf( " Acceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
-		bytes -= 2 * 4 + 2;
+		bytes -= 1 + 2 * 4 + 2;
 	}
 	if (XbusMessage_getDataItem(acc, XDI_FreeAcceleration, message)){
 		uprintf( " FreeAcceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
-		bytes -= 3 * 4 + 2;
+		bytes -= 1 + 3 * 4 + 2;
 	}
 	float gyr[3];
 	if (XbusMessage_getDataItem(gyr, XDI_RateOfTurn, message)){
 		uprintf( " Rate Of Turn: (%.3f, %.3f, %.3f)", gyr[0], gyr[1], gyr[2]);
-		bytes -= 3 * 4 + 2;
+		bytes -= 1 + 3 * 4 + 2;
 	}
 	float delta_q[4];
 	if (XbusMessage_getDataItem(delta_q, XDI_Quaternion, message)){
 		uprintf( " deltaQ: (%.3f, %.3f, %.3f, %.3f)", delta_q[0], delta_q[1],
 				delta_q[2], delta_q[3]);
-		bytes -= 4 * 4 + 2;
+		bytes -= 1 + 4 * 4 + 2;
 	}
 	float mag[3];
 	if (XbusMessage_getDataItem(mag, XDI_MagneticField, message)){
 		uprintf( " Magnetic Field: (%.3f, %.3f, %.3f)", mag[0], mag[1], mag[2]);
-		bytes -= 3 * 4 + 2;
+		bytes -= 1 + 3 * 4 + 2;
 	}
 	uint32_t status;
 	if (XbusMessage_getDataItem(&status, XDI_StatusWord, message)){
 		uprintf( " Status:%lX", status);
-		bytes -= 4 + 2;
+		bytes -= 1 + 4 + 2;
 	}
 	uprintf(" [%i] bytes unread\n\r", bytes);
 }

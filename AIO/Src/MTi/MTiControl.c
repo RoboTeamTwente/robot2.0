@@ -8,6 +8,8 @@
 #include <string.h>
 #include "../PuttyInterface/PuttyInterface.h"
 
+#define MAX_XDI_CONFIGS 64
+
 uint8_t aRxBuffer[2055];
 struct XbusParser * XBParser;
 uint8_t RxCpltCallback_flag = 0;
@@ -112,10 +114,64 @@ void MT_SendXbusMessage(struct XbusMessage XbusMessage){
 	uint8_t raw[128];
 	size_t XbusMes_size =  XbusMessage_format(raw, (struct XbusMessage const*)&XbusMessage, XLLF_Uart);
 	HAL_UART_Transmit_IT(&huartMT, raw, XbusMes_size);
-	for(uint i = 0; i < XbusMes_size; i++){
-		uprintf("[%02x]", raw[i]);
+	HAL_Delay(1);
+//	for(uint i = 0; i < XbusMes_size; i++){
+//		uprintf("[%02x]", raw[i]);
+//	}
+//	uprintf("\n\r");
+}
+
+MT_StatusTypeDef MT_GoToConfig(){
+	struct XbusMessage mess = {XMID_GoToConfig};
+	uint8_t cnt = 0;
+	do{
+		MT_SendXbusMessage(mess);
+		cnt++;
+	}while(MT_WaitForAck(XMID_GoToConfigAck) != MT_succes && cnt < 20 );
+	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt < 20){
+		TextOut("In config state.\n\r");
+		return MT_succes;
+	}else{
+		TextOut("No GoToConfigAck received.\n\r");
+		return MT_failed;
 	}
-	uprintf("\n\r");
+}
+
+MT_StatusTypeDef MT_GoToMeasure(){
+	struct XbusMessage mess = {XMID_GoToMeasurement};
+	uint8_t cnt = 0;
+	do {
+		MT_SendXbusMessage(mess);
+		cnt++;
+	}while(MT_WaitForAck(XMID_GoToMeasurementAck) != MT_succes && cnt < 20 );
+	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt < 20){
+		TextOut("In measurement state.\n\r");
+		return MT_succes;
+	}else{
+		TextOut("No GoToMeasurementAck received.\n\r");
+		return MT_failed;
+	}
+}
+
+MT_StatusTypeDef MT_BuildConfig(enum XsDataIdentifier XDI, uint16_t frequency, bool complete){
+	static uint8_t n_configs = 0;
+	static struct OutputConfiguration config[MAX_XDI_CONFIGS];
+	config[n_configs].dtype = XDI;
+	config[n_configs++].freq =  frequency;
+	if(complete){
+		struct XbusMessage mess;
+		mess.mid = XMID_SetOutputConfiguration;
+		mess.length = n_configs;
+		mess.data = &config;
+//		uint16_t* mdptr = mess.data;
+//		uprintf( "[%x %x] [%x %x] [%x %x]\n\r", *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++, *mdptr++);
+		MT_SendXbusMessage(mess);
+		MT_ReadNewMessage(0);
+		n_configs = 0;
+	}
+	return MT_succes;
 }
 
 // Wait till a certain message type is received from MTi over usart
@@ -124,7 +180,7 @@ MT_StatusTypeDef MT_WaitForAck(enum XsMessageId XMID){
 	bool timedout = false;
 	MT_ReadNewMessage(0);
 	timeout = HAL_GetTick();
-	while(ReceivedMessageStorage->mid != XMID && (timedout = ((HAL_GetTick() - timeout) < 500U))){
+	while(ReceivedMessageStorage->mid != XMID && (timedout = ((HAL_GetTick() - timeout) < 1000U))){
 		MT_Update();
 	}
 	if(timedout){

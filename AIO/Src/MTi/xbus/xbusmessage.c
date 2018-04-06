@@ -270,7 +270,9 @@ bool XbusMessage_getDataItem(void* item, enum XsDataIdentifier id, struct XbusMe
 
 			case XDI_DeltaV:
 			case XDI_Acceleration:
+			case XDI_FreeAcceleration:
 			case XDI_RateOfTurn:
+			case XDI_EulerAngles:
 			case XDI_MagneticField:
 				readFloats(item, raw, 3);
 				break;
