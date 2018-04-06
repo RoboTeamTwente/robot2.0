@@ -164,14 +164,15 @@ int main(void)
 			  if(dataStruct.rotationDirection){
 				  rotSign = -1;
 			  }
+			  uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
 			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
-			  for(int i = 0; i < 4; i++){
-				  if((HAL_GetTick() % 4000) > 2000){
-					  wheels[i] = 80;
-				  }else{
-					  wheels[i] = -80;
-				  }
-			  }
+//			  for(int i = 0; i < 4; i++){
+//				  if((HAL_GetTick() % 4000) > 2000){
+//					  wheels[i] = 80;
+//				  }else{
+//					  wheels[i] = -80;
+//				  }
+//			  }
 			  uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 			  wheels_SetOutput(wheels);
 			  //dribbler
@@ -198,7 +199,7 @@ int main(void)
 	  geneva_Update();
 	  if((HAL_GetTick() - printtime > 500)){
 		  printtime = HAL_GetTick();
-		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 	  }
   /* USER CODE END WHILE */
