@@ -51,6 +51,7 @@
 #include "address/address.h"
 #include "geneva/geneva.h"
 #include "DO/DO.h"
+#include "Ballsensor/ballsensor.h"
 #include "myNRF24.h"
 #include "wheels/wheels.h"
 #include "kickchip/kickchip.h"
@@ -153,6 +154,7 @@ int main(void)
 //  geneva_Init();
 //  DO_Init();
   dribbler_Init();
+  ballsensorInit();
   wheels_Init();
   MT_Init();
 
@@ -185,6 +187,7 @@ int main(void)
 			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 			  wheels_SetOutput(wheels);
 
+	  ballsensorMeasurementLoop();
 			  //dribbler
 			  dribbler_SetSpeed(dataStruct.driblerSpeed);
 
