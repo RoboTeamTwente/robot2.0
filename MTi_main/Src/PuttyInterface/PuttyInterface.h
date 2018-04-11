@@ -11,7 +11,7 @@
 #define PUTTY_USART
 
 #ifdef PUTTY_USART
-#define huartx huart3
+#define huartx huart1
 #endif /* PUTTY_USART */
 
 #ifdef PUTTY_USART
@@ -29,8 +29,8 @@
 #define MAX_COMMAND_LENGTH   32
 
 // function that works like normal printf()
-#define uprintf(...) { sprintf(smallStrBuffer, __VA_ARGS__); \
-	TextOut(smallStrBuffer);}
+#define uprintf(...) sprintf(smallStrBuffer, __VA_ARGS__); \
+	TextOut(smallStrBuffer)
 
 // function that will be called when HandlePcInput is done.
 typedef void (*HandleLine)(char * input);
@@ -38,7 +38,7 @@ typedef void (*HandleLine)(char * input);
 typedef struct {
 	uint8_t rec_buf[32];
 	char small_buf[32];
-	uint huart_Rx_len;
+	uint huart2_Rx_len;
 	HandleLine handle;
 }PuttyInterfaceTypeDef;
 

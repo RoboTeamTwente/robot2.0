@@ -35,8 +35,6 @@ PID_controller_HandleTypeDef Geneva_pid = {
 		.dir_Port[1] = Geneva_dir_A_GPIO_Port,
 };
 
-
-
 void geneva_Init(){
 	geneva_state = geneva_setup;
 	pid_Init(&Geneva_pid);
