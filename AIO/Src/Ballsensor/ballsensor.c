@@ -46,8 +46,8 @@ void parseMessage() {
 	uint16_t y;
 	y = data[14] << 8;
 	y |= data[15];
-	//uprintf("BALLSENSOR - x:\t %d \t y:\t %d \n\r", x,y);
-	kick_Kick();
+	uprintf("BALLSENSOR - x:\t %d \t y:\t %d \n\r", x,y);
+	kick_Kick(60);
 
 	if(!memcmp( data, bootcomplete_response, sizeof(bootcomplete_response))) {
 	  //uprintf("BootComplete response received, enabling device\n\r");

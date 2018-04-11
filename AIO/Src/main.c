@@ -1,3 +1,4 @@
+
 /**
   ******************************************************************************
   * @file           : main.c
@@ -157,7 +158,6 @@ int main(void)
   ballsensorInit();
   wheels_Init();
   MT_Init();
-
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
   dataPacket dataStruct;
@@ -221,7 +221,8 @@ int main(void)
 		  printtime = HAL_GetTick();
 		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_Data_succes, MT_Data_failed);
+		  //uprintf("MT status suc/err = [%u/%u]\n\r", MT_Data_succes, MT_Data_failed);
+		  uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
   /* USER CODE END WHILE */
 
