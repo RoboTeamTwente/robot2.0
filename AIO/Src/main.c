@@ -1,3 +1,4 @@
+
 /**
   ******************************************************************************
   * @file           : main.c
@@ -53,6 +54,7 @@
 #include "DO/DO.h"
 #include "myNRF24.h"
 #include "wheels/wheels.h"
+#include "kickchip/kickchip.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -135,6 +137,7 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM5_Init();
+  MX_TIM13_Init();
   /* USER CODE BEGIN 2 */
   address = ReadAddress();
   puttystruct.handle = HandleCommand;
@@ -154,6 +157,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  kick_ChargeUpdate();	//Check if charging should be on.
+	  //kick_Kick(60);
+	  //HAL_Delay(1000);
 	  if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
@@ -190,10 +196,12 @@ int main(void)
 		  // handle the message
 	  }
 	  geneva_Update();
-	  if((HAL_GetTick() - printtime > 500)){
+	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
-		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+		  //kick_Kick(HAL_GetTick() % 90 + 10);
+		  //uprintf("kicked at [%lu]\n\r", HAL_GetTick() % 90 + 10);
 	  }
   /* USER CODE END WHILE */
 
@@ -275,7 +283,16 @@ void HandleCommand(char* input){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
+	}else if(!memcmp(input, "kick" , strlen("kick"))){
+		kick_Kick(60);
+	}else if(!memcmp(input, "chip" , strlen("chip"))){
+		kick_Chip(60);
+	}else if(!memcmp(input, "charge" , strlen("charge"))){
+		kick_ChargeUpdate();
+	}else if(!memcmp(input, "block" , strlen("block"))){
+		kick_printblock();
 	}
+
 }
 
 void Uint2Leds(uint8_t uint, uint8_t n_leds){
@@ -315,6 +332,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
 		DO_Control();
+	}else if(htim->Instance == htim13.Instance){
+		kick_Callback();
 	}
 }
 
