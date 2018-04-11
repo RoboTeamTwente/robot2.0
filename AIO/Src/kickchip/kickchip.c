@@ -35,7 +35,7 @@ void kick_Callback()
 	HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_RESET);		// Chip off
 	chargeBlock = 0;
 	HAL_TIM_Base_Stop(&htim13);
-	uprintf("Holabola = [%d]\n\r", chargeBlock);
+	uprintf("Holabola\n\r"/*, chargeBlock*/);
 }
 
 
