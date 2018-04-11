@@ -151,6 +151,7 @@ int main(void)
   dataPacket dataStruct;
   uint LastPackageTime = 0;
   uint printtime = 0;
+  uint kick_timer = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -178,8 +179,13 @@ int main(void)
 			  dribbler_SetSpeed(dataStruct.driblerSpeed);
 
 			  //kicker
-			  if (dataStruct.kickForce != 0){
-
+			  if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
+				  kick_timer = HAL_GetTick() + 1000;
+				  if(dataStruct.chipper){
+					  kick_Chip((dataStruct.kickForce*100)/255);
+				  }else{
+					  kick_Kick((dataStruct.kickForce*100)/255);
+				  }
 			  }
 		  }
 

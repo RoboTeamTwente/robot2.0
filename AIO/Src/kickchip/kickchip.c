@@ -50,7 +50,7 @@ void kick_ChargeUpdate()
 				HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET);	// Turn charging off
 			}
 		}else{
-				HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);		// Turn charging on
+			HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);		// Turn charging on
 		}
 	}
 
