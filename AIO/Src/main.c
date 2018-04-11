@@ -1,4 +1,3 @@
-
 /**
   ******************************************************************************
   * @file           : main.c
@@ -39,7 +38,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_hal.h"
-#include "dma.h"
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
@@ -64,14 +62,17 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 #define STOP_AFTER 250 //ms
-
+#define MT_DEBUG 0
 PuttyInterfaceTypeDef puttystruct;
 int8_t address = -1;
 uint8_t freqChannel = 78;
 bool battery_empty = false;
 bool user_control = false;
 bool print_encoder = false;
-
+uint MT_Data_succes = 0;
+uint MT_Data_failed = 0;
+float angles[3];
+float acc[3];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -128,7 +129,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_TIM8_Init();
   MX_TIM4_Init();
   MX_TIM3_Init();
@@ -182,7 +182,7 @@ int main(void)
 				  rotSign = -1;
 			  }
 			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
-			  uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
+			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 			  wheels_SetOutput(wheels);
 
 			  //dribbler
@@ -214,12 +214,11 @@ int main(void)
 	  geneva_Update();
 	  //if(huartMT.hdmarx->StreamIndex - huartMT.hdmarx->StreamBaseAddress)  uprintf("StreamIndex = [%lu]\n\r", huartMT.hdmarx->StreamIndex/* - huartMT.hdmarx->StreamBaseAddress*/);
 	  MT_Update();
-	  if((HAL_GetTick() - printtime > 500)){
+	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
 		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  //kick_Kick(HAL_GetTick() % 90 + 10);
-		  //uprintf("kicked at [%lu]\n\r", HAL_GetTick() % 90 + 10);
+		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_Data_succes, MT_Data_failed);
 	  }
   /* USER CODE END WHILE */
 
@@ -405,6 +404,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
+		MT_Update();
 		DO_Control();
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
@@ -423,7 +423,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 void MT_HandleMessage(struct XbusMessage* RX_message){
 	if(RX_message->mid == XMID_Error){
 		MTiErrorHandler(RX_message);
+		MT_Data_failed++;
 	}else if(RX_message->mid == XMID_MTData2){
+		MT_Data_succes++;
 		printMessageData(RX_message);
 	}else if(RX_message->mid == XMID_ReqOutputConfigurationAck){
 		MTiPrintOutputConfig(RX_message);
@@ -523,80 +525,73 @@ void MTiPrintOutputConfig(struct XbusMessage const* message){
 void MTiErrorHandler(struct XbusMessage const* message){
 	if (!message)
 		return;
-	uprintf("ERROR: %02x\n\r", *(uint8_t *)(message->data));
+	if(MT_DEBUG) uprintf("ERROR: %02x\n\r", *(uint8_t *)(message->data));
 
 }
 
 void printMessageData(struct XbusMessage const* message){
 	int bytes = message->length;
-//	uint8_t* rawptr = message->data;
-//	for(uint i = 0; i < bytes; i++){
-//		uprintf("[%02x]", rawptr[i]);
-//	}
-//	uprintf("\n\r");
 	if (!message)
 		return;
-	uprintf("MT:");
+	if(MT_DEBUG) uprintf("MT:");
 
 	uint16_t counter;
 	if (XbusMessage_getDataItem(&counter, XDI_PacketCounter, message)){
-		uprintf( " Packet cnt: %5d", counter);
+		if(MT_DEBUG) uprintf( " Packet cnt: %5d", counter);
 		bytes -= 1 + 2 + 2;
 	}
 	uint32_t SampleTimeFine;
 	if (XbusMessage_getDataItem(&SampleTimeFine, XDI_SampleTimeFine, message)){
-		uprintf( " SampleTimeFine: %lu", SampleTimeFine);
+		if(MT_DEBUG) uprintf( " SampleTimeFine: %lu", SampleTimeFine);
 		bytes -= 1 + 2 + 4;
 	}
 	float ori[4];
 	if (XbusMessage_getDataItem(ori, XDI_Quaternion, message)){
-		uprintf( " Orientation: (%.3f, %.3f, %.3f, %.3f)", ori[0], ori[1],
+		if(MT_DEBUG) uprintf( " Orientation: (%.3f, %.3f, %.3f, %.3f)", ori[0], ori[1],
 				ori[2], ori[3]);
 		bytes -= 1 + 4 * 4 + 2;
 
 	}
-	float angles[3];
 	if (XbusMessage_getDataItem(angles, XDI_EulerAngles, message)){
-		uprintf( " EulerAngles: (%.3f, %.3f, %.3f)", angles[0], angles[1], angles[2]);
+		if(MT_DEBUG) uprintf( " EulerAngles: (%.3f, %.3f, %.3f)", angles[0], angles[1], angles[2]);
 		bytes -= 1 + 3 * 4 + 2;
 
 	}
 	float delta_v[3];
 	if (XbusMessage_getDataItem(delta_v, XDI_DeltaV, message)){
-		uprintf( " deltaV: (%.3f, %.3f, %.3f)", delta_v[0], delta_v[1], delta_v[2]);
+		if(MT_DEBUG) uprintf( " deltaV: (%.3f, %.3f, %.3f)", delta_v[0], delta_v[1], delta_v[2]);
 		bytes -= 1 + 3 * 4 + 2;
 	}
-	float acc[3];
 	if (XbusMessage_getDataItem(acc, XDI_Acceleration, message)){
-		uprintf( " Acceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
+		if(MT_DEBUG) uprintf( " Acceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
 		bytes -= 1 + 2 * 4 + 2;
 	}
 	if (XbusMessage_getDataItem(acc, XDI_FreeAcceleration, message)){
-		uprintf( " FreeAcceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
+		if(MT_DEBUG) uprintf( " FreeAcceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
 		bytes -= 1 + 3 * 4 + 2;
 	}
 	float gyr[3];
 	if (XbusMessage_getDataItem(gyr, XDI_RateOfTurn, message)){
-		uprintf( " Rate Of Turn: (%.3f, %.3f, %.3f)", gyr[0], gyr[1], gyr[2]);
+		if(MT_DEBUG) uprintf( " Rate Of Turn: (%.3f, %.3f, %.3f)", gyr[0], gyr[1], gyr[2]);
 		bytes -= 1 + 3 * 4 + 2;
 	}
 	float delta_q[4];
 	if (XbusMessage_getDataItem(delta_q, XDI_Quaternion, message)){
-		uprintf( " deltaQ: (%.3f, %.3f, %.3f, %.3f)", delta_q[0], delta_q[1],
+		if(MT_DEBUG) uprintf( " deltaQ: (%.3f, %.3f, %.3f, %.3f)", delta_q[0], delta_q[1],
 				delta_q[2], delta_q[3]);
 		bytes -= 1 + 4 * 4 + 2;
 	}
 	float mag[3];
 	if (XbusMessage_getDataItem(mag, XDI_MagneticField, message)){
-		uprintf( " Magnetic Field: (%.3f, %.3f, %.3f)", mag[0], mag[1], mag[2]);
+		if(MT_DEBUG) uprintf( " Magnetic Field: (%.3f, %.3f, %.3f)", mag[0], mag[1], mag[2]);
 		bytes -= 1 + 3 * 4 + 2;
 	}
 	uint32_t status;
 	if (XbusMessage_getDataItem(&status, XDI_StatusWord, message)){
-		uprintf( " Status:%lX", status);
+		if(MT_DEBUG) uprintf( " Status:%lX", status);
 		bytes -= 1 + 4 + 2;
 	}
-	uprintf(" [%i] bytes unread\n\r", bytes);
+	if(MT_DEBUG) uprintf(" [%i] bytes unread\n\r", bytes);
 }
 /* USER CODE END 4 */
 
