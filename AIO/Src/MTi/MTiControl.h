@@ -24,18 +24,18 @@ typedef enum {
 	MT_failed
 }MT_StatusTypeDef;
 
-void MT_Init();
+MT_StatusTypeDef MT_Init();
 MT_StatusTypeDef MT_Update();
 MT_StatusTypeDef MT_StartOperation(bool to_config);
-void MT_CancelOperation();
+MT_StatusTypeDef MT_CancelOperation();
 MT_StatusTypeDef MT_GoToConfig();
 MT_StatusTypeDef MT_GoToMeasure();
 MT_StatusTypeDef MT_BuildConfig(enum XsDataIdentifier XDI, uint16_t frequency, bool complete);
-MT_StatusTypeDef MT_WaitForAck(enum XsMessageId XMID);
-void MT_SendXbusMessage(struct XbusMessage XbusMessage);
-void MT_ReadNewMessage(uint8_t cancel_previous);
-void MT_HandleMessage(struct XbusMessage* RX_message);
-void MT_ReadContinuously(bool yes);
+uint* MT_GetSuccErr();
+float* MT_GetAcceleration();
+float* MT_GetAngles();
+void MT_FactoryReset();
+void MT_RequestConfig();
 // Callback is called when the HAL_Uart received its wanted amount of bytes
 void MT_UART_RxCpltCallback();
 
