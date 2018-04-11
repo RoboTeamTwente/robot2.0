@@ -13,7 +13,7 @@ void kick_Kick(int percentage)
 	chargeBlock = 1;													// Block charging
 	HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_SET); 			// Kick on
 	__HAL_TIM_CLEAR_IT(&htim13,TIM_IT_UPDATE);							// Clear timer
-	__HAL_TIM_SET_AUTORELOAD(&htim13, percentage);						// Set kick time
+	__HAL_TIM_SET_AUTORELOAD(&htim13, percentage << 2);					// Set kick time
 	HAL_TIM_Base_Start_IT(&htim13);   									// Start timer for kick off
 
 }
@@ -24,7 +24,7 @@ void kick_Chip(int percentage)
 	chargeBlock = 1;													// Block charging
 	HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_SET); 			// Chip on
 	__HAL_TIM_CLEAR_IT(&htim13,TIM_IT_UPDATE);							// Clear timer
-	__HAL_TIM_SET_AUTORELOAD(&htim13, percentage);						// Set kick time
+	__HAL_TIM_SET_AUTORELOAD(&htim13, percentage << 2);					// Set kick time
 	HAL_TIM_Base_Start_IT(&htim13);   									// Start timer for kick off
 
 }

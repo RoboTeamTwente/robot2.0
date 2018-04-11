@@ -144,7 +144,7 @@ int main(void)
   PuttyInterface_Init(&puttystruct);
 //  geneva_Init();
 //  DO_Init();
-//  dribbler_Init();
+  dribbler_Init();
   wheels_Init();
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
