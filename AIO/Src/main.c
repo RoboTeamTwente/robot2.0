@@ -180,7 +180,7 @@ int main(void)
 
 			  //kicker
 			  if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
-				  kick_timer = HAL_GetTick() + 1000;
+				  kick_timer = HAL_GetTick() + 1000U;
 				  if(dataStruct.chipper){
 					  kick_Chip((dataStruct.kickForce*100)/255);
 				  }else{
