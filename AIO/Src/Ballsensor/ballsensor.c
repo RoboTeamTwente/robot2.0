@@ -5,6 +5,8 @@
  *      Author: Gebruiker
  */
 #include "ballsensor.h"
+#include "../kickchip/kickchip.h"
+
 enum zForceStates{
 	zForce_RST,
 	zForce_WaitForDR,
@@ -44,7 +46,8 @@ void parseMessage() {
 	uint16_t y;
 	y = data[14] << 8;
 	y |= data[15];
-	uprintf("BALLSENSOR - x:\t %d \t y:\t %d \n\r", x,y);
+	//uprintf("BALLSENSOR - x:\t %d \t y:\t %d \n\r", x,y);
+	kick_Kick();
 
 	if(!memcmp( data, bootcomplete_response, sizeof(bootcomplete_response))) {
 	  //uprintf("BootComplete response received, enabling device\n\r");

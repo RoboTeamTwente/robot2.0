@@ -10,6 +10,7 @@
 
 #include "i2c.h"
 #include "gpio.h"
+#include "../kickchip/kickchip.h"
 #include "../PuttyInterface/PuttyInterface.h"
 
 PuttyInterfaceTypeDef puttystruct;

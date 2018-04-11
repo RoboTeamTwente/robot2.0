@@ -171,6 +171,7 @@ int main(void)
   while (1)
   {
 	  kick_ChargeUpdate();	//Check if charging should be on.
+	  ballsensorMeasurementLoop();
 	  //kick_Kick(60);
 	  //HAL_Delay(1000);
 	  if(irqRead(&hspi2)){
@@ -187,7 +188,6 @@ int main(void)
 			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 			  wheels_SetOutput(wheels);
 
-	  ballsensorMeasurementLoop();
 			  //dribbler
 			  dribbler_SetSpeed(dataStruct.driblerSpeed);
 
