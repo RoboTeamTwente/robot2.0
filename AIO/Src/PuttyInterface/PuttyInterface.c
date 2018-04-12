@@ -139,7 +139,7 @@ void HexOut(uint8_t data[], uint8_t length){
 
 
 void PuttyInterface_Init(PuttyInterfaceTypeDef* pitd){
-	pitd->huart2_Rx_len = 0;
+	pitd->huart_Rx_len = 0;
 	char * startmessage = "----------PuttyInterface_Init-----------\n\r";
 	uprintf(startmessage);
 #ifdef PUTTY_USART
@@ -148,12 +148,12 @@ void PuttyInterface_Init(PuttyInterfaceTypeDef* pitd){
 }
 
 void PuttyInterface_Update(PuttyInterfaceTypeDef* pitd){
-	if(pitd->huart2_Rx_len){
+	if(pitd->huart_Rx_len){
 #ifdef PUTTY_USB
 		usb_comm = true;
 #endif
-		HandlePcInput((char*)&pitd->small_buf, pitd->huart2_Rx_len, pitd->handle);
-		pitd->huart2_Rx_len = 0;
+		HandlePcInput((char*)&pitd->small_buf, pitd->huart_Rx_len, pitd->handle);
+		pitd->huart_Rx_len = 0;
 #ifdef PUTTY_USART
 		HAL_UART_Receive_IT(&huartx, pitd->rec_buf, 1);
 #endif

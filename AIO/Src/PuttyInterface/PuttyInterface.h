@@ -38,7 +38,7 @@ typedef void (*HandleLine)(char * input);
 typedef struct {
 	uint8_t rec_buf[32];
 	char small_buf[32];
-	uint huart2_Rx_len;
+	uint huart_Rx_len;
 	HandleLine handle;
 }PuttyInterfaceTypeDef;
 
