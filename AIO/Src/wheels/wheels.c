@@ -10,6 +10,8 @@
 #include <math.h>
 #include "tim.h"
 
+#define PWM_CUTOFF 10.0F
+
 void wheels_Init(){
 	HAL_TIM_Base_Start(&htim1);
 	HAL_TIM_Base_Start(&htim3);
@@ -81,6 +83,8 @@ void wheels_SetOutput(float power[4]){
 		}
 		if(power[i] > 100){
 			power[i] = 100;
+		}else if(power[i] < PWM_CUTOFF){
+			power[i] = 0;
 		}
 	}
 		__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 0);
