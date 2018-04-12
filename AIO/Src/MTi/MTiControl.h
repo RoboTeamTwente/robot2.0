@@ -13,8 +13,6 @@
 #include "usart.h"
 #include "stdint.h"
 #include "xbus/xbusparser.h"
-#include "xbus/xbusutility.h"
-#include "xbus/xsdeviceid.h"
 
 #define MAX_RAW_MESSAGE_SIZE 	2055
 #define huartMT huart2

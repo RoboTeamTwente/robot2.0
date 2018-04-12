@@ -7,6 +7,8 @@
 #include "MTiControl.h"
 #include <string.h>
 #include "../PuttyInterface/PuttyInterface.h"
+#include "xbus/xbusutility.h"
+#include "xbus/xsdeviceid.h"
 
 #define MAX_XDI_CONFIGS 64
 #define MT_DEBUG 0
