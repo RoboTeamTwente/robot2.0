@@ -160,6 +160,7 @@ int main(void)
   MT_Init();
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
+  kick_Init();
   dataPacket dataStruct;
   uint LastPackageTime = 0;
   uint printtime = 0;
@@ -355,12 +356,8 @@ void HandleCommand(char* input){
 		kick_Kick(60);
 	}else if(!memcmp(input, "chip" , strlen("chip"))){
 		kick_Chip(60);
-	}else if(!memcmp(input, "charge" , strlen("charge"))){
-		kick_ChargeUpdate();
 	}else if(!memcmp(input, "block" , strlen("block"))){
-		kick_printblock();
-	}else if(!strcmp(input, "encoder")){
-		print_encoder = !print_encoder;
+		kick_Stateprint();
 	}
 
 }
