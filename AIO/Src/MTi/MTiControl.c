@@ -6,9 +6,9 @@
  */
 #include "MTiControl.h"
 #include <string.h>
-#include "../PuttyInterface/PuttyInterface.h"
 #include "xbus/xbusutility.h"
 #include "xbus/xsdeviceid.h"
+#include "../PuttyInterface/PuttyInterface.h"
 
 #define MAX_XDI_CONFIGS 64
 #define MT_DEBUG 0
@@ -37,25 +37,25 @@ static void* XBP_allocateBuffer(size_t bufSize);
 static void XBP_deallocateBuffer(void const* buffer);
 static void SendWakeUpAck();
 static void PrintOutputConfig(struct XbusMessage const* message);
-static void ErrorHandler(struct XbusMessage const* message);
+static inline void ErrorHandler(struct XbusMessage const* message);
 static void PrintMessageData(struct XbusMessage const* message);
 static void SendXbusMessage(struct XbusMessage XbusMessage);
-static void ReadNewMessage(uint8_t cancel_previous);
-static MT_StatusTypeDef WaitForAck(enum XsMessageId XMID);
+static inline void ReadNewMessage(uint8_t cancel_previous);
+static inline MT_StatusTypeDef WaitForAck(enum XsMessageId XMID);
 
 /*
- * -----------------------------public functions
+ * -----------------------------public functions-------------------------------------
  */
 // Initialize controlling the MTi device
 MT_StatusTypeDef MT_Init(){
-	ReceivedMessageStorage = malloc(MAX_RAW_MESSAGE_SIZE);// Reserve memory to store the longest possible message
+	ReceivedMessageStorage = malloc(MAX_RAW_MESSAGE_SIZE);				// Reserve memory to store the longest possible message
 
-	HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 0);// set the MTi in reset state
-	struct XbusParserCallback XBP_callback = {};// Create a structure to contain the callback functions
+	HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 0);			// set the MTi in reset state
+	struct XbusParserCallback XBP_callback = {};						// Create a structure to contain the callback functions
 	XBP_callback.handleMessage = XBP_handleMessage;
 	XBP_callback.allocateBuffer = XBP_allocateBuffer;
 	XBP_callback.deallocateBuffer = XBP_deallocateBuffer;
-	XBParser = XbusParser_create(&XBP_callback);// Create an XBus parser
+	XBParser = XbusParser_create(&XBP_callback);						// Create an XBus parser
 	if(XBParser == NULL){
 		return MT_failed;
 	}
@@ -67,14 +67,20 @@ MT_StatusTypeDef MT_Update(){
 		RxCpltCallback_flag = 0;
 		if(cplt_mess_stored_flag){
 			cplt_mess_stored_flag = 0;
-			if(ReceivedMessageStorage->mid == XMID_Error){
+			switch(ReceivedMessageStorage->mid){
+			case XMID_Error:
 				ErrorHandler(ReceivedMessageStorage);
 				MT_Data_succerr[1]++;
-			}else if(ReceivedMessageStorage->mid == XMID_MTData2){
+				break;
+			case XMID_MTData2:
 				MT_Data_succerr[0]++;
 				PrintMessageData(ReceivedMessageStorage);
-			}else if(ReceivedMessageStorage->mid == XMID_ReqOutputConfigurationAck){
+				break;
+			case XMID_ReqOutputConfigurationAck:
 				PrintOutputConfig(ReceivedMessageStorage);
+				break;
+			default:
+				break;
 			}
 			TheAlligator(XBParser);
 			ReadNewMessage(0);
@@ -199,24 +205,6 @@ MT_StatusTypeDef MT_BuildConfig(enum XsDataIdentifier XDI, uint16_t frequency, b
 	}
 	return MT_succes;
 }
-
-// Wait till a certain message type is received from MTi over usart
-MT_StatusTypeDef WaitForAck(enum XsMessageId XMID){
-	uint timeout = 0;
-	bool timedout = false;
-	ReadNewMessage(0);
-	timeout = HAL_GetTick();
-	while(ReceivedMessageStorage->mid != XMID && (timedout = ((HAL_GetTick() - timeout) < 1000U))){
-		MT_Update();
-	}
-	if(timedout){
-		return MT_succes;
-	}else{
-		return MT_failed;
-	}
-}
-
-
 
 uint* MT_GetSuccErr(){
 	return MT_Data_succerr;
@@ -354,7 +342,7 @@ static void PrintOutputConfig(struct XbusMessage const* message){
 
 	}
 }
-static void ErrorHandler(struct XbusMessage const* message){
+static inline void ErrorHandler(struct XbusMessage const* message){
 	if (!message)
 		return;
 	uprintf("ERROR: %02x\n\r", *(uint8_t *)(message->data));
@@ -427,9 +415,24 @@ static void PrintMessageData(struct XbusMessage const* message){
 }
 // Start reading a new message
 // if cancel_previous, the current running receive operation is cancelled
-static void ReadNewMessage(uint8_t cancel_previous){
+static inline void ReadNewMessage(uint8_t cancel_previous){
 	if(cancel_previous){
 		HAL_UART_AbortReceive(&huartMT);
 	}
 	HAL_UART_Receive_IT(&huartMT, (uint8_t *)aRxBuffer, 5);
+}
+// Wait till a certain message type is received from MTi over usart
+static inline MT_StatusTypeDef WaitForAck(enum XsMessageId XMID){
+	uint timeout = 0;
+	bool timedout = false;
+	ReadNewMessage(0);
+	timeout = HAL_GetTick();
+	while(ReceivedMessageStorage->mid != XMID && (timedout = ((HAL_GetTick() - timeout) < 1000U))){
+		MT_Update();
+	}
+	if(timedout){
+		return MT_succes;
+	}else{
+		return MT_failed;
+	}
 }
