@@ -148,6 +148,7 @@ int main(void)
   wheels_Init();
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
+  kick_Init();
   dataPacket dataStruct;
   uint LastPackageTime = 0;
   uint printtime = 0;

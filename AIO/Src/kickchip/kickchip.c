@@ -15,6 +15,7 @@ void kick_Init(){
 	kick_state = Charging;
 	HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_RESET);		// Kick off
 	HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_RESET);		// Chip off
+	HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);		// Charging on
 	TicToc = 0;
 	Callback_time = 0;
 	kick_Callback();
@@ -87,6 +88,7 @@ void kick_Callback()
 			{
 				HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET);// Turn charging off
 				kick_state = Ready;												// Go to ready state
+				uprintf("Hoi");
 			}
 			Callback_time = 100*Timestep;										// Set timer to 100ms
 		}
