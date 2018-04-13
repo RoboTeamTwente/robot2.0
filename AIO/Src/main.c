@@ -158,7 +158,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  kick_ChargeUpdate();	//Check if charging should be on.
 	  //kick_Kick(60);
 	  //HAL_Delay(1000);
 	  if(irqRead(&hspi2)){
@@ -293,10 +292,8 @@ void HandleCommand(char* input){
 		kick_Kick(60);
 	}else if(!memcmp(input, "chip" , strlen("chip"))){
 		kick_Chip(60);
-	}else if(!memcmp(input, "charge" , strlen("charge"))){
-		kick_ChargeUpdate();
 	}else if(!memcmp(input, "block" , strlen("block"))){
-		kick_printblock();
+		kick_Stateprint();
 	}
 
 }
