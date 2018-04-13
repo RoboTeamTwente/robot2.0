@@ -46,6 +46,23 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *I2cHandle)
 	zForceState = zForce_WaitForDR;
 }
 
+void I2CTx(uint8_t tosend[]) {
+    while(HAL_OK != (error = HAL_I2C_Master_Transmit_IT(&hi2c1, ballsensor_i2caddr, tosend, sizeof(tosend)))){// in case of error; put the device in reset
+  	  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
+        uprintf("BALLSENSOR - i2c transmit failed with error [%d]!\n\rzForce stopped\n\r", error);
+        zForceState = zForce_RST;
+    }
+}
+
+void I2CRx() {
+	while(HAL_OK != (error = HAL_I2C_Master_Receive_IT(&hi2c1, ballsensor_i2caddr, data, next_message_length))){
+		HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
+		uprintf("BALLSENSOR - i2c read failed with error [%d]!\n\rzForce stopped\n\r", error);
+
+		zForceState = zForce_RST;
+	}
+}
+
 void printRawData(uint8_t data[]) {
     uprintf("data = [");
     for(uint i = 0; i < next_message_length; i++){
@@ -125,12 +142,7 @@ void ballsensorMeasurementLoop()
 			  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 1);
 			  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)){
 				  //uprintf("data ready\n\r");
-				  while(HAL_OK != (error = HAL_I2C_Master_Receive_IT(&hi2c1, ballsensor_i2caddr, data, next_message_length))){
-					  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
-					  uprintf("BALLSENSOR WaitforDR - i2c read failed with error [%d]!\n\rzForce stopped\n\r", error);
-
-					  zForceState = zForce_RST;
-				  }
+				  I2CRx();
 			  }
 			  break;
 		  case zForce_DecodeMessage:// message is received and needs to be decoded
@@ -140,29 +152,15 @@ void ballsensorMeasurementLoop()
 		  			  break;
 		  case zForce_ReadMessage:// when message length is known it should be received
 			  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)){
-
-				  while(HAL_OK != (error = HAL_I2C_Master_Receive_IT(&hi2c1, ballsensor_i2caddr, data, next_message_length))){// in case of error; put the device in reset
-					  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
-					  uprintf("BALLSENSOR ReadMessage - i2c read failed with error [%d]!\n\rzForce stopped\n\r", error);
-				  }
+				  I2CRx();
 			  }
 			  break;
 		  case zForce_EnableDevice:
-			  while(HAL_OK != (error = HAL_I2C_Master_Transmit_IT(&hi2c1, ballsensor_i2caddr, enable_command, 13))){// in case of error; put the device in reset
-			  		HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
-			  		uprintf("BALLSENSOR - i2c transmit failed with error [%d]!\n\rzForce stopped\n\r", error);
-			  		zForceState = zForce_RST;
-			  }
-
+			  	  I2CTx(enable_command);
 			  break;
 		  case zForce_setFreq:
 		          uprintf("Setting frequency\n\r");
-		          while(HAL_OK != (error = HAL_I2C_Master_Transmit_IT(&hi2c1, ballsensor_i2caddr, set_freq_command, sizeof(set_freq_command)))){// in case of error; put the device in reset
-		        	  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
-		              uprintf("BALLSENSOR - i2c transmit failed with error [%d]!\n\rzForce stopped\n\r", error);
-		              zForceState = zForce_RST;
-		          }
-
+		          I2CTx(set_freq_command);
 		      break;
 			  break;
 		  }
