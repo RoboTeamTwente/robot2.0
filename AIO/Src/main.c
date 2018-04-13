@@ -171,7 +171,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  kick_ChargeUpdate();	//Check if charging should be on.
 	  ballsensorMeasurementLoop();
 	  //kick_Kick(60);
 	  //HAL_Delay(1000);
@@ -223,7 +222,7 @@ int main(void)
 		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 		  //uprintf("MT status suc/err = [%u/%u]\n\r", MT_Data_succes, MT_Data_failed);
-		  uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
+		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
   /* USER CODE END WHILE */
 
