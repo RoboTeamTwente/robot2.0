@@ -10,6 +10,8 @@
 #include <math.h>
 #include "tim.h"
 
+#define PWM_CUTOFF 10.0F
+
 void wheels_Init(){
 	HAL_TIM_Base_Start(&htim1);
 	HAL_TIM_Base_Start(&htim3);
@@ -24,28 +26,45 @@ void wheels_Init(){
 #define ROBOT_RADIUS 0.0775F
 #define WHEEL_RADIUS 0.0275F
 void calcMotorSpeed (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]){
-	static float cos_a0 = cos(60.0F  * 3.1415F/180.0F); //240
-	static float cos_a1 = cos(120.0F * 3.1415F/180.0F); //300
-	static float cos_a2 = cos(240.0F * 3.1415F/180.0F); //60
-	static float cos_a3 = cos(300.0F * 3.1415F/180.0F); //120
-	static float sin_a0 = sin(60.0F  * 3.1415F/180.0F); //240
-	static float sin_a1 = sin(120.0F * 3.1415F/180.0F); //300
-	static float sin_a2 = sin(240.0F * 3.1415F/180.0F); //60
-	static float sin_a3 = sin(300.0F * 3.1415F/180.0F); //120
-	float xSpeed; //positive x = moving forward
-	float ySpeed; //positive y = moving to the right
-	float angularComponent;
+//	static float cos_a0 = cos(60.0F  * 3.1415F/180.0F); //240
+//	static float cos_a1 = cos(120.0F * 3.1415F/180.0F); //300
+//	static float cos_a2 = cos(240.0F * 3.1415F/180.0F); //60
+//	static float cos_a3 = cos(300.0F * 3.1415F/180.0F); //120
+//	static float sin_a0 = sin(60.0F  * 3.1415F/180.0F); //240
+//	static float sin_a1 = sin(120.0F * 3.1415F/180.0F); //300
+//	static float sin_a2 = sin(240.0F * 3.1415F/180.0F); //60
+//	static float sin_a3 = sin(300.0F * 3.1415F/180.0F); //120
+//	float xSpeed; //positive x = moving forward
+//	float ySpeed; //positive y = moving to the right
+//	float angularComponent;
+//
+//	xSpeed = -cos(direction) * magnitude;
+//	ySpeed = -sin(direction) * magnitude;
+//
+//
+//	angularComponent = rotSign * ROBOT_RADIUS * wRadPerSec;
+//
+//	power[wheels_RF] = (cos_a0 * ySpeed * 1.4 + sin_a0 * xSpeed + angularComponent) / WHEEL_RADIUS;
+//	power[wheels_RB] = (cos_a1 * ySpeed * 1.4 + sin_a1 * xSpeed + angularComponent) / WHEEL_RADIUS;
+//	power[wheels_LB] = (cos_a2 * ySpeed * 1.4 + sin_a2 * xSpeed + angularComponent) / WHEEL_RADIUS;
+//	power[wheels_LF] = (cos_a3 * ySpeed * 1.4 + sin_a3 * xSpeed + angularComponent) / WHEEL_RADIUS;
 
-	xSpeed = -cos(direction) * magnitude;
-	ySpeed = -sin(direction) * magnitude;
+	// Jelle's variant, using forces instead of velocities (for testing)
+	static float cos_a0 = cosf(60.0F  * 3.1415F/180.0F);
+	static float sin_a0 = sinf(60.0F  * 3.1415F/180.0F);
+	float xForce; //positive x = moving forward
+	float yForce; //positive y = moving to the right
+	float robotTorque;
 
+	xForce = cosf(direction) * magnitude * 1537.7;
+	yForce = sinf(direction) * magnitude * 1537.7;
+	robotTorque = rotSign * wRadPerSec * 31.5;
 
-	angularComponent = rotSign * ROBOT_RADIUS * wRadPerSec;
+	power[wheels_RF] = ( xForce/(4*sin_a0) + yForce/(4*cos_a0) - robotTorque/(4*ROBOT_RADIUS) ) * WHEEL_RADIUS;
+	power[wheels_RB] = ( xForce/(4*sin_a0) - yForce/(4*cos_a0) - robotTorque/(4*ROBOT_RADIUS) ) * WHEEL_RADIUS;
+	power[wheels_LB] = ( -xForce/(4*sin_a0) - yForce/(4*cos_a0) - robotTorque/(4*ROBOT_RADIUS) ) * WHEEL_RADIUS;
+	power[wheels_LF] = ( -xForce/(4*sin_a0) + yForce/(4*cos_a0) - robotTorque/(4*ROBOT_RADIUS) ) * WHEEL_RADIUS;
 
-	power[wheels_RF] = (cos_a0 * ySpeed * 1.4 + sin_a0 * xSpeed + angularComponent) / WHEEL_RADIUS;
-	power[wheels_RB] = (cos_a1 * ySpeed * 1.4 + sin_a1 * xSpeed + angularComponent) / WHEEL_RADIUS;
-	power[wheels_LB] = (cos_a2 * ySpeed * 1.4 + sin_a2 * xSpeed + angularComponent) / WHEEL_RADIUS;
-	power[wheels_LF] = (cos_a3 * ySpeed * 1.4 + sin_a3 * xSpeed + angularComponent) / WHEEL_RADIUS;
 }
 
 void wheels_SetOutput(float power[4]){
@@ -54,14 +73,18 @@ void wheels_SetOutput(float power[4]){
 //	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, 0);
 //	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
 
-	uint8_t reverse[4] = {0};
+	static uint8_t reverse[4] = {0};
 	for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-		if(power[i] < 0 ){
+		if(power[i] < -0.1 ){
 			power[i] = -power[i];
 			reverse[i] = 1;
+		}else if(power[i] > 0.1 ){
+			reverse[i] = 0;
 		}
 		if(power[i] > 100){
 			power[i] = 100;
+		}else if(power[i] < PWM_CUTOFF){
+			power[i] = 0;
 		}
 	}
 		__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 0);
