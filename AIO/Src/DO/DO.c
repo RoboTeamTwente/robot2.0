@@ -6,9 +6,11 @@
  */
 
 #include "DO.h"
+#include "tim.h"
 
 DO_States DO_Init(){
-	return DO_error;
+	HAL_TIM_Base_Start_IT(&htim7);
+	return DO_succes;
 }
 
 DO_States DO_Control(){

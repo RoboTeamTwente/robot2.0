@@ -64,17 +64,13 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 #define STOP_AFTER 250 //ms
-#define MT_DEBUG 0
 PuttyInterfaceTypeDef puttystruct;
 int8_t address = -1;
 uint8_t freqChannel = 78;
 bool battery_empty = false;
 bool user_control = false;
 bool print_encoder = false;
-uint MT_Data_succes = 0;
-uint MT_Data_failed = 0;
-float angles[3];
-float acc[3];
+float velocity[3] = {0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,10 +87,6 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds);
 
 void dribbler_SetSpeed(uint8_t percentage);
 void dribbler_Init();
-
-void MTiPrintOutputConfig(struct XbusMessage const* message);
-void MTiErrorHandler(struct XbusMessage const* message);
-void printMessageData(struct XbusMessage const* message);
 
 /* USER CODE END PFP */
 
@@ -153,7 +145,7 @@ int main(void)
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
 //  geneva_Init();
-//  DO_Init();
+  DO_Init();
   dribbler_Init();
   ballsensorInit();
   wheels_Init();
@@ -184,9 +176,9 @@ int main(void)
 			  if(dataStruct.rotationDirection){
 				  rotSign = -1;
 			  }
-			  uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
+			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
 			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
-			  uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
+			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 			  wheels_SetOutput(wheels);
 
 			  //dribbler
@@ -311,37 +303,21 @@ void HandleCommand(char* input){
 		MT_GoToConfig();
 	}else if(!strcmp(input, "measure")){
 		MT_GoToMeasure();
-	}else if(strcmp(input, "reqdata") == 0){
-		TextOut("Sending request data message.\n\r");
-		struct XbusMessage mess = { .mid = XMID_ReqData,
-									.length = 0,
-									.data = NULL};
-		MT_SendXbusMessage(mess);
-		MT_ReadNewMessage(0);
 	}else if(strcmp(input, "factoryreset") == 0){
 		TextOut("Resetting the configuration.\n\r");
-		struct XbusMessage mess = { .mid = XMID_RestoreFactoryDef,
-									.length = 0,
-									.data = NULL};
-		MT_SendXbusMessage(mess);
+		MT_FactoryReset();
 	}else if(memcmp(input, "setconfig", strlen("setconfig")) == 0){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
-		MT_BuildConfig(XDI_Acceleration, 100, false);
+		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
 	}else if(strcmp(input, "reqconfig") == 0){
 		TextOut("requesting output configuration mode\n\r");
-		struct XbusMessage mess = { .mid = XMID_ReqOutputConfiguration,
-									.data = NULL,
-									.length = 0};
-		MT_SendXbusMessage(mess);
-		MT_ReadNewMessage(0);
+		MT_RequestConfig();
 	}else if(!strcmp(input, "reset")){
 		uprintf("resetting the MTi.\n\r");
 		MT_CancelOperation();
-	}
-
-	else if(!strcmp(input, "address")){
-		uprintf("address = [%d]\n\r", ReadAddress());
+	}else if(!strcmp(input, "address")){
+		uprintf("address = [%d]\n\r", address);
 	}else if(!strcmp(input, "example2")){
 		uprintf("stop!\n\r");
 	}else if(!strcmp(input, "geneva")){
@@ -405,7 +381,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
-		MT_Update();
+		float * accptr;
+		accptr = MT_GetAcceleration();
+		velocity[0] += *accptr++ / 100;
+		velocity[1] += *accptr++ / 100;
+		velocity[2] += *accptr   / 100;
 		DO_Control();
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
@@ -419,180 +399,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		// calibration  of the geneva drive finished
 		geneva_SensorCallback();
 	}
-}
-
-void MT_HandleMessage(struct XbusMessage* RX_message){
-	if(RX_message->mid == XMID_Error){
-		MTiErrorHandler(RX_message);
-		MT_Data_failed++;
-	}else if(RX_message->mid == XMID_MTData2){
-		MT_Data_succes++;
-		printMessageData(RX_message);
-	}else if(RX_message->mid == XMID_ReqOutputConfigurationAck){
-		MTiPrintOutputConfig(RX_message);
-	}
-}
-void MTiPrintOutputConfig(struct XbusMessage const* message){
-	if (!message)
-		return;
-	uprintf("MTiPrintOutputConfig:\n\r");
-
-	uint8_t* rawptr = message->data;
-	uint16_t fptr[message->length];
-	uprintf( "len = [%u]", message->length);
-
-	for(uint16_t * i = fptr; i < fptr + (message->length)/2; i++){
-		rawptr = XbusUtility_readU16(i, rawptr);
-		uprintf( "[%04x]", *i);
-
-	}
-	uprintf( "\n\r");
-
-
-	uint16_t freq;
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Temperature, message))){
-		uprintf("XDI_Temperature:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_UtcTime, message))){
-		uprintf("XDI_UtcTime:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_PacketCounter, message))){
-		uprintf("XDI_PacketCounter:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeFine, message))){
-		uprintf("XDI_SampleTimeFine:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeCoarse, message))){
-		uprintf("XDI_SampleTimeCoarse:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Quaternion, message))){
-		uprintf("XDI_Quaternion:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RotationMatrix, message))){
-		uprintf("XDI_RotationMatrix:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_EulerAngles, message))){
-		uprintf("XDI_EulerAngles:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaV, message))){
-		uprintf("XDI_DeltaV:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Acceleration, message))){
-		uprintf("XDI_Acceleration:%x\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_FreeAcceleration, message))){
-			uprintf("XDI_FreeAcceleration:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_AccelerationHR, message))){
-		uprintf("XDI_AccelerationHR:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurn, message))){
-		uprintf("XDI_RateOfTurn:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaQ, message))){
-		uprintf("XDI_DeltaQ:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurnHR, message))){
-		uprintf("XDI_RateOfTurnHR:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_MagneticField, message))){
-		uprintf("XDI_MagneticField:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusByte, message))){
-		uprintf("XDI_StatusByte:%u\n\r", freq);
-
-	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusWord, message))){
-		uprintf("XDI_StatusWord:%u\n\r", freq);
-
-	}
-}
-void MTiErrorHandler(struct XbusMessage const* message){
-	if (!message)
-		return;
-	if(MT_DEBUG) uprintf("ERROR: %02x\n\r", *(uint8_t *)(message->data));
-
-}
-
-void printMessageData(struct XbusMessage const* message){
-	int bytes = message->length;
-	if (!message)
-		return;
-	if(MT_DEBUG) uprintf("MT:");
-
-	uint16_t counter;
-	if (XbusMessage_getDataItem(&counter, XDI_PacketCounter, message)){
-		if(MT_DEBUG) uprintf( " Packet cnt: %5d", counter);
-		bytes -= 1 + 2 + 2;
-	}
-	uint32_t SampleTimeFine;
-	if (XbusMessage_getDataItem(&SampleTimeFine, XDI_SampleTimeFine, message)){
-		if(MT_DEBUG) uprintf( " SampleTimeFine: %lu", SampleTimeFine);
-		bytes -= 1 + 2 + 4;
-	}
-	float ori[4];
-	if (XbusMessage_getDataItem(ori, XDI_Quaternion, message)){
-		if(MT_DEBUG) uprintf( " Orientation: (%.3f, %.3f, %.3f, %.3f)", ori[0], ori[1],
-				ori[2], ori[3]);
-		bytes -= 1 + 4 * 4 + 2;
-
-	}
-	if (XbusMessage_getDataItem(angles, XDI_EulerAngles, message)){
-		if(MT_DEBUG) uprintf( " EulerAngles: (%.3f, %.3f, %.3f)", angles[0], angles[1], angles[2]);
-		bytes -= 1 + 3 * 4 + 2;
-
-	}
-	float delta_v[3];
-	if (XbusMessage_getDataItem(delta_v, XDI_DeltaV, message)){
-		if(MT_DEBUG) uprintf( " deltaV: (%.3f, %.3f, %.3f)", delta_v[0], delta_v[1], delta_v[2]);
-		bytes -= 1 + 3 * 4 + 2;
-	}
-	if (XbusMessage_getDataItem(acc, XDI_Acceleration, message)){
-		if(MT_DEBUG) uprintf( " Acceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
-		bytes -= 1 + 2 * 4 + 2;
-	}
-	if (XbusMessage_getDataItem(acc, XDI_FreeAcceleration, message)){
-		if(MT_DEBUG) uprintf( " FreeAcceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
-		bytes -= 1 + 3 * 4 + 2;
-	}
-	float gyr[3];
-	if (XbusMessage_getDataItem(gyr, XDI_RateOfTurn, message)){
-		if(MT_DEBUG) uprintf( " Rate Of Turn: (%.3f, %.3f, %.3f)", gyr[0], gyr[1], gyr[2]);
-		bytes -= 1 + 3 * 4 + 2;
-	}
-	float delta_q[4];
-	if (XbusMessage_getDataItem(delta_q, XDI_Quaternion, message)){
-		if(MT_DEBUG) uprintf( " deltaQ: (%.3f, %.3f, %.3f, %.3f)", delta_q[0], delta_q[1],
-				delta_q[2], delta_q[3]);
-		bytes -= 1 + 4 * 4 + 2;
-	}
-	float mag[3];
-	if (XbusMessage_getDataItem(mag, XDI_MagneticField, message)){
-		if(MT_DEBUG) uprintf( " Magnetic Field: (%.3f, %.3f, %.3f)", mag[0], mag[1], mag[2]);
-		bytes -= 1 + 3 * 4 + 2;
-	}
-	uint32_t status;
-	if (XbusMessage_getDataItem(&status, XDI_StatusWord, message)){
-		if(MT_DEBUG) uprintf( " Status:%lX", status);
-		bytes -= 1 + 4 + 2;
-	}
-	if(MT_DEBUG) uprintf(" [%i] bytes unread\n\r", bytes);
 }
 /* USER CODE END 4 */
 
