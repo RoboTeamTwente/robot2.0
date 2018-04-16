@@ -570,6 +570,8 @@ void HAL_TIM_Encoder_MspInit(TIM_HandleTypeDef* tim_encoderHandle)
     /* TIM8 interrupt Init */
     HAL_NVIC_SetPriority(TIM8_UP_TIM13_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(TIM8_UP_TIM13_IRQn);
+    HAL_NVIC_SetPriority(TIM8_TRG_COM_TIM14_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(TIM8_TRG_COM_TIM14_IRQn);
   /* USER CODE BEGIN TIM8_MspInit 1 */
 
   /* USER CODE END TIM8_MspInit 1 */
@@ -873,6 +875,7 @@ void HAL_TIM_Encoder_MspDeInit(TIM_HandleTypeDef* tim_encoderHandle)
     /* HAL_NVIC_DisableIRQ(TIM8_UP_TIM13_IRQn); */
   /* USER CODE END TIM8:TIM8_UP_TIM13_IRQn disable */
 
+    HAL_NVIC_DisableIRQ(TIM8_TRG_COM_TIM14_IRQn);
   /* USER CODE BEGIN TIM8_MspDeInit 1 */
 
   /* USER CODE END TIM8_MspDeInit 1 */

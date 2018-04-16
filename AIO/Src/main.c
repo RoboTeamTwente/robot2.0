@@ -166,10 +166,10 @@ int main(void)
 	  ballsensorMeasurementLoop();
 	  //kick_Kick(60);
 	  //HAL_Delay(1000);
-	  if(irqRead(&hspi2)){
+	  if(irqRead(&hspi2) || 1){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
-		  if(dataStruct.robotID == address){
+		  if(dataStruct.robotID == address || 1){
 			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 			  float wheels[4];
 			  int rotSign = 1;
@@ -178,9 +178,17 @@ int main(void)
 			  }
 			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
 			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
+			  if(HAL_GetTick() % 4000 < 2000){
+				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
+					  wheels[wheel] = 30;
+				  }
+			  }else{
+				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
+					  wheels[wheel] = -30;
+				  }
+			  }
 			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 			  wheels_SetOutput(wheels);
-
 			  //dribbler
 			  dribbler_SetSpeed(dataStruct.driblerSpeed);
 
@@ -214,7 +222,7 @@ int main(void)
 		  printtime = HAL_GetTick();
 		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  //uprintf("MT status suc/err = [%u/%u]\n\r", MT_Data_succes, MT_Data_failed);
+		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
   /* USER CODE END WHILE */

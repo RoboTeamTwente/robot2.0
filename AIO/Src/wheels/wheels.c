@@ -8,7 +8,9 @@
 #include "wheels.h"
 
 #include <math.h>
+#include <stdbool.h>
 #include "tim.h"
+#include "../PuttyInterface/PuttyInterface.h"
 
 #define PWM_CUTOFF 10.0F
 
@@ -73,7 +75,10 @@ void wheels_SetOutput(float power[4]){
 //	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, 0);
 //	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
 
-	static uint8_t reverse[4] = {0};
+	static bool reverse[4] = {0};
+	bool prev_reverse[4];
+	memcpy(prev_reverse, reverse, 4);
+	bool delay = false;
 	for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
 		if(power[i] < -0.1 ){
 			power[i] = -power[i];
@@ -87,24 +92,26 @@ void wheels_SetOutput(float power[4]){
 			power[i] = 0;
 		}
 	}
-		__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 0);
-		__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 0);
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, 0);
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
+	delay = memcmp(prev_reverse, reverse, 4);
 
-		HAL_Delay(1);
+	__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 0);
+	__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 0);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, 0);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
 
-		HAL_GPIO_WritePin(FR_RF_GPIO_Port,FR_RF_Pin, reverse[wheels_RF]);
-		HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, reverse[wheels_RB]);
-		HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, reverse[wheels_LB]);
-		HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, reverse[wheels_LF]);
+	if(delay)	HAL_Delay(1);
 
-		HAL_Delay(1);
+	HAL_GPIO_WritePin(FR_RF_GPIO_Port,FR_RF_Pin, reverse[wheels_RF]);
+	HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, reverse[wheels_RB]);
+	HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, reverse[wheels_LB]);
+	HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, reverse[wheels_LF]);
 
-		__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, power[wheels_RF] / 100 * MAX_PWM);
-		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, power[wheels_RB] / 100 * MAX_PWM);
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, power[wheels_LB] / 100 * MAX_PWM);
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, power[wheels_LF] / 100 * MAX_PWM);
+	if(delay)	HAL_Delay(0);
+
+	__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, power[wheels_RF] / 100 * MAX_PWM);
+	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, power[wheels_RB] / 100 * MAX_PWM);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, power[wheels_LB] / 100 * MAX_PWM);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, power[wheels_LF] / 100 * MAX_PWM);
 }
 
 int16_t wheels_GetEncoder(wheels_handles wheel){
