@@ -25,7 +25,17 @@ PuttyInterfaceTypeDef puttystruct;
 uint8_t enable_command[13];
 uint8_t enable_response[11];
 uint8_t bootcomplete_response[19];
+uint8_t config_command[30];
+uint8_t set_freq_command[17];
+uint8_t set_freq_response[10];
+uint8_t measurement_rx[5];
 
+void I2CTx(uint8_t tosend[]);
+void I2CRx();
+
+void printRawData(uint8_t data[]);
+void printPosition(uint8_t data[]);
+void ballHandler(uint16_t x, uint16_t y);
 void parseMessage();
 void ballsensorInit();
 void ballsensorMeasurementLoop();
