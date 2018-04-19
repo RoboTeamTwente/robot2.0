@@ -3,9 +3,9 @@
 #define __kickchip_H
 
 typedef enum{
-	Ready,
-	Kicking,
-	Charging
+	kick_Ready,
+	kick_Kicking,
+	kick_Charging
 }kick_states;
 
 void kick_Init();

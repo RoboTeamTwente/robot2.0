@@ -12,10 +12,10 @@ int Callback_time;
 
 // Init variables and call kick_Callback(), which will keep calling itself.
 void kick_Init(){
-	kick_state = Charging;
+	kick_state = kick_Charging;
 	HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_RESET);		// Kick off
 	HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_RESET);		// Chip off
-	HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);		// Charging on
+	HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);		// kick_Charging on
 	TicToc = 0;
 	Callback_time = 0;
 	kick_Callback();
@@ -23,17 +23,17 @@ void kick_Init(){
 
 
 /*
- *  Initiates the kicking of the robot at a percentage of the max power.
- *  Will only do this if in state Ready.
+ *  Initiates the kick_Kicking of the robot at a percentage of the max power.
+ *  Will only do this if in state kick_Ready.
  *  Sets a timer for kick_Callback() to stop the kick. The power of the kick depends on the time interval between this function and the callback.
  */
 void kick_Kick(int percentage)
 {
-	if(kick_state == Ready)
+	if(kick_state == kick_Ready)
 	{
-		kick_state = Kicking;												// Block charging
-		HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET); 	// Disable charging
-		uprintf("Kicking\n\r");
+		kick_state = kick_Kicking;												// Block kick_Charging
+		HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET); 	// Disable kick_Charging
+		uprintf("kick_Kicking\n\r");
 		HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_SET); 			// Kick on
 
 		HAL_TIM_Base_Stop(&htim13);											// Stop timer
@@ -46,16 +46,16 @@ void kick_Kick(int percentage)
 
 /*
  * Initiates the chipping of the robot at a percentage of the max power.
- *  Will only do this if in state Ready.
+ *  Will only do this if in state kick_Ready.
  *  Sets a timer for kick_Callback() to stop the chip.
  */
 void kick_Chip(int percentage)
 {
-	if(kick_state == Ready)
+	if(kick_state == kick_Ready)
 	{
-		HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET); 	// Disable charging
-		kick_state = Kicking;												// Block charging
-		uprintf("Kicking\n\r");
+		HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET); 	// Disable kick_Charging
+		kick_state = kick_Kicking;												// Block kick_Charging
+		uprintf("kick_Kicking\n\r");
 		HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_SET); 			// Chip on
 
 		HAL_TIM_Base_Stop(&htim13);											// Stop timer
@@ -68,7 +68,7 @@ void kick_Chip(int percentage)
 
 
 /*
- * Handles all the callbacks for kicking, chipping and charging
+ * Handles all the callbacks for kick_Kicking, chipping and kick_Charging
  * This function keeps setting a new timer to call itself.
  */
 void kick_Callback()
@@ -76,31 +76,30 @@ void kick_Callback()
 		HAL_TIM_Base_Stop(&htim13);											// Stop the timer
 		__HAL_TIM_SET_COUNTER(&htim13, 0);
 
-		if(kick_state == Kicking)
+		if(kick_state == kick_Kicking)
 		{
 			HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_RESET);		// Kick off
 			HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_RESET);		// Chip off
-			kick_state = Charging;
-			HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);		// Turn charging on
+			kick_state = kick_Charging;
+			HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);		// Turn kick_Charging on
 			Callback_time = 100*Timestep;										// Set timer to 100ms
 		}
-		else if(kick_state == Charging)
+		else if(kick_state == kick_Charging)
 		{
-			if(!HAL_GPIO_ReadPin(Charge_done_GPIO_Port, Charge_done_Pin))		// If charging is done
+			if(!HAL_GPIO_ReadPin(Charge_done_GPIO_Port, Charge_done_Pin))		// If kick_Charging is done
 			{
-				HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET);// Turn charging off
-				kick_state = Ready;												// Go to ready state
-				uprintf("Hoi");
+				HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET);// Turn kick_Charging off
+				kick_state = kick_Ready;												// Go to kick_Ready state
 			}
 			Callback_time = 100*Timestep;										// Set timer to 100ms
 		}
-		else if(kick_state == Ready)
+		else if(kick_state == kick_Ready)
 		{
 			if(TicToc == 0){
-				HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET);	// Turn charging off
+				HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET);	// Turn kick_Charging off
 				Callback_time = 100*Timestep;										// Set timer to 100ms
 			}else{
-				HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);		// Turn charging on
+				HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_SET);		// Turn kick_Charging on
 				Callback_time = 900*Timestep;										// Set timer to 900ms
 			}
 			TicToc = !TicToc;

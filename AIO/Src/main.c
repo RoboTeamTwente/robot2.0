@@ -70,6 +70,11 @@ uint8_t freqChannel = 78;
 bool battery_empty = false;
 bool user_control = false;
 bool print_encoder = false;
+
+bool wheels_testing = false;
+float wheels_testing_power = 30;
+bool keyboard_control = false;
+
 float velocity[3] = {0};
 /* USER CODE END PV */
 
@@ -140,6 +145,7 @@ int main(void)
   MX_TIM7_Init();
   MX_TIM5_Init();
   MX_TIM13_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
   address = ReadAddress();
   puttystruct.handle = HandleCommand;
@@ -147,7 +153,7 @@ int main(void)
 //  geneva_Init();
   DO_Init();
   dribbler_Init();
-  ballsensorInit();
+  //ballsensorInit();
   wheels_Init();
   MT_Init();
   nssHigh(&hspi2);
@@ -163,13 +169,27 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  ballsensorMeasurementLoop();
-	  //kick_Kick(60);
-	  //HAL_Delay(1000);
-	  if(irqRead(&hspi2) || 1){
+	  //ballsensorMeasurementLoop();
+	  if(wheels_testing){
+		  if(keyboard_control){
+
+		  }else{
+			  float wheels[4];
+			  if(HAL_GetTick() % 4000 < 2000){
+				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
+					  wheels[wheel] = wheels_testing_power;
+				  }
+			  }else{
+				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
+					  wheels[wheel] = -wheels_testing_power;
+				  }
+			  }
+			  wheels_SetOutput(wheels);
+		  }
+	  }else if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
-		  if(dataStruct.robotID == address || 1){
+		  if(dataStruct.robotID == address){
 			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 			  float wheels[4];
 			  int rotSign = 1;
@@ -178,15 +198,6 @@ int main(void)
 			  }
 			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
 			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
-			  if(HAL_GetTick() % 4000 < 2000){
-				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-					  wheels[wheel] = 30;
-				  }
-			  }else{
-				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-					  wheels[wheel] = -30;
-				  }
-			  }
 			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 			  wheels_SetOutput(wheels);
 			  //dribbler
@@ -201,6 +212,8 @@ int main(void)
 					  kick_Kick((dataStruct.kickForce*100)/255);
 				  }
 			  }
+			  //geneva
+
 		  }
 
 	  }else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
@@ -209,15 +222,13 @@ int main(void)
 	  }
 	  if(!HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
 		  // BATTERY IS ALMOST EMPTY!!!!!
-		  battery_empty = true;
-		  dribbler_SetSpeed(0);
+//		  battery_empty = true;
+//		  dribbler_SetSpeed(0);
 	  }
 	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
 		  // handle the message
 	  }
-	  geneva_Update();
-	  //if(huartMT.hdmarx->StreamIndex - huartMT.hdmarx->StreamBaseAddress)  uprintf("StreamIndex = [%lu]\n\r", huartMT.hdmarx->StreamIndex/* - huartMT.hdmarx->StreamBaseAddress*/);
-	  MT_Update();
+	  geneva_Update();	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
 		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
@@ -292,6 +303,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+#define TEST_WHEELS_COMMAND "test wheels"
 void HandleCommand(char* input){
 	if(strcmp(input, "start") == 0){
 		TextOut("Starting device MTi\n\r");
@@ -342,8 +354,22 @@ void HandleCommand(char* input){
 		kick_Chip(60);
 	}else if(!memcmp(input, "block" , strlen("block"))){
 		kick_Stateprint();
+	}else if(!memcmp(input, TEST_WHEELS_COMMAND, strlen(TEST_WHEELS_COMMAND))){
+		wheels_testing_power = atoff(input + strlen(TEST_WHEELS_COMMAND));
+		if((wheels_testing = !wheels_testing)){
+			uprintf("wheels test on, pwm [%f]\n\r", wheels_testing_power);
+		}
+	}else if(!memcmp(input, "dribble", strlen("dribble"))){
+		uint8_t speed = strtol(input + strlen("dribble"), NULL, 10);
+		dribbler_SetSpeed(speed);
+		uprintf("speed is set to[%lu]\n\r", __HAL_TIM_GET_COMPARE(&htim11, TIM_CHANNEL_1));
 	}
 
+	else if(!strcmp(input, "keyboard control")){
+		uprintf("going to keyboard control\r\npress escape to stop\n\r");
+		keyboard_control = true;
+		wheels_testing = true;
+	}
 }
 
 void Uint2Leds(uint8_t uint, uint8_t n_leds){
@@ -360,7 +386,7 @@ void dribbler_SetSpeed(uint8_t speed){
 	if(speed > 7){
 		speed = 7;
 	}
-	__HAL_TIM_SET_COMPARE(&htim11, TIM_CHANNEL_1, (7 - speed) * MAX_PWM);
+	__HAL_TIM_SET_COMPARE(&htim11, TIM_CHANNEL_1, (7 - speed) * (MAX_PWM / 7));
 }
 
 void dribbler_Init(){
@@ -397,6 +423,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		DO_Control();
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
+	}else if(htim->Instance == htim14.Instance){
+		HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
+		wheels_Callback();
 	}
 }
 
