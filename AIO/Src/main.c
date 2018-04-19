@@ -139,7 +139,9 @@ int main(void)
   MX_TIM7_Init();
   MX_TIM5_Init();
   MX_TIM13_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
+  Uint2Leds(0xff,0);
   address = ReadAddress();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
@@ -151,6 +153,7 @@ int main(void)
 
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
+
   dataPacket dataStruct;
   uint LastPackageTime = 0;
   uint printtime = 0;
@@ -159,11 +162,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+  while (1){
 	  kick_ChargeUpdate();	//Check if charging should be on.
-	  //kick_Kick(60);
-	  //HAL_Delay(1000);
 	  if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
@@ -284,37 +284,30 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HandleCommand(char* input){
-	if(strcmp(input, "start") == 0){
-		TextOut("Starting device MTi\n\r");
-		if(MT_succes == MT_StartOperation(true)){
-			TextOut("Communication with MTi started, in config state.\n\r");
+	if(strcmp(input, "mt start") == 0){
+		uprintf("Starting device MTi\n\r");
+		if(MT_succes == MT_Init()){
+			uprintf("MTi started.\n\r");
 		}else{
-			TextOut("No communication with MTi!\n\r");
+			uprintf("No communication with MTi!\n\r");
 		}
-	}else if(strcmp(input, "start2") == 0){
-		TextOut("Starting device MTi\n\r");
-		if(MT_succes == MT_StartOperation(false)){
-			TextOut("Communication with MTi started, going to measure state in .5 seconds.\n\r");
-		}else{
-			TextOut("No communication with MTi!\n\r");
-		}
-	}else if(strcmp(input, "config") == 0){
+	}else if(!strcmp(input, "mt stop")){
+		uprintf("resetting the MTi.\n\r");
+		MT_DeInit();
+	}else if(strcmp(input, "mt config") == 0){
 		MT_GoToConfig();
-	}else if(!strcmp(input, "measure")){
+	}else if(!strcmp(input, "mt measure")){
 		MT_GoToMeasure();
-	}else if(strcmp(input, "factoryreset") == 0){
-		TextOut("Resetting the configuration.\n\r");
+	}else if(strcmp(input, "mt factoryreset") == 0){
+		uprintf("Resetting the configuration.\n\r");
 		MT_FactoryReset();
-	}else if(memcmp(input, "setconfig", strlen("setconfig")) == 0){
+	}else if(memcmp(input, "mt setconfig", strlen("mt setconfig")) == 0){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
 	}else if(strcmp(input, "reqconfig") == 0){
-		TextOut("requesting output configuration mode\n\r");
+		uprintf("requesting output configuration mode\n\r");
 		MT_RequestConfig();
-	}else if(!strcmp(input, "reset")){
-		uprintf("resetting the MTi.\n\r");
-		MT_CancelOperation();
 	}else if(!strcmp(input, "address")){
 		uprintf("address = [%d]\n\r", address);
 	}else if(!strcmp(input, "example2")){
@@ -369,14 +362,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
 	}else if(huart->Instance == huartMT.Instance){// Input from the Xsens
 		MT_UART_RxCpltCallback();
-	}
-}
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-	if(huart->Instance == huart3.Instance){
-
-	}else if(huart->Instance == huartMT.Instance){
-		HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
 	}
 }
 

@@ -124,6 +124,8 @@
 #define PC_RX_GPIO_Port GPIOC
 #define PC_RXC11_Pin GPIO_PIN_11
 #define PC_RXC11_GPIO_Port GPIOC
+#define Switch_Pin GPIO_PIN_0
+#define Switch_GPIO_Port GPIOD
 #define empty_battery_Pin GPIO_PIN_4
 #define empty_battery_GPIO_Port GPIOD
 #define Geneva_cal_sens_Pin GPIO_PIN_5
