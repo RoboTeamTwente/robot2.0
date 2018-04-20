@@ -50,7 +50,7 @@
 #include <stdlib.h>
 #include "PuttyInterface/PuttyInterface.h"
 #include "address/address.h"
-#include "geneva/geneva.h"
+#include "Geneva/geneva.h"
 #include "DO/DO.h"
 #include "Ballsensor/ballsensor.h"
 #include "myNRF24.h"
