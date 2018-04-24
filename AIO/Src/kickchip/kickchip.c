@@ -29,6 +29,9 @@ void kick_Init(){
  */
 void kick_Kick(int percentage)
 {
+	if(percentage < 1){
+		percentage = 1;
+	}
 	if(kick_state == kick_Ready)
 	{
 		kick_state = kick_Kicking;												// Block kick_Charging
@@ -51,6 +54,9 @@ void kick_Kick(int percentage)
  */
 void kick_Chip(int percentage)
 {
+	if(percentage < 1){
+		percentage = 1;
+	}
 	if(kick_state == kick_Ready)
 	{
 		HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET); 	// Disable kick_Charging

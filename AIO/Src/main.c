@@ -220,8 +220,10 @@ int main(void)
 	  	  float wheel_powers[4] = {0, 0, 0, 0};
 		  wheels_SetOutput(wheel_powers);
 	  }
-	  if(!HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
-		  // BATTERY IS ALMOST EMPTY!!!!!
+	  if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
+		  uprintf("Battery empty!\n\r");
+		  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
+// 		  BATTERY IS ALMOST EMPTY!!!!!
 //		  battery_empty = true;
 //		  dribbler_SetSpeed(0);
 	  }
@@ -349,9 +351,9 @@ void HandleCommand(char* input){
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
 	}else if(!memcmp(input, "kick" , strlen("kick"))){
-		kick_Kick(60);
+		kick_Kick(strtol(input + 1 + strlen("kick"), NULL, 10));
 	}else if(!memcmp(input, "chip" , strlen("chip"))){
-		kick_Chip(60);
+		kick_Chip(strtol(input + 1 + strlen("chip"), NULL, 10));
 	}else if(!memcmp(input, "block" , strlen("block"))){
 		kick_Stateprint();
 	}else if(!memcmp(input, TEST_WHEELS_COMMAND, strlen(TEST_WHEELS_COMMAND))){
