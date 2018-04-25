@@ -169,7 +169,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //ballsensorMeasurementLoop();
+	 //ballsensorMeasurementLoop();
 	  if(wheels_testing){
 		  if(keyboard_control){
 
@@ -420,6 +420,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		velocity[0] += *accptr++ / 100;
 		velocity[1] += *accptr++ / 100;
 		velocity[2] += *accptr   / 100;
+		uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB), wheels_GetSpeed(wheels_LF));
+		//uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 		DO_Control();
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
