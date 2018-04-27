@@ -41,7 +41,7 @@ void wheels_Init(){
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
 }
 
-void calcMotorSpeed (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]){
+void calcVelocityRef (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]){
 	// Jelle's variant, using forces instead of velocities (for testing)
 	static float cos_a0 = cosf(60.0F  * 3.1415F/180.0F);
 	static float sin_a0 = sinf(60.0F  * 3.1415F/180.0F);

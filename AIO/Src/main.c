@@ -75,7 +75,7 @@ bool wheels_testing = false;
 float wheels_testing_power = 30;
 bool keyboard_control = false;
 
-float velocity[3] = {0};
+float velocityRef[3] = {0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -197,7 +197,10 @@ int main(void)
 				  rotSign = -1;
 			  }
 			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
-			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
+
+
+			  calcVelocityRef ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, velocityRef);
+
 			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 			  wheels_SetOutput(wheels);
 			  //dribbler
@@ -419,10 +422,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim7.Instance){
 		float * accptr;
 		accptr = MT_GetAcceleration();
-		velocity[0] += *accptr++ / 100;
-		velocity[1] += *accptr++ / 100;
-		velocity[2] += *accptr   / 100;
-		DO_Control();
+		float xsensData[3];
+		xsensData[body_x] = accptr[0];
+		xsensData[body_y] = accptr[1];
+		xsensData[body_w] = MT_GetAngles()[2];
+		DO_Control(velocityRef, xsensData);
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
