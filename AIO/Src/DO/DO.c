@@ -108,7 +108,7 @@ void limiter(float input[3], float maxEl, float output[3]){
 
 	output[body_x] = scale*input[body_x];
 	output[body_y] = scale*input[body_y];
-	output[body_w] = scale*input[body_w];
+	output[body_w] = input[body_w];
 }
 
 //observer output should just be pre-declared as 0 before any looping starts
@@ -137,16 +137,17 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 	postObserverSignal[body_y] = pOut[body_y] - ptrdo[body_y];
 	postObserverSignal[body_w] = pOut[body_w] - ptrdo[body_w];
 
+	// Limiting the output to prevent saturation of the PWM signals for any of the wheels
 	float intermediaryOutput[4];
 	body2Wheels(postObserverSignal, intermediaryOutput);
-
 	float maxEl = fmax(fmax(intermediaryOutput[wheels_RF],intermediaryOutput[wheels_RB]),fmax(intermediaryOutput[wheels_LB],intermediaryOutput[wheels_LF]));
-
 	float scaledInput[3];
 	limiter(postObserverSignal, maxEl, scaledInput);
 
+	// output the wheel PWMs
 	body2Wheels(scaledInput, output);
 
+	// compute disturbance observer output for next iteration
 	disturbanceObserver(xsensData, scaledInput, ptrdo);
 }
 

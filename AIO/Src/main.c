@@ -191,18 +191,24 @@ int main(void)
 		  roboCallback(&hspi2, &dataStruct);
 		  if(dataStruct.robotID == address){
 			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-			  float wheels[4];
+
 			  int rotSign = 1;
 			  if(dataStruct.rotationDirection){
 				  rotSign = -1;
 			  }
 			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
+			  float velRefAmp = (float)dataStruct.robotVelocity/ 1000.0F;
+			  float velRefDir = (float)dataStruct.movingDirection * (2*M_PI/512);
+			  float angularVelRef = rotSign * (float)(dataStruct.angularVelocity/180.0)*M_PI;
+			  velocityRef[body_x] = -cosf(velRefDir) * velRefAmp;
+			  velocityRef[body_y] = -sinf(velRefDir) * velRefAmp;
+			  velocityRef[body_w] = angularVelRef;
 
-
-			  calcVelocityRef ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, velocityRef);
-
+			  //float wheels[4];
+			  //calcMotorSpeeds((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
 			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
-			  wheels_SetOutput(wheels);
+			  //wheels_SetOutput(wheels);
+
 			  //dribbler
 			  dribbler_SetSpeed(dataStruct.driblerSpeed);
 
