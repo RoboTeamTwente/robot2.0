@@ -23,4 +23,12 @@ DO_States DO_Init();
 
 DO_States DO_Control(float velocityRef[3], float xsensData[3]);
 
+void disturbanceObserver(float localBodyReference[3], float localBodyVelocity[3], float output[3]);
+void body2Wheels(float v[3], float output[4]);
+void wheels2Body(float w[4], float output[3]);
+void rotate(float yaw, float input[3], float output[3]);
+void pController(float input[3], float kp[3], float output[3]);
+float compute_limit_scale(float input[3], float limit);
+void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], float ptrdo[3], float output[4]);
+
 #endif /* DO_DO_H_ */

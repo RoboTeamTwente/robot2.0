@@ -45,6 +45,8 @@ DO_States DO_Init(){
 
 void disturbanceObserver(float localBodyReference[3], float localBodyVelocity[3], float output[3]){
 
+	// Requires transformation to global coordinates and back
+
 	output[body_x]= 0;
 	output[body_y] = 0;
 	output[body_w] = 0;								//Will be made into an actual disturbance observer now :)
@@ -88,32 +90,50 @@ void rotate(float yaw, float input[3], float output[3]){
 }
 
 void pController(float input[3], float kp[3], float output[3]){
+	// These limits are meant to prevent slipping
+	float w_limit = 200;
+	float PWM_limit = 70;
 
-	output[body_x] = kp[body_x]*input[body_x];
-	output[body_y] = kp[body_y]*input[body_y];
-	output[body_w] = kp[body_w]*input[body_w];
+	float pre_out[3];
+	pre_out[body_x] = kp[body_x]*input[body_x];
+	pre_out[body_y] = kp[body_y]*input[body_y];
+	pre_out[body_w] = kp[body_w]*input[body_w];
+
+	float scale = compute_limit_scale(pre_out, PWM_limit);
+
+	if (pre_out[body_w] > w_limit) {
+		pre_out[body_w] = w_limit;
+	} else if (pre_out[body_w] < -w_limit) {
+		pre_out[body_w] = -w_limit;
+	}
+
+	output[body_x] = pre_out[body_x] * scale;
+	output[body_y] = pre_out[body_y] * scale;
+	output[body_w] = pre_out[body_w];
 
 }
 
-void limiter(float input[3], float maxEl, float output[3]){
+float compute_limit_scale(float input[3], float limit){
 
 	float scale;
+	float intermediaryOutput[4];
+	body2Wheels(input, intermediaryOutput);
+	float maxEl = fmax(fmax(intermediaryOutput[wheels_RF],intermediaryOutput[wheels_RB]),fmax(intermediaryOutput[wheels_LB],intermediaryOutput[wheels_LF]));
 
-	if (fabs(maxEl) > 95){
-		scale = 95/fabs(maxEl);
+	if (fabs(maxEl) > limit){
+		scale = limit/fabs(maxEl);
 	}
-	else{
-		scale = 0;
+	else {
+		scale = 1;
 	}
 
-	output[body_x] = scale*input[body_x];
-	output[body_y] = scale*input[body_y];
-	output[body_w] = input[body_w];
+	return scale;
 }
 
 //observer output should just be pre-declared as 0 before any looping starts
 void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], float ptrdo[3], float output[4]){
 
+	// Compute the error in local body coordinates
 	float localReference[3];
 	rotate(xsensData[body_w], velocityRef, localReference);
 
@@ -125,29 +145,31 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 	error[body_y] = localReference[body_y] - localVel[body_y];
 	error[body_w] = localReference[body_w] - localVel[body_w];
 
+	// P-control
 	float controllerGain[3];
-	controllerGain[body_x] = 2000;
-	controllerGain[body_y] = 2000;
-	controllerGain[body_w] = 400;
+	controllerGain[body_x] = 20000;
+	controllerGain[body_y] = 20000;
+	controllerGain[body_w] = 200;
 	float pOut[3];
 	pController(error, controllerGain, pOut);
 
+	// Apply the Disturbance Observer output
 	float postObserverSignal[3];
 	postObserverSignal[body_x] = pOut[body_x] - ptrdo[body_x];
 	postObserverSignal[body_y] = pOut[body_y] - ptrdo[body_y];
 	postObserverSignal[body_w] = pOut[body_w] - ptrdo[body_w];
 
 	// Limiting the output to prevent saturation of the PWM signals for any of the wheels
-	float intermediaryOutput[4];
-	body2Wheels(postObserverSignal, intermediaryOutput);
-	float maxEl = fmax(fmax(intermediaryOutput[wheels_RF],intermediaryOutput[wheels_RB]),fmax(intermediaryOutput[wheels_LB],intermediaryOutput[wheels_LF]));
 	float scaledInput[3];
-	limiter(postObserverSignal, maxEl, scaledInput);
+	float scale = compute_limit_scale(postObserverSignal, 95);
+	scaledInput[body_x] = scale*postObserverSignal[body_x];
+	scaledInput[body_y] = scale*postObserverSignal[body_y];
+	scaledInput[body_w] = scale*postObserverSignal[body_w];
 
-	// output the wheel PWMs
+	// Output the wheel PWMs (by filling in the output array)
 	body2Wheels(scaledInput, output);
 
-	// compute disturbance observer output for next iteration
+	// Compute disturbance observer output for next iteration, filling in the DO array (ptrdo)
 	disturbanceObserver(xsensData, scaledInput, ptrdo);
 }
 
