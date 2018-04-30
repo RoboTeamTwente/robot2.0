@@ -15,8 +15,10 @@
 #define PWM_CUTOFF 10.0F
 #define ROBOT_RADIUS 0.0775F
 #define WHEEL_RADIUS 0.0275F
-#define COUNTS_PER_ROTATION 5000
 #define HTIM5_FREQ 1000000.0F
+#define PULSES_PER_ROTATION 1024
+#define GEAR_RATIO 2.5F
+#define X__ENCODING 4 // counts per pulse X1, X2 or X4
 
 bool reverse[4] = {0};
 int pwm[4];
@@ -156,31 +158,22 @@ inline int16_t wheels_GetEncoder(wheels_handles wheel){
 	}
 }
 float wheels_GetSpeed(wheels_handles wheel){
-	float retval = 0;
 	static uint prev_time[4];
-	switch(wheel){
-	case wheels_RF:
-		retval = HTIM5_FREQ * (float)(wheels_GetEncoder(wheels_RF))/( __HAL_TIM_GET_COUNTER(&htim5) - prev_time[wheels_RF]);
-		prev_time[wheels_RF] = __HAL_TIM_GET_COUNTER(&htim5);
-		ResetEncoder(wheels_RF);
-		break;
-	case wheels_RB:
-		retval = HTIM5_FREQ * (float)(wheels_GetEncoder(wheels_RB))/( __HAL_TIM_GET_COUNTER(&htim5) - prev_time[wheels_RB]);
-		prev_time[wheels_RB] = __HAL_TIM_GET_COUNTER(&htim5);
-		ResetEncoder(wheels_RB);
-		break;
-	case wheels_LB:
-		retval = HTIM5_FREQ * (float)(wheels_GetEncoder(wheels_LB))/( __HAL_TIM_GET_COUNTER(&htim5) - prev_time[wheels_LB]);
-		prev_time[wheels_LB] = __HAL_TIM_GET_COUNTER(&htim5);
-		ResetEncoder(wheels_LB);
-		break;
-	case wheels_LF:
-		retval = HTIM5_FREQ * (float)(wheels_GetEncoder(wheels_LF))/( __HAL_TIM_GET_COUNTER(&htim5) - prev_time[wheels_LF]);
-		prev_time[wheels_LF] = __HAL_TIM_GET_COUNTER(&htim5);
-		ResetEncoder(wheels_LF);
-		break;
-	}
-	return retval;
+	int16_t counts;
+	uint useconds;
+	float seconds;
+	float RPS;
+	float motor_rotations;
+	float wheel_rotations;
+	counts = wheels_GetEncoder(wheel);
+	ResetEncoder(wheel);
+	useconds = __HAL_TIM_GET_COUNTER(&htim5) - prev_time[wheel];
+	prev_time[wheel] = __HAL_TIM_GET_COUNTER(&htim5);
+	seconds = (float)useconds/HTIM5_FREQ;
+	motor_rotations = counts / (float)(PULSES_PER_ROTATION * X__ENCODING);
+	wheel_rotations = motor_rotations/GEAR_RATIO;
+	RPS = wheel_rotations / seconds;
+	return RPS * 2 * M_PI;
 }
 
 void wheels_Callback(){
@@ -205,7 +198,6 @@ void wheels_Callback(){
 		HAL_TIM_Base_Stop(&htim14);											// Stop timer
 		__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
 		__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
-		uprintf("HAL_TIM_Base_Stop\n\r");
 		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, pwm[wheels_RF]);
 		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, pwm[wheels_RB]);
 		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, pwm[wheels_LB]);
