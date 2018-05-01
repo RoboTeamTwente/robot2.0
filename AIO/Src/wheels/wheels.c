@@ -64,6 +64,18 @@ void wheels_Init(){
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
 }
+void wheels_Deinit(){
+	wheels_state = wheels_uninitialized;
+	HAL_TIM_Base_Stop(&htim1);
+	HAL_TIM_Base_Stop(&htim3);
+	HAL_TIM_Base_Stop(&htim4);
+	HAL_TIM_Base_Stop(&htim5);
+	HAL_TIM_Base_Stop(&htim8);
+	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2);
+}
 
 void calcMotorSpeed (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]){
 	// Jelle's variant, using forces instead of velocities (for testing)
@@ -150,7 +162,7 @@ inline int16_t wheels_GetEncoder(wheels_handles wheel){
 	case wheels_RB:
 		return __HAL_TIM_GET_COUNTER(&htim1);
 	case wheels_LB:
-		return __HAL_TIM_GET_COUNTER(&htim3);
+		return -__HAL_TIM_GET_COUNTER(&htim3);
 	case wheels_LF:
 		return __HAL_TIM_GET_COUNTER(&htim4);
 	default:

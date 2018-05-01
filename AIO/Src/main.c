@@ -175,7 +175,6 @@ int main(void)
 
 		  }else{
 			  float wheels[4];
-			  if(HAL_GetTick() % 4000 < 2000){
 				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
 					  wheels[wheel] = wheels_testing_power;
 				  }
