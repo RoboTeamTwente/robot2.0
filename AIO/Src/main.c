@@ -147,7 +147,6 @@ int main(void)
   MX_TIM13_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  Uint2Leds(0xff,0);
   address = ReadAddress();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
@@ -171,22 +170,7 @@ int main(void)
   while (1)
   {
 	 //ballsensorMeasurementLoop();
-	  if(wheels_testing){
-		  if(keyboard_control){
-
-		  }else{
-			  float wheels[4];
-				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-					  wheels[wheel] = wheels_testing_power;
-				  }
-			  }else{
-				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-					  wheels[wheel] = -wheels_testing_power;
-				  }
-			  }
-			  wheels_SetOutput(wheels);
-		  }
-	  }else if(irqRead(&hspi2)){
+	 if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
 		  if(dataStruct.robotID == address){
@@ -230,7 +214,8 @@ int main(void)
 	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
 		  // handle the message
 	  }
-	  geneva_Update();	  MT_Update();
+	  geneva_Update();
+	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
 		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))

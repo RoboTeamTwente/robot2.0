@@ -87,6 +87,7 @@ MT_StatusTypeDef MT_DeInit(){
 }
 
 MT_StatusTypeDef MT_Update(){
+	MT_StatusTypeDef ret = MT_succes;
 	if(RxCpltCallback_flag != 0){
 		RxCpltCallback_flag = 0;
 		if(cplt_mess_stored_flag){
@@ -95,6 +96,7 @@ MT_StatusTypeDef MT_Update(){
 			case XMID_Error:
 				ErrorHandler(ReceivedMessageStorage);
 				MT_Data_succerr[1]++;
+				ret = MT_failed;
 				break;
 			case XMID_MTData2:
 				MT_Data_succerr[0]++;
@@ -127,10 +129,10 @@ MT_StatusTypeDef MT_Update(){
 
 	if(HAL_UART_ErrorCallback_flag != 0){
 		HAL_UART_ErrorCallback_flag = 0;
-		return MT_failed;
+		ret = MT_failed;
 	}
 
-	return MT_succes;
+	return ret;
 }
 
 
