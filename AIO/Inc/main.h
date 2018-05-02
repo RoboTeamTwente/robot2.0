@@ -50,6 +50,8 @@
 
 /* Private define ------------------------------------------------------------*/
 #define MAX_PWM 2400
+#define ENCODER_FILTER 15
+#define APB1 96
 
 #define FR_RB_Pin GPIO_PIN_4
 #define FR_RB_GPIO_Port GPIOE

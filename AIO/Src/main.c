@@ -169,13 +169,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //ballsensorMeasurementLoop();
+	 //ballsensorMeasurementLoop();
 	  if(wheels_testing){
 		  if(keyboard_control){
 
 		  }else{
 			  float wheels[4];
-			  if(HAL_GetTick() % 4000 < 2000){
 				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
 					  wheels[wheel] = wheels_testing_power;
 				  }
@@ -233,7 +232,7 @@ int main(void)
 	  geneva_Update();	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
-		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
@@ -358,7 +357,8 @@ void HandleCommand(char* input){
 		kick_Stateprint();
 	}else if(!memcmp(input, TEST_WHEELS_COMMAND, strlen(TEST_WHEELS_COMMAND))){
 		wheels_testing_power = atoff(input + strlen(TEST_WHEELS_COMMAND));
-		if((wheels_testing = !wheels_testing)){
+		wheels_testing = (wheels_testing_power <= -10 || wheels_testing_power >= 10);
+		if((wheels_testing)){
 			uprintf("wheels test on, pwm [%f]\n\r", wheels_testing_power);
 		}
 	}else if(!memcmp(input, "dribble", strlen("dribble"))){
@@ -422,6 +422,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		velocity[0] += *accptr++ / 100;
 		velocity[1] += *accptr++ / 100;
 		velocity[2] += *accptr   / 100;
+		if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
+		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 		DO_Control();
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
