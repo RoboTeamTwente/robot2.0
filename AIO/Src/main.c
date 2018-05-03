@@ -75,7 +75,7 @@ bool wheels_testing = false;
 float wheels_testing_power = 30;
 bool keyboard_control = false;
 
-float velocity[3] = {0};
+float velocityRef[3] = {0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -175,15 +175,24 @@ int main(void)
 		  roboCallback(&hspi2, &dataStruct);
 		  if(dataStruct.robotID == address){
 			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-			  float wheels[4];
+
 			  int rotSign = 1;
 			  if(dataStruct.rotationDirection){
 				  rotSign = -1;
 			  }
 			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
-			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
+			  float velRefAmp = (float)dataStruct.robotVelocity/ 1000.0F;
+			  float velRefDir = (float)dataStruct.movingDirection * (2*M_PI/512);
+			  float angularVelRef = rotSign * (float)(dataStruct.angularVelocity/180.0)*M_PI;
+			  velocityRef[body_x] = -cosf(velRefDir) * velRefAmp;
+			  velocityRef[body_y] = -sinf(velRefDir) * velRefAmp;
+			  velocityRef[body_w] = angularVelRef;
+
+			  //float wheels[4];
+			  //calcMotorSpeeds((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
 			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
-			  wheels_SetOutput(wheels);
+			  //wheels_SetOutput(wheels);
+
 			  //dribbler
 			  dribbler_SetSpeed(dataStruct.driblerSpeed);
 
@@ -390,12 +399,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim7.Instance){
 		float * accptr;
 		accptr = MT_GetAcceleration();
-		velocity[0] += *accptr++ / 100;
-		velocity[1] += *accptr++ / 100;
-		velocity[2] += *accptr   / 100;
-		if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
-		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
-		DO_Control();
+		float xsensData[3];
+		xsensData[body_x] = accptr[0];
+		xsensData[body_y] = accptr[1];
+		xsensData[body_w] = MT_GetAngles()[2];
+		DO_Control(velocityRef, xsensData);
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
