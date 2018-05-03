@@ -134,7 +134,7 @@ void wheels_SetOutput(float power[4]){
 			HAL_TIM_Base_Stop(&htim14);											// Stop timer
 			__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 2000);
+			__HAL_TIM_SET_AUTORELOAD(&htim14, 1000);
 			HAL_TIM_Base_Start_IT(&htim14);   									// Start timer for kick off
 			//HAL_Delay(1);
 

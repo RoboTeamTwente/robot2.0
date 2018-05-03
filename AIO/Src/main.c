@@ -186,7 +186,7 @@ int main(void)
 			  float angularVelRef = rotSign * (float)(dataStruct.angularVelocity/180.0)*M_PI;
 			  velocityRef[body_x] = -cosf(velRefDir) * velRefAmp;
 			  velocityRef[body_y] = -sinf(velRefDir) * velRefAmp;
-			  velocityRef[body_w] = angularVelRef;
+			  velocityRef[body_w] = -angularVelRef;
 
 			  //float wheels[4];
 			  //calcMotorSpeeds((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
@@ -402,7 +402,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		float xsensData[3];
 		xsensData[body_x] = accptr[0];
 		xsensData[body_y] = accptr[1];
-		xsensData[body_w] = MT_GetAngles()[2];
+		xsensData[body_w] = 0;//MT_GetAngles()[2];
 		DO_Control(velocityRef, xsensData);
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
