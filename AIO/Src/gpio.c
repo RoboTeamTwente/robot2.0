@@ -71,7 +71,8 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(FR_RB_GPIO_Port, FR_RB_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, FR_RB_Pin|LD5_Pin|LD4_Pin|LD3_Pin 
+                          |LD2_Pin|LD1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, FR_RF_Pin|Charge_Pin, GPIO_PIN_RESET);
@@ -80,15 +81,8 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, Chip_Pin|Kick_Pin|SPI2_CS_Pin|FR_LB_Pin 
-                          |bs_nRST_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, LD5_Pin|LD4_Pin|LD3_Pin|LD2_Pin 
-                          |LD1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, Chip_Pin|Kick_Pin|LD6_Pin|SPI2_CS_Pin 
+                          |FR_LB_Pin|bs_nRST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, FR_LF_Pin|Switch_Pin|GPIO_PIN_1|Geneva_dir_A_Pin 
@@ -165,11 +159,17 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PD2 PD3 PDPin */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3|empty_battery_Pin;
+  /*Configure GPIO pins : PD2 PD3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PtPin */
+  GPIO_InitStruct.Pin = empty_battery_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(empty_battery_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
   GPIO_InitStruct.Pin = Geneva_cal_sens_Pin;
