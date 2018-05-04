@@ -12,7 +12,7 @@
 #include "tim.h"
 #include "../PuttyInterface/PuttyInterface.h"
 
-#define PWM_CUTOFF 10.0F
+#define PWM_CUTOFF 1.0F
 #define ROBOT_RADIUS 0.0775F
 #define WHEEL_RADIUS 0.0275F
 #define HTIM5_FREQ 1000000.0F
@@ -36,10 +36,10 @@ enum {
 static inline void ResetEncoder(wheels_handles wheel){
 	switch(wheel){
 	case wheels_RF:
-		__HAL_TIM_SET_COUNTER(&htim8, 0);
+		__HAL_TIM_SET_COUNTER(&htim1, 0);
 		break;
 	case wheels_RB:
-		__HAL_TIM_SET_COUNTER(&htim1, 0);
+		__HAL_TIM_SET_COUNTER(&htim8, 0);
 		break;
 	case wheels_LB:
 		__HAL_TIM_SET_COUNTER(&htim3, 0);
@@ -158,9 +158,9 @@ void wheels_SetOutput(float power[4]){
 inline int16_t wheels_GetEncoder(wheels_handles wheel){
 	switch(wheel){
 	case wheels_RF:
-		return __HAL_TIM_GET_COUNTER(&htim8);
-	case wheels_RB:
 		return __HAL_TIM_GET_COUNTER(&htim1);
+	case wheels_RB:
+		return __HAL_TIM_GET_COUNTER(&htim8);
 	case wheels_LB:
 		return -__HAL_TIM_GET_COUNTER(&htim3); //  minus due to inverted routing (right leon?)
 	case wheels_LF:

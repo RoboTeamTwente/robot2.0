@@ -181,13 +181,13 @@ int main(void)
 				  rotSign = -1;
 			  }
 			  //uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
-			  uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
+			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
 			  float velRefAmp = (float)dataStruct.robotVelocity/ 1000.0F;
 			  float velRefDir = (float)dataStruct.movingDirection * (2*M_PI/512);
 			  float angularVelRef = rotSign * (float)(dataStruct.angularVelocity/180.0)*M_PI;
-			  velocityRef[body_x] = -cosf(velRefDir) * velRefAmp;
-			  velocityRef[body_y] = -sinf(velRefDir) * velRefAmp;
-			  velocityRef[body_w] = -angularVelRef;
+			  velocityRef[body_x] = cosf(velRefDir) * velRefAmp * 4;
+			  velocityRef[body_y] = sinf(velRefDir) * velRefAmp * 4;
+			  velocityRef[body_w] = angularVelRef * 2;
 
 			  //float wheels[4];
 			  //calcMotorSpeeds((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
@@ -228,9 +228,9 @@ int main(void)
 	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
-		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
+		  //uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
   /* USER CODE END WHILE */
@@ -404,7 +404,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		float xsensData[3];
 		xsensData[body_x] = accptr[0];
 		xsensData[body_y] = accptr[1];
-		xsensData[body_w] = 0;//MT_GetAngles()[2];
+		xsensData[body_w] = MT_GetAngles()[2]/180*M_PI;
 		DO_Control(velocityRef, xsensData);
 		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
