@@ -170,7 +170,7 @@ int main(void)
   while (1)
   {
 	 //ballsensorMeasurementLoop();
-	  if(irqRead(&hspi2)){
+	 if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
 		  if(dataStruct.robotID == address){
@@ -188,7 +188,6 @@ int main(void)
 			  velocityRef[body_x] = -cosf(velRefDir) * velRefAmp;
 			  velocityRef[body_y] = -sinf(velRefDir) * velRefAmp;
 			  velocityRef[body_w] = -angularVelRef;
-			  //uprintf("[%f]", velRefAmp);
 
 			  //float wheels[4];
 			  //calcMotorSpeeds((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
@@ -225,7 +224,8 @@ int main(void)
 	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
 		  // handle the message
 	  }
-	  geneva_Update();	  MT_Update();
+	  geneva_Update();
+	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
 		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
@@ -302,37 +302,30 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 #define TEST_WHEELS_COMMAND "test wheels"
 void HandleCommand(char* input){
-	if(strcmp(input, "start") == 0){
-		TextOut("Starting device MTi\n\r");
-		if(MT_succes == MT_StartOperation(true)){
-			TextOut("Communication with MTi started, in config state.\n\r");
+	if(strcmp(input, "mt start") == 0){
+		uprintf("Starting device MTi\n\r");
+		if(MT_succes == MT_Init()){
+			uprintf("MTi started.\n\r");
 		}else{
-			TextOut("No communication with MTi!\n\r");
+			uprintf("No communication with MTi!\n\r");
 		}
-	}else if(strcmp(input, "start2") == 0){
-		TextOut("Starting device MTi\n\r");
-		if(MT_succes == MT_StartOperation(false)){
-			TextOut("Communication with MTi started, going to measure state in .5 seconds.\n\r");
-		}else{
-			TextOut("No communication with MTi!\n\r");
-		}
-	}else if(strcmp(input, "config") == 0){
+	}else if(!strcmp(input, "mt stop")){
+		uprintf("resetting the MTi.\n\r");
+		MT_DeInit();
+	}else if(strcmp(input, "mt config") == 0){
 		MT_GoToConfig();
-	}else if(!strcmp(input, "measure")){
+	}else if(!strcmp(input, "mt measure")){
 		MT_GoToMeasure();
-	}else if(strcmp(input, "factoryreset") == 0){
-		TextOut("Resetting the configuration.\n\r");
+	}else if(strcmp(input, "mt factoryreset") == 0){
+		uprintf("Resetting the configuration.\n\r");
 		MT_FactoryReset();
-	}else if(memcmp(input, "setconfig", strlen("setconfig")) == 0){
+	}else if(memcmp(input, "mt setconfig", strlen("mt setconfig")) == 0){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
 	}else if(strcmp(input, "reqconfig") == 0){
-		TextOut("requesting output configuration mode\n\r");
+		uprintf("requesting output configuration mode\n\r");
 		MT_RequestConfig();
-	}else if(!strcmp(input, "reset")){
-		uprintf("resetting the MTi.\n\r");
-		MT_CancelOperation();
 	}else if(!strcmp(input, "address")){
 		uprintf("address = [%d]\n\r", address);
 	}else if(!strcmp(input, "example2")){
@@ -401,14 +394,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	}
 }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-	if(huart->Instance == huart3.Instance){
-
-	}else if(huart->Instance == huartMT.Instance){
-		HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
-	}
-}
-
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
@@ -419,7 +404,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		float xsensData[3];
 		xsensData[body_x] = accptr[0];
 		xsensData[body_y] = accptr[1];
-		xsensData[body_w] = MT_GetAngles()[2];
+		xsensData[body_w] = 0;//MT_GetAngles()[2];
 		DO_Control(velocityRef, xsensData);
 		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));

@@ -18,7 +18,8 @@ typedef enum {
 }wheels_handles;
 
 void wheels_Init();
-void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]);
+void wheels_Deinit();
+void calcMotorSpeed (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]);
 void wheels_SetOutput(float power[4]);
 int16_t wheels_GetEncoder(wheels_handles wheel);
 float wheels_GetSpeed(wheels_handles wheel);

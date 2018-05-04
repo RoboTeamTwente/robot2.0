@@ -34,7 +34,7 @@ MT_StatusTypeDef MT_StartOperation(bool to_config);
 /*	Put the xsens in Reset mode
  * 	retval: HAL_failed if unable to abort UART operation
  */
-MT_StatusTypeDef MT_CancelOperation();
+MT_StatusTypeDef MT_DeInit();
 /*	Put Xsens into Configuration state
  * 	retval: MT_succes if GoToConfigAck is received MT_failed otherwise
  */

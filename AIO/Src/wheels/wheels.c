@@ -64,6 +64,18 @@ void wheels_Init(){
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
 }
+void wheels_Deinit(){
+	wheels_state = wheels_uninitialized;
+	HAL_TIM_Base_Stop(&htim1);
+	HAL_TIM_Base_Stop(&htim3);
+	HAL_TIM_Base_Stop(&htim4);
+	HAL_TIM_Base_Stop(&htim5);
+	HAL_TIM_Base_Stop(&htim8);
+	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2);
+}
 
 void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]){
 	// Jelle's variant, using forces instead of velocities (for testing)
@@ -122,7 +134,7 @@ void wheels_SetOutput(float power[4]){
 			HAL_TIM_Base_Stop(&htim14);											// Stop timer
 			__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 2000);
+			__HAL_TIM_SET_AUTORELOAD(&htim14, 1000);
 			HAL_TIM_Base_Start_IT(&htim14);   									// Start timer for kick off
 			//HAL_Delay(1);
 
