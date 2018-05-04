@@ -402,8 +402,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		float * accptr;
 		accptr = MT_GetAcceleration();
 		float xsensData[3];
-		xsensData[body_x] = accptr[0];
-		xsensData[body_y] = accptr[1];
+		xsensData[body_x] = -accptr[0];
+		xsensData[body_y] = -accptr[1];
 		xsensData[body_w] = MT_GetAngles()[2]/180*M_PI;
 		DO_Control(velocityRef, xsensData);
 		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));

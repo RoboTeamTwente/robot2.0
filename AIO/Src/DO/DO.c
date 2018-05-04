@@ -43,13 +43,34 @@ DO_States DO_Init(){
 }
 
 
-void disturbanceObserver(float localBodyReference[3], float localBodyVelocity[3], float output[3]){
+void disturbanceObserver(float yaw, float localInput[3], float globalAcc[3], float output[3]){
 
 	// Requires transformation to global coordinates and back
+	float globalInput[3];
+	rotate(-yaw, localInput, globalInput);
+//	float globalAcc[3];
+//	rotate(-yaw, localAcc, globalAcc);
+	float accX = globalAcc[body_x];
+	float accY = globalAcc[body_y];
+	if (fabs(accX)<0.3) {
+		accX = 0;
+	}
+	if (fabs(accY)<0.3) {
+		accY=0;
+	}
 
-	output[body_x]= 0;
-	output[body_y] = 0;
-	output[body_w] = 0;								//Will be made into an actual disturbance observer now :)
+	float globalOut[3] = {0,0,0};
+	static float prevOut[3] = {0,0,0};
+	if (!isnan(prevOut[0])){ // lowpass filtering
+		globalOut[body_x] = 0.07*(accX*3000 - globalInput[body_x]) + 0.93*prevOut[body_x];
+		globalOut[body_y] = 0.07*(accY*3000 - globalInput[body_y]) + 0.93*prevOut[body_y];
+	}
+	prevOut[body_x] = globalOut[body_x];
+	prevOut[body_y] = globalOut[body_y];
+
+	globalOut[body_x] = globalOut[body_x]*0.5;
+	globalOut[body_y] = globalOut[body_y]*0.5;
+	//rotate(yaw, globalOut, output);
 }
 
 //multiplies a 4*3 matrix by a vector of 3 elements.
@@ -141,8 +162,8 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 	float localVel[3];
 	wheels2Body(w_wheels, localVel);
 //	uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
-	uprintf("[%f]\n\r", xsensData[body_w]);
-	uprintf("[%f, %f, %f]\n\r", localReference[body_x], localReference[body_y],  localReference[body_w]);
+	uprintf("[%f %f %f]\n\r", xsensData[body_x], xsensData[body_y], xsensData[body_w]);
+	//uprintf("[%f, %f, %f]\n\r", localReference[body_x], localReference[body_y],  localReference[body_w]);
 
 
 	float error[3];
@@ -166,7 +187,7 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 
 	// Limiting the output to prevent saturation of the PWM signals for any of the wheels
 	float scaledInput[3];
-	float scale = compute_limit_scale(postObserverSignal, 95);
+	float scale = compute_limit_scale(postObserverSignal, 25); // safety-mode
 	scaledInput[body_x] = scale*postObserverSignal[body_x];
 	scaledInput[body_y] = scale*postObserverSignal[body_y];
 	scaledInput[body_w] = scale*postObserverSignal[body_w];
@@ -175,7 +196,7 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 	body2Wheels(scaledInput, output);
 
 	// Compute disturbance observer output for next iteration, filling in the DO array (do_output)
-	disturbanceObserver(xsensData, scaledInput, do_output);
+	disturbanceObserver(xsensData[body_w], scaledInput, xsensData, do_output);
 
 //	uprintf("[%f, %f]\n\r", w_wheels[wheels_RF], output[wheels_RF]);
 	//uprintf("[%f, %f, %f, %f]\n\r", output[wheels_RF],  output[wheels_RB], output[wheels_LB], output[wheels_LF]);
