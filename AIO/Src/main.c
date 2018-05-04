@@ -169,6 +169,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 	 //ballsensorMeasurementLoop();
 	 if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
@@ -207,6 +208,8 @@ int main(void)
 	  if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
 		  uprintf("Battery empty!\n\r");
 		  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
+		  wheels_DeInit();
+		  kick_DeInit();
 // 		  BATTERY IS ALMOST EMPTY!!!!!
 //		  battery_empty = true;
 //		  dribbler_SetSpeed(0);
@@ -254,9 +257,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLM = 4;
   RCC_OscInitStruct.PLL.PLLN = 192;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -399,7 +402,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
-		HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 		wheels_Callback();
 	}
 }
