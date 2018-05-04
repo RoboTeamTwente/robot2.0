@@ -10,6 +10,7 @@
 #include "DO.h"
 #include "tim.h"
 #include "../wheels/wheels.h"
+#include "../PuttyInterface/PuttyInterface.h"
 
 
 //These structs speak for themselves. Theyre just here so I can return these from functions.
@@ -28,16 +29,15 @@ struct Vector4 {
 };
 
 
-//struct Vector3 observerOutput;
-//struct Vector3 *ptrdo = &observerOutput;
-float observerOutput[3];
+
+static float do_output[3];
 
 DO_States DO_Init(){
 	HAL_TIM_Base_Start_IT(&htim7);
 
-//	observerOutput.x = 0;
-//	observerOutput.y = 0;
-//	observerOutput.w = 0;
+	do_output[body_x] = 0;
+	do_output[body_y] = 0;
+	do_output[body_w] = 0;
 
 	return DO_succes;
 }
@@ -131,7 +131,8 @@ float compute_limit_scale(float input[3], float limit){
 }
 
 //observer output should just be pre-declared as 0 before any looping starts
-void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], float ptrdo[3], float output[4]){
+void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], float output[4]){
+	// uses global variable: do_output which is reset to 0 in the init function
 
 	// Compute the error in local body coordinates
 	float localReference[3];
@@ -155,9 +156,9 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 
 	// Apply the Disturbance Observer output
 	float postObserverSignal[3];
-	postObserverSignal[body_x] = pOut[body_x] - ptrdo[body_x];
-	postObserverSignal[body_y] = pOut[body_y] - ptrdo[body_y];
-	postObserverSignal[body_w] = pOut[body_w] - ptrdo[body_w];
+	postObserverSignal[body_x] = pOut[body_x] - do_output[body_x];
+	postObserverSignal[body_y] = pOut[body_y] - do_output[body_y];
+	postObserverSignal[body_w] = pOut[body_w] - do_output[body_w];
 
 	// Limiting the output to prevent saturation of the PWM signals for any of the wheels
 	float scaledInput[3];
@@ -169,8 +170,8 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 	// Output the wheel PWMs (by filling in the output array)
 	body2Wheels(scaledInput, output);
 
-	// Compute disturbance observer output for next iteration, filling in the DO array (ptrdo)
-	disturbanceObserver(xsensData, scaledInput, ptrdo);
+	// Compute disturbance observer output for next iteration, filling in the DO array (do_output)
+	disturbanceObserver(xsensData, scaledInput, do_output);
 }
 
 
@@ -183,7 +184,10 @@ DO_States DO_Control(float velocityRef[3], float xsensData[3]){
 	w_wheels[wheels_LF] = wheels_GetSpeed(wheels_LF);
 
 	float wheelsPWM[4];
-	controller(velocityRef, w_wheels, xsensData, observerOutput, wheelsPWM);
+	controller(velocityRef, w_wheels, xsensData, wheelsPWM);
+
+	//uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
+	//uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
 
 	wheels_SetOutput(wheelsPWM);
 
