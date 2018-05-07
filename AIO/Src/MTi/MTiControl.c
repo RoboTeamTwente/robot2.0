@@ -67,9 +67,11 @@ MT_StatusTypeDef MT_Init(){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
+		MT_SetOptions();
 		MT_GoToMeasure();
 	}else{
 		uprintf("starting MTi Operation failed\n\r");
+		Xsens_state = Xsens_Unknown;
 		return MT_failed;
 	}
 	return MT_succes;
@@ -78,11 +80,13 @@ MT_StatusTypeDef MT_Init(){
 MT_StatusTypeDef MT_DeInit(){
 	reception_state = uninitialized;
 	if(HAL_OK != HAL_UART_Abort(&huartMT)){
+		Xsens_state = Xsens_Unknown;
 		return MT_failed;
 	}
 	HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 0);
 	XbusParser_destroy(XBParser);
 	free(ReceivedMessageStorage);
+	Xsens_state = Xsens_Reset;
 	return MT_succes;
 }
 
@@ -140,8 +144,10 @@ MT_StatusTypeDef MT_StartOperation(bool to_config){
 	HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 1);
 	if(WaitForAck(XMID_WakeUp) == MT_succes){
 		if(to_config) SendWakeUpAck();
+		Xsens_state = Xsens_Config;
 		return MT_succes;
 	}else{
+		Xsens_state = Xsens_Unknown;
 		return MT_failed;
 	}
 }
@@ -187,11 +193,56 @@ MT_StatusTypeDef MT_GoToConfig(){
 	uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
 		TextOut("In config state.\n\r");
+		Xsens_state = Xsens_Config;
 		return MT_succes;
 	}else{
 		TextOut("No GoToConfigAck received.\n\r");
+		Xsens_state = Xsens_Unknown;
 		return MT_failed;
 	}
+}
+
+MT_StatusTypeDef MT_SetOptions(){
+	uint32_t Setflags = XOF_DisableAutoStore | XOF_EnableInRunCompassCalibration | XOF_EnableAhs;
+	uint32_t Clearflags = XOF_DisableAutoMeasurement;
+	uint8_t data[8];
+	uint8_t* ptr = data;
+	ptr = XbusUtility_writeU32(ptr, Setflags);
+	XbusUtility_writeU32(ptr, Clearflags);
+	struct XbusMessage mess = {XMID_SetOptionFlags, 8 , (void*)data};
+	uint8_t cnt = 0;
+	do{
+		SendXbusMessage(mess);
+		cnt++;
+	}while(WaitForAck(XMID_ReqOptionFlagsAck) != MT_succes && cnt < 20 );
+	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt < 20){
+		uprintf("ReqOptionFlagsAck.\n\r");
+		return MT_succes;
+	}else{
+		TextOut("No ReqOptionFlagsAck received.\n\r");
+		return MT_failed;
+	}
+	return MT_succes;
+}
+
+MT_StatusTypeDef MT_ReqOptions(){
+	struct XbusMessage mess = {XMID_ReqOptionFlags};
+	uint8_t cnt = 0;
+	do{
+		SendXbusMessage(mess);
+		cnt++;
+	}while(WaitForAck(XMID_ReqOptionFlagsAck) != MT_succes && cnt < 20 );
+	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt < 20){
+		uprintf("ReqOptionFlagsAck.\n\r");
+		uprintf("length[%d], options flags[%02x %02x %02x %02x]\n\r", ReceivedMessageStorage->length, ((uint8_t*)ReceivedMessageStorage->data)[0], ((uint8_t*)ReceivedMessageStorage->data)[1], ((uint8_t*)ReceivedMessageStorage->data)[2], ((uint8_t*)ReceivedMessageStorage->data)[3])
+		return MT_succes;
+	}else{
+		TextOut("No ReqOptionFlagsAck received.\n\r");
+		return MT_failed;
+	}
+	return MT_succes;
 }
 
 MT_StatusTypeDef MT_GoToMeasure(){
@@ -204,9 +255,11 @@ MT_StatusTypeDef MT_GoToMeasure(){
 	uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
 		TextOut("In measurement state.\n\r");
+		Xsens_state = Xsens_Measure;
 		return MT_succes;
 	}else{
 		TextOut("No GoToMeasurementAck received.\n\r");
+		Xsens_state = Xsens_Unknown;
 		return MT_failed;
 	}
 }
