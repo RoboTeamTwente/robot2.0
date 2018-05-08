@@ -169,6 +169,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 	 //ballsensorMeasurementLoop();
 	 if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
@@ -217,6 +218,8 @@ int main(void)
 	  if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
 		  uprintf("Battery empty!\n\r");
 		  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
+		  wheels_DeInit();
+		  kick_DeInit();
 // 		  BATTERY IS ALMOST EMPTY!!!!!
 //		  battery_empty = true;
 //		  dribbler_SetSpeed(0);
@@ -228,8 +231,9 @@ int main(void)
 	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
-		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+		  //uprintf("euler")
 		  //uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
@@ -264,9 +268,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLM = 4;
   RCC_OscInitStruct.PLL.PLLN = 192;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -316,6 +320,12 @@ void HandleCommand(char* input){
 		MT_GoToConfig();
 	}else if(!strcmp(input, "mt measure")){
 		MT_GoToMeasure();
+	}else if(!strcmp(input, "mt options")){
+		MT_ReqOptions();
+	}else if(!strcmp(input, "mt setoptions")){
+		MT_SetOptions();
+	}else if(!strcmp(input, "mt icc")){
+		MT_UseIcc();
 	}else if(strcmp(input, "mt factoryreset") == 0){
 		uprintf("Resetting the configuration.\n\r");
 		MT_FactoryReset();
@@ -398,7 +408,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
-
 		float * accptr;
 		accptr = MT_GetAcceleration();
 		float xsensData[3];
@@ -411,7 +420,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
-		HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 		wheels_Callback();
 	}
 }

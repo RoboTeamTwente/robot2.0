@@ -64,7 +64,7 @@ void wheels_Init(){
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
 }
-void wheels_Deinit(){
+void wheels_DeInit(){
 	wheels_state = wheels_uninitialized;
 	HAL_TIM_Base_Stop(&htim1);
 	HAL_TIM_Base_Stop(&htim3);

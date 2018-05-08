@@ -165,6 +165,19 @@ enum XsFormatCoordinateSystem{
 	XDI_NWU		= 0x8
 };
 
+enum XsOptionFlags{
+	XOF_DisableAutoStore				= 0x00000001U,
+	XOF_DisableAutoMeasurement 			= 0x00000002U,
+	XOF_EnableAhs						= 0x00000010U,
+	XOF_EnableInRunCompassCalibration	= 0x00000080U
+};
+
+enum XsIcc{
+	XsIcc_Start  	= 0,	//Representative Motion | Measurement State
+	XsIcc_Stop		= 1, 	//Representative Motion | Measurement State
+	XsIcc_Store		= 2,	//ICC parameters Config | State
+	XsIcc_Get		= 3,	//Representative Motion | State Measurement State
+};
 /*!
  * \brief Low level format to use when formating Xbus messages for transmission.
  */
