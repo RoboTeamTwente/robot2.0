@@ -21,12 +21,13 @@ typedef enum {
 	MT_succes,
 	MT_failed
 }MT_StatusTypeDef;// Defines the status that most functions will return
+
 enum{
 	Xsens_Reset,
 	Xsens_Config,
 	Xsens_Measure,
 	Xsens_Unknown
-}Xsens_state = Xsens_Unknown;
+}Xsens_state;
 
 MT_StatusTypeDef MT_Init();
 /*	Call at a High > 200 HZ to ensure all messages will be handled
@@ -45,6 +46,8 @@ MT_StatusTypeDef MT_DeInit();
  * 	retval: MT_succes if GoToConfigAck is received MT_failed otherwise
  */
 MT_StatusTypeDef MT_GoToConfig();
+
+MT_StatusTypeDef MT_UseIcc();
 /*	set the option flags
  *
  */

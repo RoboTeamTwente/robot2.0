@@ -171,6 +171,13 @@ enum XsOptionFlags{
 	XOF_EnableAhs						= 0x00000010U,
 	XOF_EnableInRunCompassCalibration	= 0x00000080U
 };
+
+enum XsIcc{
+	XsIcc_Start  	= 0,	//Representative Motion | Measurement State
+	XsIcc_Stop		= 1, 	//Representative Motion | Measurement State
+	XsIcc_Store		= 2,	//ICC parameters Config | State
+	XsIcc_Get		= 3,	//Representative Motion | State Measurement State
+};
 /*!
  * \brief Low level format to use when formating Xbus messages for transmission.
  */

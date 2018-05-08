@@ -313,6 +313,8 @@ void HandleCommand(char* input){
 		MT_ReqOptions();
 	}else if(!strcmp(input, "mt setoptions")){
 		MT_SetOptions();
+	}else if(!strcmp(input, "mt icc")){
+		MT_UseIcc();
 	}else if(strcmp(input, "mt factoryreset") == 0){
 		uprintf("Resetting the configuration.\n\r");
 		MT_FactoryReset();

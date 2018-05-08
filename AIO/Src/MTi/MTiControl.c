@@ -69,6 +69,7 @@ MT_StatusTypeDef MT_Init(){
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
 		MT_SetOptions();
 		MT_GoToMeasure();
+		MT_UseIcc();
 	}else{
 		uprintf("starting MTi Operation failed\n\r");
 		Xsens_state = Xsens_Unknown;
@@ -202,9 +203,26 @@ MT_StatusTypeDef MT_GoToConfig(){
 	}
 }
 
+MT_StatusTypeDef MT_UseIcc(){
+	struct XbusMessage mess = {XMID_IccCommand, 1, XsIcc_Start};
+	uint8_t cnt = 0;
+	do{
+		SendXbusMessage(mess);
+		cnt++;
+	}while(WaitForAck(XMID_IccCommandAck) != MT_succes && cnt < 20 );
+	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt < 20){
+		TextOut("In config state.\n\r");
+		return MT_succes;
+	}else{
+		TextOut("No GoToConfigAck received.\n\r");
+		return MT_failed;
+	}
+}
+
 MT_StatusTypeDef MT_SetOptions(){
-	uint32_t Setflags = XOF_DisableAutoStore | XOF_EnableInRunCompassCalibration | XOF_EnableAhs;
-	uint32_t Clearflags = XOF_DisableAutoMeasurement;
+	uint32_t Setflags = XOF_DisableAutoStore | XOF_EnableInRunCompassCalibration;
+	uint32_t Clearflags = XOF_DisableAutoMeasurement | XOF_EnableAhs;
 	uint8_t data[8];
 	uint8_t* ptr = data;
 	ptr = XbusUtility_writeU32(ptr, Setflags);
