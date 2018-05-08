@@ -43,7 +43,7 @@ DO_States DO_Init(){
 }
 
 
-void disturbanceObserver(float yaw, float localInput[3], float globalAcc[3], float output[3]){
+void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], float output[3]){
 
 	// Requires transformation to global coordinates and back
 	float globalInput[3];
@@ -52,12 +52,12 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[3], flo
 //	rotate(-yaw, localAcc, globalAcc);
 	float accX = globalAcc[body_x];
 	float accY = globalAcc[body_y];
-	if (fabs(accX)<0.3) {
-		accX = 0;
-	}
-	if (fabs(accY)<0.3) {
-		accY=0;
-	}
+//	if (fabs(accX)<0.3) {
+//		accX = 0;
+//	}
+//	if (fabs(accY)<0.3) {
+//		accY=0;
+//	}
 
 	float globalOut[3] = {0,0,0};
 	static float prevOut[3] = {0,0,0};
@@ -71,7 +71,7 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[3], flo
 	// safety: reduce effect, while testing
 	globalOut[body_x] = globalOut[body_x]*0.5;
 	globalOut[body_y] = globalOut[body_y]*0.5;
-	//rotate(yaw, globalOut, output);
+	rotate(yaw, globalOut, output);
 }
 
 //multiplies a 4*3 matrix by a vector of 3 elements.
@@ -114,7 +114,7 @@ void rotate(float yaw, float input[3], float output[3]){
 void pController(float input[3], float kp[3], float output[3]){
 	// These limits are meant to prevent slipping
 	float w_limit = 500;
-	float PWM_limit = 50;
+	float PWM_limit = 30;
 
 	float pre_out[3];
 	pre_out[body_x] = kp[body_x]*input[body_x];
@@ -153,7 +153,7 @@ float compute_limit_scale(float input[3], float limit){
 }
 
 //observer output should just be pre-declared as 0 before any looping starts
-void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], float output[4]){
+void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], bool DO_enabled, float output[4]){
 	// uses global variable: do_output which is reset to 0 in the init function
 
 	// Compute the error in local body coordinates
@@ -162,10 +162,9 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 
 	float localVel[3];
 	wheels2Body(w_wheels, localVel);
-//	uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
-	uprintf("[%f %f %f]\n\r", xsensData[body_x], xsensData[body_y], xsensData[body_w]);
+	uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
+	//uprintf("[%f %f %f]\n\r", xsensData[body_x], xsensData[body_y], xsensData[body_w]);
 	//uprintf("[%f, %f, %f]\n\r", localReference[body_x], localReference[body_y],  localReference[body_w]);
-
 
 	float error[3];
 	error[body_x] = localReference[body_x] - localVel[body_x];
@@ -174,9 +173,9 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 
 	// P-control
 	float controllerGain[3];
-	controllerGain[body_x] = 20000/30;
-	controllerGain[body_y] = 20000/30;
-	controllerGain[body_w] = 200/30;
+	controllerGain[body_x] = 20000/10;
+	controllerGain[body_y] = 20000/10;
+	controllerGain[body_w] = 200/10;
 	float pOut[3];
 	pController(error, controllerGain, pOut);
 
@@ -196,8 +195,16 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 	// Output the wheel PWMs (by filling in the output array)
 	body2Wheels(scaledInput, output);
 
+	// To make sure the robot does not do anything due to the DO when stationary
+	float accData[2] = {xsensData[body_x],xsensData[body_y]};
+	if (sqrt(localVel[body_x]*localVel[body_x] + localVel[body_y]*localVel[body_y])<0.05) {
+		accData[body_x] = 0;
+		accData[body_y] = 0;
+	}
 	// Compute disturbance observer output for next iteration, filling in the DO array (do_output)
-	disturbanceObserver(xsensData[body_w], scaledInput, xsensData, do_output);
+	if (DO_enabled) {
+		disturbanceObserver(xsensData[body_w], scaledInput, accData, do_output);
+	}
 
 //	uprintf("[%f, %f]\n\r", w_wheels[wheels_RF], output[wheels_RF]);
 	//uprintf("[%f, %f, %f, %f]\n\r", output[wheels_RF],  output[wheels_RB], output[wheels_LB], output[wheels_LF]);
@@ -206,10 +213,12 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 }
 
 
-DO_States DO_Control(float velocityRef[3], float xsensData[3]){
+DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled){
 
-//	velocityRef[0] = 0;
-//	velocityRef[1] = 1;
+//	velocityRef[0] = 1;
+//	velocityRef[1] = 0;
+//	velocityRef[2] = 0;
+//	xsensData[2] = 0;
 	static float w_prev[4] = {0,0,0,0};
 
 	float w_wheels[4];
@@ -231,10 +240,10 @@ DO_States DO_Control(float velocityRef[3], float xsensData[3]){
 	w_prev[wheels_LF] = w_wheels[wheels_LF];
 
 	float wheelsPWM[4];
-	controller(velocityRef, w_wheels, xsensData, wheelsPWM);
+	controller(velocityRef, w_wheels, xsensData, DO_enabled, wheelsPWM);
 
-	//uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
-	//uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
+//	uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
+//	uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
 
 //	float wheelsPWM2[4] = {0,0,-0,-0};
 //	wheelsPWM2[wheels_LB] = -(30*1.5 - w_wheels[wheels_LB])*0.0;

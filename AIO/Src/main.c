@@ -186,8 +186,8 @@ int main(void)
 			  float velRefAmp = (float)dataStruct.robotVelocity/ 1000.0F;
 			  float velRefDir = (float)dataStruct.movingDirection * (2*M_PI/512);
 			  float angularVelRef = rotSign * (float)(dataStruct.angularVelocity/180.0)*M_PI;
-			  velocityRef[body_x] = cosf(velRefDir) * velRefAmp * 4;
-			  velocityRef[body_y] = sinf(velRefDir) * velRefAmp * 4;
+			  velocityRef[body_x] = cosf(velRefDir) * velRefAmp * 2;
+			  velocityRef[body_y] = sinf(velRefDir) * velRefAmp * 2;
 			  velocityRef[body_w] = angularVelRef * 2;
 
 			  //float wheels[4];
@@ -414,7 +414,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		xsensData[body_x] = -accptr[0];
 		xsensData[body_y] = -accptr[1];
 		xsensData[body_w] = MT_GetAngles()[2]/180*M_PI;
-		DO_Control(velocityRef, xsensData);
+		bool DO_enabled = true;
+		DO_Control(velocityRef, xsensData, DO_enabled);
 		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 	}else if(htim->Instance == htim13.Instance){

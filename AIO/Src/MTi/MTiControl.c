@@ -212,10 +212,10 @@ MT_StatusTypeDef MT_UseIcc(){
 	}while(WaitForAck(XMID_IccCommandAck) != MT_succes && cnt < 20 );
 	uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
-		TextOut("In config state.\n\r");
+		TextOut("received IccCommandAck.\n\r");
 		return MT_succes;
 	}else{
-		TextOut("No GoToConfigAck received.\n\r");
+		TextOut("No IccCommandAck received.\n\r");
 		return MT_failed;
 	}
 }
