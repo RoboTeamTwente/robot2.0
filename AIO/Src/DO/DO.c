@@ -62,12 +62,13 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[3], flo
 	float globalOut[3] = {0,0,0};
 	static float prevOut[3] = {0,0,0};
 	if (!isnan(prevOut[0])){ // lowpass filtering
-		globalOut[body_x] = 0.07*(accX*3000 - globalInput[body_x]) + 0.93*prevOut[body_x];
-		globalOut[body_y] = 0.07*(accY*3000 - globalInput[body_y]) + 0.93*prevOut[body_y];
+		globalOut[body_x] = 0.07*(accX*4000 - globalInput[body_x]) + 0.93*prevOut[body_x];
+		globalOut[body_y] = 0.07*(accY*4000 - globalInput[body_y]) + 0.93*prevOut[body_y];
 	}
 	prevOut[body_x] = globalOut[body_x];
 	prevOut[body_y] = globalOut[body_y];
 
+	// safety: reduce effect, while testing
 	globalOut[body_x] = globalOut[body_x]*0.5;
 	globalOut[body_y] = globalOut[body_y]*0.5;
 	//rotate(yaw, globalOut, output);
@@ -173,9 +174,9 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 
 	// P-control
 	float controllerGain[3];
-	controllerGain[body_x] = 20000/30;//100;
-	controllerGain[body_y] = 20000/30;///100;
-	controllerGain[body_w] = 200/30;///100;
+	controllerGain[body_x] = 20000/30;
+	controllerGain[body_y] = 20000/30;
+	controllerGain[body_w] = 200/30;
 	float pOut[3];
 	pController(error, controllerGain, pOut);
 
@@ -187,7 +188,7 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], flo
 
 	// Limiting the output to prevent saturation of the PWM signals for any of the wheels
 	float scaledInput[3];
-	float scale = compute_limit_scale(postObserverSignal, 25); // safety-mode
+	float scale = compute_limit_scale(postObserverSignal, 95);
 	scaledInput[body_x] = scale*postObserverSignal[body_x];
 	scaledInput[body_y] = scale*postObserverSignal[body_y];
 	scaledInput[body_w] = scale*postObserverSignal[body_w];
