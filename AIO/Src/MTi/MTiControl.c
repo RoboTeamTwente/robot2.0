@@ -220,6 +220,47 @@ MT_StatusTypeDef MT_UseIcc(){
 	}
 }
 
+MT_StatusTypeDef MT_SetFilterProfile(uint8_t filter){
+	uint8_t data[2];
+	XbusUtility_writeU16(data,  XFP_General+filter);
+	struct XbusMessage mess = {XMID_SetFilterProfile, 2, data};
+	uint8_t cnt = 0;
+	do{
+		SendXbusMessage(mess);
+		cnt++;
+	}while(WaitForAck(XMID_SetFilterProfileAck) != MT_succes && cnt < 20 );
+	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt < 20){
+		uprintf("SetFilterProfileAck.\n\r");
+		return MT_succes;
+	}else{
+		TextOut("No SetFilterProfileAck received.\n\r");
+		return MT_failed;
+	}
+	return MT_succes;
+
+}
+
+MT_StatusTypeDef MT_ReqFilterProfile(){
+	struct XbusMessage mess = {XMID_ReqFilterProfile};
+	uint8_t cnt = 0;
+	do{
+		SendXbusMessage(mess);
+		cnt++;
+	}while(WaitForAck(XMID_ReqFilterProfileAck) != MT_succes && cnt < 20 );
+	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt < 20){
+		uprintf("ReqFilterProfileAck.\n\r");
+		uprintf("len[%d],[%d %d]\n\r", ReceivedMessageStorage->length, ((uint8_t*)ReceivedMessageStorage->data)[0], ((uint8_t*)ReceivedMessageStorage->data)[1]);
+		return MT_succes;
+	}else{
+		TextOut("No ReqFilterProfileAck received.\n\r");
+		return MT_failed;
+	}
+	return MT_succes;
+
+}
+
 MT_StatusTypeDef MT_SetOptions(){
 	uint32_t Setflags = XOF_DisableAutoStore | XOF_EnableInRunCompassCalibration;
 	uint32_t Clearflags = XOF_DisableAutoMeasurement | XOF_EnableAhs;

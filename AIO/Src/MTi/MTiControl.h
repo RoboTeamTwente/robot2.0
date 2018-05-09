@@ -46,8 +46,23 @@ MT_StatusTypeDef MT_DeInit();
  * 	retval: MT_succes if GoToConfigAck is received MT_failed otherwise
  */
 MT_StatusTypeDef MT_GoToConfig();
-
+/*	start using the In-run compass calibration
+ *
+ */
 MT_StatusTypeDef MT_UseIcc();
+/* choose which filter the MTi-3 should use
+ * param filter
+ * 		0: general
+ * 		1: High_mag_dep
+ * 		2: Dynamic
+ * 		3: North_referenced
+ * 		4: VRU_general
+ */
+MT_StatusTypeDef MT_SetFilterProfile(uint8_t filter);
+/*request the current filter profile
+ *
+ */
+MT_StatusTypeDef MT_ReqFilterProfile();
 /*	set the option flags
  *
  */

@@ -70,7 +70,7 @@ uint8_t freqChannel = 78;
 bool battery_empty = false;
 bool user_control = false;
 bool print_encoder = false;
-
+bool print_euler = false;
 bool wheels_testing = false;
 float wheels_testing_power = 30;
 bool keyboard_control = false;
@@ -153,7 +153,7 @@ int main(void)
 //  geneva_Init();
   DO_Init();
   dribbler_Init();
-  //ballsensorInit();
+  ballsensorInit();
   wheels_Init();
   MT_Init();
   nssHigh(&hspi2);
@@ -170,7 +170,7 @@ int main(void)
   while (1)
   {
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
-	 //ballsensorMeasurementLoop();
+	 ballsensorMeasurementLoop();
 	 if(irqRead(&hspi2)){
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
@@ -294,6 +294,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 #define TEST_WHEELS_COMMAND "test wheels"
+#define SET_FILTER_COMMAND "mt filter"
 void HandleCommand(char* input){
 	if(strcmp(input, "mt start") == 0){
 		uprintf("Starting device MTi\n\r");
@@ -315,9 +316,14 @@ void HandleCommand(char* input){
 		MT_SetOptions();
 	}else if(!strcmp(input, "mt icc")){
 		MT_UseIcc();
+	}else if(!memcmp(input, SET_FILTER_COMMAND , strlen(SET_FILTER_COMMAND))){
+		MT_SetFilterProfile(strtol(input + 1 + strlen(SET_FILTER_COMMAND), NULL, 10));
 	}else if(strcmp(input, "mt factoryreset") == 0){
 		uprintf("Resetting the configuration.\n\r");
 		MT_FactoryReset();
+	}else if(strcmp(input, "mt reqfilter") == 0){
+		uprintf("requesting current filter profile.\n\r");
+		MT_ReqFilterProfile();
 	}else if(memcmp(input, "mt setconfig", strlen("mt setconfig")) == 0){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
@@ -333,6 +339,9 @@ void HandleCommand(char* input){
 		uprintf("position = [%u]\n\r", geneva_GetPosition());
 	}else if(!strcmp(input, "geneva stop")){
 		geneva_SetState(geneva_idle);
+	}else if(!strcmp(input, "euler")){
+		print_euler = ! print_euler;
+		uprintf("print_euler = %d", print_euler);
 	}else if(!memcmp(input, "geneva" , strlen("geneva"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
 	}else if(!memcmp(input, "control" , strlen("control"))){
@@ -406,7 +415,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 //		if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 		float * euler;
 		euler = MT_GetAngles();
-		if(Xsens_state == Xsens_Measure)	uprintf("euler angles[%f, %f, %f]\n\r", euler[0], euler[1], euler[2]);
+		if(Xsens_state == Xsens_Measure && print_euler)	uprintf("euler angles[%f, %f, %f]\n\r", euler[0], euler[1], euler[2]);
 		DO_Control();
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
@@ -420,6 +429,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		//wireless message received
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
+		uprintf("geneva sensor callback\n\r");
 		geneva_SensorCallback();
 	}
 }
