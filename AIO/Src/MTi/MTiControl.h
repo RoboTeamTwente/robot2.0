@@ -71,6 +71,14 @@ MT_StatusTypeDef MT_SetOptions();
  *
  */
 MT_StatusTypeDef MT_ReqOptions();
+/*	start the no rotation calibration
+ *
+ */
+MT_StatusTypeDef MT_NoRotation(uint16_t seconds);
+/*	returns the statusword in param word if it exists
+ *
+ */
+uint32_t* MT_GetStatusWord();
 /*	Put Xsens into Measurement state
  * 	retval: MT_succes if GoToMeasutementAck is received MT_failed otherwise
  */

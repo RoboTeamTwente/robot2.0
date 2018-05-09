@@ -24,6 +24,8 @@ struct XbusMessage* ReceivedMessageStorage;
 uint MT_Data_succerr[2] = {0};
 float angles[3];
 float acc[3];
+uint8_t raw[128];
+uint32_t statusword;
 
 enum reception_states{
 	uninitialized,
@@ -49,6 +51,7 @@ static inline MT_StatusTypeDef WaitForAck(enum XsMessageId XMID);
  */
 // Initialize controlling the MTi device
 MT_StatusTypeDef MT_Init(){
+	MT_StatusTypeDef ret = MT_succes;
 	reception_state = receive_5;
 	cplt_mess_stored_flag = 0;
 	ReceivedMessageStorage = malloc(MAX_RAW_MESSAGE_SIZE);				// Reserve memory to store the longest possible message
@@ -64,18 +67,21 @@ MT_StatusTypeDef MT_Init(){
 
 	if(MT_succes == MT_StartOperation(true)){
 		uprintf("started MTi Operation in config state\n\r");
+		//MT_SetOptions();
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
+		MT_BuildConfig(XDI_StatusWord, 10, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
-		MT_SetOptions();
-		MT_GoToMeasure();
-		MT_UseIcc();
+		ret = MT_GoToMeasure();
+		HAL_Delay(50);
+		ret = MT_NoRotation(10);
+		//MT_UseIcc();
 	}else{
 		uprintf("starting MTi Operation failed\n\r");
 		Xsens_state = Xsens_Unknown;
-		return MT_failed;
+		ret =  MT_failed;
 	}
-	return MT_succes;
+	return ret;
 }
 
 MT_StatusTypeDef MT_DeInit(){
@@ -131,6 +137,10 @@ MT_StatusTypeDef MT_Update(){
 			}
 		}
 	}
+//	if(!(statusword & 0b00011000) && !started_icc){
+//		started_icc = true;
+//		MT_UseIcc();
+//	}
 
 	if(HAL_UART_ErrorCallback_flag != 0){
 		HAL_UART_ErrorCallback_flag = 0;
@@ -174,10 +184,9 @@ void MT_UART_ErrorCallback(){
 }
 // An xbusmessage is formatted and sent over usart
 void SendXbusMessage(struct XbusMessage XbusMessage){
-	uint8_t raw[128];
 	size_t XbusMes_size =  XbusMessage_format(raw, (struct XbusMessage const*)&XbusMessage, XLLF_Uart);
-	HAL_UART_Transmit_IT(&huartMT, raw, XbusMes_size);
-	HAL_Delay(1);
+	HAL_UART_Transmit/*_IT*/(&huartMT, raw, XbusMes_size, 0xFFFF);
+//	HAL_Delay(1);
 //	for(uint i = 0; i < XbusMes_size; i++){
 //		uprintf("[%02x]", raw[i]);
 //	}
@@ -191,7 +200,7 @@ MT_StatusTypeDef MT_GoToConfig(){
 		SendXbusMessage(mess);
 		cnt++;
 	}while(WaitForAck(XMID_GoToConfigAck) != MT_succes && cnt < 20 );
-	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
 		TextOut("In config state.\n\r");
 		Xsens_state = Xsens_Config;
@@ -210,12 +219,12 @@ MT_StatusTypeDef MT_UseIcc(){
 		SendXbusMessage(mess);
 		cnt++;
 	}while(WaitForAck(XMID_IccCommandAck) != MT_succes && cnt < 20 );
-	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
-		TextOut("In config state.\n\r");
+		TextOut("IccCommandAck.\n\r");
 		return MT_succes;
 	}else{
-		TextOut("No GoToConfigAck received.\n\r");
+		TextOut("No IccCommandAck received.\n\r");
 		return MT_failed;
 	}
 }
@@ -229,7 +238,7 @@ MT_StatusTypeDef MT_SetFilterProfile(uint8_t filter){
 		SendXbusMessage(mess);
 		cnt++;
 	}while(WaitForAck(XMID_SetFilterProfileAck) != MT_succes && cnt < 20 );
-	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
 		uprintf("SetFilterProfileAck.\n\r");
 		return MT_succes;
@@ -248,7 +257,7 @@ MT_StatusTypeDef MT_ReqFilterProfile(){
 		SendXbusMessage(mess);
 		cnt++;
 	}while(WaitForAck(XMID_ReqFilterProfileAck) != MT_succes && cnt < 20 );
-	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
 		uprintf("ReqFilterProfileAck.\n\r");
 		uprintf("len[%d],[%d %d]\n\r", ReceivedMessageStorage->length, ((uint8_t*)ReceivedMessageStorage->data)[0], ((uint8_t*)ReceivedMessageStorage->data)[1]);
@@ -261,10 +270,10 @@ MT_StatusTypeDef MT_ReqFilterProfile(){
 
 }
 
+uint8_t data[8];
 MT_StatusTypeDef MT_SetOptions(){
 	uint32_t Setflags = XOF_DisableAutoStore | XOF_EnableInRunCompassCalibration;
 	uint32_t Clearflags = XOF_DisableAutoMeasurement | XOF_EnableAhs;
-	uint8_t data[8];
 	uint8_t* ptr = data;
 	ptr = XbusUtility_writeU32(ptr, Setflags);
 	XbusUtility_writeU32(ptr, Clearflags);
@@ -274,7 +283,7 @@ MT_StatusTypeDef MT_SetOptions(){
 		SendXbusMessage(mess);
 		cnt++;
 	}while(WaitForAck(XMID_ReqOptionFlagsAck) != MT_succes && cnt < 20 );
-	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
 		uprintf("ReqOptionFlagsAck.\n\r");
 		return MT_succes;
@@ -285,6 +294,30 @@ MT_StatusTypeDef MT_SetOptions(){
 	return MT_succes;
 }
 
+MT_StatusTypeDef MT_NoRotation(uint16_t seconds){
+	uint8_t data[2];
+	XbusUtility_writeU16(data, seconds);
+	struct XbusMessage mess = {XMID_SetNoRotation, 2 , (void*)data};
+	uint8_t cnt = 0;
+	do{
+		SendXbusMessage(mess);
+		cnt++;
+	}while(WaitForAck(XMID_SetNoRotationAck) != MT_succes && cnt < 20 );
+	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
+	if(cnt < 20){
+		uprintf("SetNoRotationAck.\n\r");
+		return MT_succes;
+	}else{
+		TextOut("No SetNoRotationAck received.\n\r");
+		return MT_failed;
+	}
+	return MT_succes;
+}
+
+uint32_t* MT_GetStatusWord(){
+	return &statusword;
+}
+
 MT_StatusTypeDef MT_ReqOptions(){
 	struct XbusMessage mess = {XMID_ReqOptionFlags};
 	uint8_t cnt = 0;
@@ -292,7 +325,7 @@ MT_StatusTypeDef MT_ReqOptions(){
 		SendXbusMessage(mess);
 		cnt++;
 	}while(WaitForAck(XMID_ReqOptionFlagsAck) != MT_succes && cnt < 20 );
-	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
 		uprintf("ReqOptionFlagsAck.\n\r");
 		uprintf("length[%d], options flags[%02x %02x %02x %02x]\n\r", ReceivedMessageStorage->length, ((uint8_t*)ReceivedMessageStorage->data)[0], ((uint8_t*)ReceivedMessageStorage->data)[1], ((uint8_t*)ReceivedMessageStorage->data)[2], ((uint8_t*)ReceivedMessageStorage->data)[3])
@@ -311,7 +344,7 @@ MT_StatusTypeDef MT_GoToMeasure(){
 		SendXbusMessage(mess);
 		cnt++;
 	}while(WaitForAck(XMID_GoToMeasurementAck) != MT_succes && cnt < 20 );
-	uprintf("cnt = %d\n\r",  cnt);
+	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
 		TextOut("In measurement state.\n\r");
 		Xsens_state = Xsens_Measure;
@@ -540,7 +573,8 @@ static void PrintMessageData(struct XbusMessage const* message){
 	}
 	uint32_t status;
 	if (XbusMessage_getDataItem(&status, XDI_StatusWord, message)){
-		if(MT_DEBUG) uprintf( " Status:%lX", status);
+		if(MT_DEBUG) uprintf( " Status:0x%lX\n\r", status);
+		statusword = status;
 		bytes -= 1 + 4 + 2;
 	}
 	if(MT_DEBUG) uprintf(" [%i] bytes unread\n\r", bytes);
