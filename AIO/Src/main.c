@@ -78,6 +78,9 @@ float wheels_testing_power = 30;
 bool keyboard_control = false;
 
 float velocity[3] = {0};
+
+uint8_t isNrfInitialized = 0;
+uint8_t localRobotID;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -163,14 +166,18 @@ int main(void)
   uint LastPackageTime = 0;
   uint printtime = 0;
   uint kick_timer = 0;
-  uint8_t localRobotID;
 
-  localRobotID = 10; //usually that should be the RobotID
+  localRobotID = 10; //TODO: debug. remove later
   	nrf24nssHigh(); //I think we need that, but I can't really say, yet, why we would need to call low-level functions in main()
+
+
 
   	while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
   		uprintf("Error while initializing nRF wireless module. Check connections.\n");
   	}
+  	isNrfInitialized = 1;
+  	uprintf("nRF wireless module successfully initialized.\n");
+  	uprintf("Status Register: %02x.\n", readReg(STATUS));
 
   /* USER CODE END 2 */
 
@@ -178,6 +185,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  preparedAckData.roboID = localRobotID;
 	  //ballsensorMeasurementLoop();
 	  if(wheels_testing){
 		  if(keyboard_control){
@@ -195,18 +203,6 @@ int main(void)
 			  }
 			  wheels_SetOutput(wheels);
 		  }
-	  }else if(irqRead(&hspi2)){
-			uprintf("\n\n new msg\n");
-
-			int8_t error_code = roboCallback(localRobotID);
-			if(error_code) {
-				uprintf("RoboCallback failed with error: %i\n", error_code);
-			}
-
-
-
-			clearInterrupts(); //should not be needed
-
 	  }else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
 	  	  float wheel_powers[4] = {0, 0, 0, 0};
 		  wheels_SetOutput(wheel_powers);
@@ -224,7 +220,7 @@ int main(void)
 		  printtime = HAL_GetTick();
 		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
+		  //printNRFregisters();
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
   /* USER CODE END WHILE */
@@ -422,11 +418,85 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == SPI1_IRQ_Pin){
-		//wireless message received
+		if(isNrfInitialized) {
+				uprintf("\n\nInterrupt fired.\n");
+
+
+				int8_t error_code = roboCallback(localRobotID);
+				if(error_code) {
+					uprintf("RoboCallback failed with error: %i\n", error_code);
+				}
+
+				//flushRX();
+				clearInterrupts(); //should not be needed
+			}
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
 		geneva_SensorCallback();
 	}
+}
+
+void printNRFregisters() {
+	uprintf("Reading registers.\n");
+			//uprintf("This feature is under construction.\n");
+			//uint8_t registerOutput = readReg(RX_ADDR_P0); //0x0A = RX_ADDR_P0 -- Receiving Address, Data Pipe 0.
+			//uprintf("RX_ADDR_P0: 0x%x\n", registerOutput);
+			//uprintf("This output will be more explanatory in the future.\n");
+			uprintf("CONFIG: 0x%02x\n", readReg(CONFIG));
+			uprintf("EN_AA: 0x%02x\n", readReg(EN_AA));
+			uprintf("EN_RXADDR: 0x%02x\n", readReg(EN_RXADDR));
+			uprintf("SETUP_AW: 0x%02x\n", readReg(SETUP_AW));
+			uprintf("SETUP_RETR: 0x%02x\n", readReg(SETUP_RETR));
+			uprintf("RF_CH: 0x%02x\n", readReg(RF_CH));
+			uprintf("RF_SETUP: 0x%02x\n", readReg(RF_SETUP));
+
+			uint8_t status_reg = readReg(STATUS);
+			uprintf("STATUS: 0x%02x ( ", status_reg);
+			if(status_reg & RX_DR) uprintf("RX_DR ");
+			if(status_reg & TX_DS) uprintf("TX_DS ");
+			if(status_reg & MAX_RT) uprintf("MAX_RT ");
+			uint8_t pipeNo = (status_reg >> 1)&7;
+			if(pipeNo >= 0 && pipeNo <= 0b101) uprintf("PIPE:%i ", pipeNo);
+			if(pipeNo == 0b110) uprintf("RX_FIFO:not_used ");
+			if(pipeNo == 0b111) uprintf("RX_FIFO:empty ");
+			if(status_reg & STATUS_TX_FULL) uprintf("TX_FULL ");
+			uprintf(")\n");
+
+			uprintf("OBSERVE_TX: 0x%02x\n", readReg(OBSERVE_TX));
+			uprintf("RPD: 0x%02x\n", readReg(RPD));
+			uint8_t buffer[5];
+			readRegMulti(RX_ADDR_P0, buffer, 5);
+			uprintf("RX_ADDR_P0: 0x%x%x%x%x%x\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
+			readRegMulti(RX_ADDR_P1, buffer, 5);
+			uprintf("RX_ADDR_P1: 0x%x%x%x%x%x\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
+			readRegMulti(RX_ADDR_P2, buffer, 5);
+			uprintf("RX_ADDR_P2: 0x%x%x%x%x%x\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
+			readRegMulti(RX_ADDR_P3, buffer, 5);
+			uprintf("RX_ADDR_P3: 0x%x%x%x%x%x\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
+			readRegMulti(RX_ADDR_P4, buffer, 5);
+			uprintf("RX_ADDR_P4: 0x%x%x%x%x%x\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
+			readRegMulti(RX_ADDR_P5, buffer, 5);
+			uprintf("RX_ADDR_P5: 0x%x%x%x%x%x\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
+
+			readRegMulti(TX_ADDR, buffer, 5);
+			uprintf("TX_ADDR: 0x%x%x%x%x%x\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4]);
+			uprintf("RX_PW_P0: 0x%02x\n", readReg(RX_PW_P0));
+			uprintf("RX_PW_P1: 0x%02x\n", readReg(RX_PW_P1));
+			uprintf("RX_PW_P2: 0x%02x\n", readReg(RX_PW_P2));
+			uprintf("RX_PW_P3: 0x%02x\n", readReg(RX_PW_P3));
+			uprintf("RX_PW_P4: 0x%02x\n", readReg(RX_PW_P4));
+			uprintf("RX_PW_P5: 0x%02x\n", readReg(RX_PW_P5));
+			uint8_t fifo_status = readReg(FIFO_STATUS);
+			uprintf("FIFO_STATUS: 0x%02x  ( ", fifo_status);
+			if(fifo_status & TX_REUSE) uprintf("TX_REUSE ");
+			if(fifo_status & FIFO_STATUS_TX_FULL) uprintf("TX_FULL ");
+			if(fifo_status & TX_EMPTY) uprintf("TX_EMPTY ");
+			if(fifo_status & RX_FULL) uprintf("RX_FULL ");
+			if(fifo_status & RX_EMPTY) uprintf("RX_EMPTY ");
+			uprintf(" )\n");
+
+			uprintf("DYNPD: 0x%02x\n", readReg(DYNPD));
+			uprintf("FEATURE: 0x%02x\n", readReg(FEATURE));
 }
 /* USER CODE END 4 */
 
