@@ -53,10 +53,12 @@
 #include "geneva/geneva.h"
 #include "DO/DO.h"
 #include "Ballsensor/ballsensor.h"
-#include "myNRF24.h"
+//#include "myNRF24.h"
 #include "wheels/wheels.h"
 #include "kickchip/kickchip.h"
 #include "MTi/MTiControl.h"
+#include "wireless/myNRF24.h"
+#include "wireless/roboNRF24.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -156,13 +158,20 @@ int main(void)
   //ballsensorInit();
   wheels_Init();
   MT_Init();
-  nssHigh(&hspi2);
-  initRobo(&hspi2, freqChannel, address);
+
   kick_Init();
-  dataPacket dataStruct;
   uint LastPackageTime = 0;
   uint printtime = 0;
   uint kick_timer = 0;
+  uint8_t localRobotID;
+
+  localRobotID = 10; //usually that should be the RobotID
+  	nrf24nssHigh(); //I think we need that, but I can't really say, yet, why we would need to call low-level functions in main()
+
+  	while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
+  		uprintf("Error while initializing nRF wireless module. Check connections.\n");
+  	}
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -187,34 +196,16 @@ int main(void)
 			  wheels_SetOutput(wheels);
 		  }
 	  }else if(irqRead(&hspi2)){
-		  LastPackageTime = HAL_GetTick();
-		  roboCallback(&hspi2, &dataStruct);
-		  if(dataStruct.robotID == address){
-			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-			  float wheels[4];
-			  int rotSign = 1;
-			  if(dataStruct.rotationDirection){
-				  rotSign = -1;
-			  }
-			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
-			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
-			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
-			  wheels_SetOutput(wheels);
-			  //dribbler
-			  dribbler_SetSpeed(dataStruct.driblerSpeed);
+			uprintf("\n\n new msg\n");
 
-			  //kicker
-			  if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
-				  kick_timer = HAL_GetTick() + 1000U;
-				  if(dataStruct.chipper){
-					  kick_Chip((dataStruct.kickForce*100)/255);
-				  }else{
-					  kick_Kick((dataStruct.kickForce*100)/255);
-				  }
-			  }
-			  //geneva
+			int8_t error_code = roboCallback(localRobotID);
+			if(error_code) {
+				uprintf("RoboCallback failed with error: %i\n", error_code);
+			}
 
-		  }
+
+
+			clearInterrupts(); //should not be needed
 
 	  }else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
 	  	  float wheel_powers[4] = {0, 0, 0, 0};
