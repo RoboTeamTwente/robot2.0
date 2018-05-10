@@ -167,17 +167,7 @@ int main(void)
   uint printtime = 0;
   uint kick_timer = 0;
 
-  localRobotID = 10; //TODO: debug. remove later
-  	nrf24nssHigh(); //I think we need that, but I can't really say, yet, why we would need to call low-level functions in main()
-
-
-
-  	while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
-  		uprintf("Error while initializing nRF wireless module. Check connections.\n");
-  	}
-  	isNrfInitialized = 1;
-  	uprintf("nRF wireless module successfully initialized.\n");
-  	uprintf("Status Register: %02x.\n", readReg(STATUS));
+  Wireless_Init();
 
   /* USER CODE END 2 */
 
@@ -434,6 +424,18 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		// calibration  of the geneva drive finished
 		geneva_SensorCallback();
 	}
+}
+
+void Wireless_Init() {
+	localRobotID = ReadAddress();
+	//I think we need that, but I can't really say, yet, why we would need to call low-level functions in main()
+
+	while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
+		uprintf("Error while initializing nRF wireless module. Check connections.\n");
+	}
+	isNrfInitialized = 1;
+	uprintf("nRF wireless module successfully initialized.\n");
+	uprintf("Status Register: %02x.\n", readReg(STATUS));
 }
 
 void printNRFregisters() {

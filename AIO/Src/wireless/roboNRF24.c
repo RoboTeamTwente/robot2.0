@@ -16,6 +16,8 @@ uint8_t counter = 0;
 
 int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t roboID){
 
+	nrf24nssHigh(); //moved from main, ulf hates me
+
 	//reset and flush buffer
 	if(NRFinit(spiHandle, nrf24nssHigh, nrf24nssLow, nrf24ceHigh, nrf24ceLow, nrf24irqRead ) != 0) {
 		return -1; //error
