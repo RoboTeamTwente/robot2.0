@@ -50,7 +50,7 @@
 #include <stdlib.h>
 #include "PuttyInterface/PuttyInterface.h"
 #include "address/address.h"
-#include "geneva/geneva.h"
+#include "Geneva/geneva.h"
 #include "DO/DO.h"
 #include "Ballsensor/ballsensor.h"
 //#include "myNRF24.h"
@@ -67,7 +67,6 @@
 /* Private variables ---------------------------------------------------------*/
 #define STOP_AFTER 250 //ms
 PuttyInterfaceTypeDef puttystruct;
-int8_t address = -1;
 uint8_t freqChannel = 78;
 bool battery_empty = false;
 bool user_control = false;
@@ -80,7 +79,7 @@ bool keyboard_control = false;
 float velocity[3] = {0};
 
 uint8_t isNrfInitialized = 0;
-uint8_t localRobotID;
+uint8_t localRobotID = 0xff; //"uninitialized"
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -97,6 +96,8 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds);
 
 void dribbler_SetSpeed(uint8_t percentage);
 void dribbler_Init();
+
+void Wireless_Init();
 
 /* USER CODE END PFP */
 
@@ -152,7 +153,6 @@ int main(void)
   MX_TIM13_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  address = ReadAddress();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
 //  geneva_Init();
@@ -314,7 +314,7 @@ void HandleCommand(char* input){
 		uprintf("resetting the MTi.\n\r");
 		MT_CancelOperation();
 	}else if(!strcmp(input, "address")){
-		uprintf("address = [%d]\n\r", address);
+		uprintf("address = [%d]\n\r", localRobotID);
 	}else if(!strcmp(input, "example2")){
 		uprintf("stop!\n\r");
 	}else if(!strcmp(input, "geneva")){
@@ -428,14 +428,25 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
 void Wireless_Init() {
 	localRobotID = ReadAddress();
-	//I think we need that, but I can't really say, yet, why we would need to call low-level functions in main()
+	uprintf("Robot ID: %i\n", localRobotID);
 
 	while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
 		uprintf("Error while initializing nRF wireless module. Check connections.\n");
 	}
 	isNrfInitialized = 1;
 	uprintf("nRF wireless module successfully initialized.\n");
-	uprintf("Status Register: %02x.\n", readReg(STATUS));
+
+	uint8_t status_reg = readReg(STATUS);
+	uprintf("STATUS: 0x%02x ( ", status_reg);
+	if(status_reg & RX_DR) uprintf("RX_DR ");
+	if(status_reg & TX_DS) uprintf("TX_DS ");
+	if(status_reg & MAX_RT) uprintf("MAX_RT ");
+	uint8_t pipeNo = (status_reg >> 1)&7;
+	if(pipeNo >= 0 && pipeNo <= 0b101) uprintf("PIPE:%i ", pipeNo);
+	if(pipeNo == 0b110) uprintf("RX_FIFO:not_used ");
+	if(pipeNo == 0b111) uprintf("RX_FIFO:empty ");
+	if(status_reg & STATUS_TX_FULL) uprintf("TX_FULL ");
+	uprintf(")\n");
 }
 
 void printNRFregisters() {

@@ -47,6 +47,14 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *I2cHandle)
 }
 
 void I2CTx(uint8_t tosend[]) {
+	//On "sizeof(tosend)": the compiler gives a warning that this will return the size of "uint8_t *".
+	//So that means, it will probably just always return "1", because, in general, a pointer for uint8_t is 1 Byte large.
+	//This agrees with what I have seen in C code so far. If you need the length of an array that you pass to a function,
+	//then you need to give this length explicitly as a separate argument.
+	//That means: define uint8_t arrayLength as another argument and pass it sizeof(originalArray) in the function call
+	//in the scope where the size of the array is known (where the array was declared).
+	//(I just checked and saw that the function isn't called anywhere, yet.)
+	//However, if your solution actually works, then correct me. Best regards ~~~ Ulf
     while(HAL_OK != (error = HAL_I2C_Master_Transmit_IT(&hi2c1, ballsensor_i2caddr, tosend, sizeof(tosend)))){// in case of error; put the device in reset
   	  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
         uprintf("BALLSENSOR - i2c transmit failed with error [%d]!\n\rzForce stopped\n\r", error);
