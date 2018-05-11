@@ -32,6 +32,8 @@ uint8_t measurement_rx[] = {0xf0, 0x11, 0x40, 0x02, 0x02};
 
 uint8_t next_message_length = 2;
 
+uint8_t ballsensorInitialized = 0;
+
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *I2cHandle)
 {
 	if(zForceState == zForce_WaitForDR) {
@@ -88,9 +90,11 @@ void printPosition(uint8_t data[]) {
 void ballHandler(uint16_t x, uint16_t y) {
 	if(kickWhenBall.enable) {
 		kick_Kick(kickWhenBall.power);
+		noBall();
 	}
 	else if(chipWhenBall.enable) {
 		kick_Chip(chipWhenBall.power);
+		noBall();
 	}
 }
 
@@ -105,16 +109,18 @@ void parseMessage() {
 		uprintf("Enable response received, going to waitfordr\n\r");
 		zForceState = zForce_setFreq;
 	}
-	else if(!memcmp(data,measurement_rx, sizeof(measurement_rx))) {
+	else if(!memcmp(data,measurement_rx, sizeof(measurement_rx))) { //ball detected
 		printPosition(data);
+		ballPosition.lastSeen = HAL_GetTick();
 		zForceState = zForce_WaitForDR;
 	}
 	else if(!memcmp(data,set_freq_response, sizeof(set_freq_response))) {
 		uprintf("Set frequency:\r\n");
 		printRawData(data);
+		ballsensorInitialized = 1;
 		zForceState = zForce_WaitForDR;
 	}
-	else {
+	else { //ignore any other data
 	  printRawData(data);
 	  noBall();
 	  zForceState = zForce_WaitForDR;
@@ -124,11 +130,26 @@ void parseMessage() {
 
 void ballsensorInit()
 {
-	  PuttyInterface_Init(&puttystruct);
-	  uprintf("Initializing ball sensor\r\n");
-	  HAL_I2C_Init(&hi2c1);
-	  resetKickChipData();
-	  noBall();
+	PuttyInterface_Init(&puttystruct);
+	uprintf("Initializing ball sensor\r\n");
+	HAL_I2C_Init(&hi2c1);
+	resetKickChipData();
+	noBall();
+
+	ballsensorReset();
+
+	next_message_length = 2;
+	HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 1);
+	while(!HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin));
+	I2CRx();
+}
+
+void ballsensorReset() {
+	ballsensorInitialized = 0;
+	noBall();
+	HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
+	//uprintf("going to waitfordr\n\r");
+	zForceState = zForce_WaitForDR;
 }
 
 uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint8_t power)
@@ -143,10 +164,7 @@ uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint
 
 	switch(zForceState){
 		  case zForce_RST:// device to be kept in reset
-				  noBall();
-				  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
-				  uprintf("going to waitfordr\n\r");
-				  zForceState = zForce_WaitForDR;
+			  	  ballsensorReset();
 			  break;
 		  case zForce_EnableDevice:
 			  	  I2CTx(enable_command, sizeof(enable_command));
@@ -175,6 +193,11 @@ uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint
 			  break;
 		  break;
 		  }
+
+	// if the ball hasn't been detected in a while, clear position data
+	if(HAL_GetTick() - ballPosition.lastSeen > NOBALL_TIMEOUT) {
+		noBall();
+	}
 
 		//PuttyInterface_Update(&puttystruct);
 	return getBallPos();

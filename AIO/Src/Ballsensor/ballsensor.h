@@ -14,6 +14,7 @@
 #include "../kickchip/kickchip.h"
 
 #define NOBALL -1
+#define NOBALL_TIMEOUT 50 //TODO: find appropriate value for this?
 
 typedef struct Position{
 	uint8_t x;
@@ -58,6 +59,7 @@ void printPosition(uint8_t data[]);
 void ballHandler(uint16_t x, uint16_t y);
 void parseMessage();
 void ballsensorInit();
+void ballsensorReset();
 uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint8_t power);
 
 void noBall();
