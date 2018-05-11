@@ -5,7 +5,7 @@
  *      Author: Gebruiker
  */
 #include "ballsensor.h"
-#include "../kickchip/kickchip.h"
+
 
 enum zForceStates{
 	zForce_RST,
@@ -15,6 +15,7 @@ enum zForceStates{
 	zForce_EnableDevice,
 	zForce_setFreq
 }zForceState = zForce_RST;
+
 
 uint8_t enable_command[] = 	{0xEE,0x0B,	0xEE,0x09,0x40,0x02,0x02,0x00,0x65,0x03,0x81,0x01,0x00};
 uint8_t enable_response[] = {			0xEF,0x09,0x40,0x02,0x02,0x00,0x65,0x03,0x81,0x01,0x00};
@@ -46,16 +47,8 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *I2cHandle)
 	zForceState = zForce_WaitForDR;
 }
 
-void I2CTx(uint8_t tosend[]) {
-	//On "sizeof(tosend)": the compiler gives a warning that this will return the size of "uint8_t *".
-	//So that means, it will probably just always return "1", because, in general, a pointer for uint8_t is 1 Byte large.
-	//This agrees with what I have seen in C code so far. If you need the length of an array that you pass to a function,
-	//then you need to give this length explicitly as a separate argument.
-	//That means: define uint8_t arrayLength as another argument and pass it sizeof(originalArray) in the function call
-	//in the scope where the size of the array is known (where the array was declared).
-	//(I just checked and saw that the function isn't called anywhere, yet.)
-	//However, if your solution actually works, then correct me. Best regards ~~~ Ulf
-    while(HAL_OK != (error = HAL_I2C_Master_Transmit_IT(&hi2c1, ballsensor_i2caddr, tosend, sizeof(tosend)))){// in case of error; put the device in reset
+void I2CTx(uint8_t tosend[], uint8_t length) {
+    while(HAL_OK != (error = HAL_I2C_Master_Transmit_IT(&hi2c1, ballsensor_i2caddr, tosend, length))){// in case of error; put the device in reset
   	  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
         uprintf("BALLSENSOR - i2c transmit failed with error [%d]!\n\rzForce stopped\n\r", error);
         zForceState = zForce_RST;
@@ -93,14 +86,19 @@ void printPosition(uint8_t data[]) {
 
 
 void ballHandler(uint16_t x, uint16_t y) {
-	kick_Kick(60);
+	if(kickWhenBall.enable) {
+		kick_Kick(kickWhenBall.power);
+	}
+	else if(chipWhenBall.enable) {
+		kick_Chip(chipWhenBall.power);
+	}
 }
 
 void parseMessage() {
 
 
 	if(!memcmp( data, bootcomplete_response, sizeof(bootcomplete_response))) {
-	  //uprintf("BootComplete response received, enabling device\n\r");
+	  uprintf("BootComplete response received, enabling device\n\r");
 	  zForceState = zForce_EnableDevice;
 	}
 	else if(!memcmp(data, enable_response, sizeof(enable_response))) {
@@ -117,7 +115,8 @@ void parseMessage() {
 		zForceState = zForce_WaitForDR;
 	}
 	else {
-		printRawData(data);
+	  printRawData(data);
+	  noBall();
 	  zForceState = zForce_WaitForDR;
 	  //uprintf("going to waitfordr\n\r");
 	}
@@ -128,51 +127,68 @@ void ballsensorInit()
 	  PuttyInterface_Init(&puttystruct);
 	  uprintf("Initializing ball sensor\r\n");
 	  HAL_I2C_Init(&hi2c1);
+	  resetKickChipData();
+	  noBall();
 }
 
-void ballsensorMeasurementLoop()
+uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint8_t power)
 {
-	  if(HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY)
-	  	{
-		  	  return;
-	  	}
+	kickWhenBall.enable = kick_enable;
+	chipWhenBall.enable = chip_enable;
+	kickWhenBall.power = chipWhenBall.power = power;
+
+	if(HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY) {
+		  	  return getBallPos();
+	}
 
 	switch(zForceState){
 		  case zForce_RST:// device to be kept in reset
-			  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
-			  uprintf("going to waitfordr\n\r");
-			  zForceState = zForce_WaitForDR;
-			  break;
-
-		  case zForce_WaitForDR:// when DR(Data Ready) is high, message length needs to be read
-
-			  next_message_length = 2;
-			  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 1);
-			  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)){
-				  //uprintf("data ready\n\r");
-				  I2CRx();
-			  }
-			  break;
-		  case zForce_DecodeMessage:// message is received and needs to be decoded
-		  			  next_message_length = data[1];
-		  			  zForceState = zForce_ReadMessage;
-		  			  //uprintf("going to readmess state\n\r");
-		  			  break;
-		  case zForce_ReadMessage:// when message length is known it should be received
-			  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)){
-				  I2CRx();
-			  }
+				  noBall();
+				  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
+				  uprintf("going to waitfordr\n\r");
+				  zForceState = zForce_WaitForDR;
 			  break;
 		  case zForce_EnableDevice:
-			  	  I2CTx(enable_command);
+			  	  I2CTx(enable_command, sizeof(enable_command));
 			  break;
 		  case zForce_setFreq:
 		          uprintf("Setting frequency\n\r");
-		          I2CTx(set_freq_command);
+		          I2CTx(set_freq_command, sizeof(set_freq_command));
 		      break;
+		  case zForce_WaitForDR:// when DR(Data Ready) is high, message length needs to be read
+				  next_message_length = 2;
+				  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 1);
+				  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)){
+					  //uprintf("data ready\n\r");
+					  I2CRx();
+				  }
 			  break;
+		  case zForce_DecodeMessage:// message is received and needs to be decoded
+				  next_message_length = data[1];
+				  zForceState = zForce_ReadMessage;
+				  //uprintf("going to readmess state\n\r");
+			  break;
+		  case zForce_ReadMessage:// when message length is known it should be received
+				  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)){
+					  I2CRx();
+				  }
+			  break;
+		  break;
 		  }
 
-		PuttyInterface_Update(&puttystruct);
+		//PuttyInterface_Update(&puttystruct);
+	return getBallPos();
 }
 
+void noBall() {
+	ballPosition.x = ballPosition.y = NOBALL;
+}
+
+uint8_t getBallPos() {
+	return ballPosition.y;
+}
+
+void resetKickChipData() {
+	kickWhenBall.enable = chipWhenBall.enable = 0;
+	kickWhenBall.power = chipWhenBall.power = 0;
+}

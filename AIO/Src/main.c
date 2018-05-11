@@ -77,11 +77,14 @@ bool wheels_testing = false;
 float wheels_testing_power = 30;
 bool keyboard_control = false;
 
+bool kickchip_command = false;
+
 float velocity[3] = {0};
 
 uint8_t isNrfInitialized = 0;
 uint8_t localRobotID = 0xff; //"uninitialized"
 uint LastPackageTime = 0;
+uint kick_timer = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -100,6 +103,7 @@ void dribbler_SetSpeed(uint8_t percentage);
 void dribbler_Init();
 
 void Wireless_Init();
+void Wireless_newPacketHandler();
 
 /* USER CODE END PFP */
 
@@ -167,7 +171,7 @@ int main(void)
   kick_Init();
 
   uint printtime = 0;
-  uint kick_timer = 0;
+
 
   Wireless_Init();
 
@@ -180,36 +184,18 @@ int main(void)
 	  preparedAckData.roboID = localRobotID;
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
-	  /*if(irqRead(&hspi2)){
-	        LastPackageTime = HAL_GetTick();
-	        roboCallback(&hspi2, &dataStruct);
-	        if(dataStruct.robotID == address){
-	          HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-	          float wheels[4];
-	          int rotSign = 1;
-	          if(dataStruct.rotationDirection){
-	            rotSign = -1;
-	          }
-	          //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
-	          calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
-	          //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
-	          wheels_SetOutput(wheels);
-	          //dribbler
-	          dribbler_SetSpeed(dataStruct.driblerSpeed);
-	          //kicker
-	                  if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
-	                    kick_timer = HAL_GetTick() + 1000U;
-	                    if(dataStruct.chipper){
-	                      kick_Chip((dataStruct.kickForce*100)/255);
-	                    }else{
-	                      kick_Kick((dataStruct.kickForce*100)/255);
-	                    }
-	                  }
-	                  //geneva
-
-	                }
-
-	              }*/
+	  if(kickchip_command) { //received instruction to kick or chip
+		  if ((HAL_GetTick() - kick_timer) > 0) {
+				kick_timer = HAL_GetTick() + 1000U;
+				if(receivedRoboData.do_chip) {
+					kick_Chip((receivedRoboData.kick_chip_power*100)/255);
+				}
+				else {
+					kick_Kick((receivedRoboData.kick_chip_power*100)/255);
+				}
+				kickchip_command = false;
+			}
+	  }
 
 	  if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
 	  	  float wheel_powers[4] = {0, 0, 0, 0};
@@ -228,9 +214,9 @@ int main(void)
 	  else {
 		  preparedAckData.batteryState = 1;
 	  }
-	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
-		  // handle the message
-	  }
+
+	  preparedAckData.ballSensor = ballsensorMeasurementLoop(receivedRoboData.do_kick, receivedRoboData.do_chip, receivedRoboData.kick_chip_power);
+
 	  geneva_Update();
 	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
@@ -432,16 +418,31 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 void Wireless_newPacketHandler() {
 	if(isNrfInitialized) {
 			LastPackageTime = HAL_GetTick();
-			uprintf("\n\nInterrupt fired.\n");
-
+			uprintf("\n\n new wireless message (interrupt fired)\n");
 
 			int8_t error_code = roboCallback(localRobotID);
 			if(error_code) {
 				uprintf("RoboCallback failed with error: %i\n", error_code);
 			}
-
-			//flushRX();
 			clearInterrupts(); //should not be needed
+
+			//wheels
+	        float wheels[4];
+	        int rotSign = 1;
+	        if(receivedRoboData.driving_reference){
+	            rotSign = -1;
+	        }
+	        calcMotorSpeed ((float)receivedRoboData.rho/ 1000.0F, (float)receivedRoboData.theta * (2*M_PI/512), rotSign, (float)(receivedRoboData.velocity_angular/180.0)*M_PI, wheels);
+	        //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
+	        wheels_SetOutput(wheels);
+
+			//dribbler
+			dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
+
+			//kicker
+			if (receivedRoboData.kick_chip_forced) {
+				kickchip_command = true;
+			}
 		}
 }
 
