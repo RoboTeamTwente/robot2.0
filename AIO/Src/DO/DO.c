@@ -51,15 +51,17 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 	float globalOut[3] = {0,0,0};
 	static float prevOut[3] = {0,0,0};
 	if (!isnan(prevOut[0])){ // lowpass filtering
-		globalOut[body_x] = 0.07*(accX*4000 - globalInput[body_x]) + 0.93*prevOut[body_x];
-		globalOut[body_y] = 0.07*(accY*4000 - globalInput[body_y]) + 0.93*prevOut[body_y];
+		globalOut[body_x] = 0.07*(accX*2000 - globalInput[body_x]) + 0.93*prevOut[body_x];
+		globalOut[body_y] = 0.07*(accY*2000 - globalInput[body_y]) + 0.93*prevOut[body_y];
 	}
 	prevOut[body_x] = globalOut[body_x];
 	prevOut[body_y] = globalOut[body_y];
 
 	// safety: reduce effect, while testing
-	globalOut[body_x] = globalOut[body_x]*0.5;
-	globalOut[body_y] = globalOut[body_y]*0.5;
+	globalOut[body_x] = globalOut[body_x]*0.25;
+	globalOut[body_y] = globalOut[body_y]*0.25;
+
+	// rotate back to local and fill in the output
 	rotate(yaw, globalOut, output);
 }
 
@@ -103,7 +105,7 @@ void rotate(float yaw, float input[3], float output[3]){
 void pController(float input[3], float kp[3], float output[3]){
 	// These limits are meant to prevent slipping
 	float w_limit = 500;
-	float PWM_limit = 95;
+	float PWM_limit = 50;
 
 	float pre_out[3];
 	pre_out[body_x] = kp[body_x]*input[body_x];
@@ -151,7 +153,7 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], boo
 
 	float localVel[3];
 	wheels2Body(w_wheels, localVel);
-	//uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
+//	uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
 //	uprintf("[%f %f %f]\n\r", xsensData[body_x], xsensData[body_y], xsensData[body_w]);
 	//uprintf("[%f, %f, %f]\n\r", localReference[body_x], localReference[body_y],  localReference[body_w]);
 
@@ -184,7 +186,7 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], boo
 	// Output the wheel PWMs (by filling in the output array)
 	body2Wheels(scaledInput, output);
 
-	// To make sure the robot does not do anything due to the DO when stationary
+	// To make sure the robot does not do anything due to the DO when wheels are stationary and acceleration is measured
 	float accData[2] = {xsensData[body_x],xsensData[body_y]};
 	if (sqrt(localVel[body_x]*localVel[body_x] + localVel[body_y]*localVel[body_y])<0.05) {
 		accData[body_x] = 0;
@@ -203,12 +205,19 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], boo
 
 float angleController(float angleRef, float yaw){
 	float angleError = constrainAngle(angleRef - yaw);
-//	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, angleError);
-	return angleError*0;
+	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, angleError);
+	float output = -angleError*20.0;
+	float limit = 20;
+	if (output > limit) {
+		output = limit;
+	} else if (output < -limit) {
+		output = -limit;
+	}
+	return output;
 }
 
 
-DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, bool refIsAngle){
+DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, bool useAngleControl, bool refIsAngle, float output[4]){
 
 //	velocityRef[0] = 1;
 //	velocityRef[1] = 0;
@@ -217,7 +226,7 @@ DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, 
 	static float w_prev[4] = {0,0,0,0};
 
 	float w_wheels[4];
-	if (!isnan(w_prev[0])){ // filtering
+	if (!isnan(w_prev[0])){ // filtering wheel speeds
 		w_wheels[wheels_RF] = 0.4*(-wheels_GetSpeed(wheels_RF)) + 0.6*w_prev[wheels_RF];
 		w_wheels[wheels_RB] = 0.4*(-wheels_GetSpeed(wheels_RB)) + 0.6*w_prev[wheels_RB];
 		w_wheels[wheels_LB] = 0.4*(-wheels_GetSpeed(wheels_LB)) + 0.6*w_prev[wheels_LB];
@@ -234,28 +243,40 @@ DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, 
 	w_prev[wheels_LB] = w_wheels[wheels_LB];
 	w_prev[wheels_LF] = w_wheels[wheels_LF];
 
-//	float newVelocityRef[3] = {velocityRef[body_x], 1/*velocityRef[body_y]*/, 0};
-//	float angleRef;
-//	if (refIsAngle) {
-//		angleRef = velocityRef[body_w];
-//	} else {
-//		static float prevAngleRef = 0;
-//		angleRef = prevAngleRef + 0.01 * velocityRef[body_w];
-//		prevAngleRef = angleRef;
-//	}
-//	newVelocityRef[body_w] = angleController(angleRef, xsensData[body_w]);
+	if (useAngleControl) {
+		float newVelocityRef[3] = {velocityRef[body_x], velocityRef[body_y], 0};
+		float angleRef;
+		if (refIsAngle) {
+			angleRef = velocityRef[body_w];
+		} else {
+			static float prevAngleRef = 0;
+			angleRef = prevAngleRef + 0.01 * velocityRef[body_w];
+			prevAngleRef = angleRef;
+		}
+		newVelocityRef[body_w] = angleController(angleRef, xsensData[body_w]);
+		controller(newVelocityRef, w_wheels, xsensData, DO_enabled, output);
+	} else {
+		controller(velocityRef, w_wheels, xsensData, DO_enabled, output);
+	}
 
-	float wheelsPWM[4];
-	controller(velocityRef, w_wheels, xsensData, DO_enabled, wheelsPWM);
+//	newVelocityRef[body_x] = 1;
 
 //	uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
 //	uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
 
-	float wheelsPWM2[4] = {0,20,-0,-0};
-	wheels_SetOutput(wheelsPWM2);
+//	float wheelsPWM2[4];//= {-10,-10,-10,-10};
+
+//	output[wheels_RF] = wheelsPWM2[wheels_RF];
+//	output[wheels_RB] = wheelsPWM2[wheels_RB];
+//	output[wheels_LB] = wheelsPWM2[wheels_LB];
+//	output[wheels_LF] = wheelsPWM2[wheels_LF];
+//	output[0] = -10;
+//	output[2] = -10;
 
 //	static float counter = 0;
 //	counter = counter+0.01;
 	//uprintf("[%f]\n\r", counter);
+
+
 	return DO_error;
 }

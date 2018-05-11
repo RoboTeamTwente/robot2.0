@@ -77,6 +77,7 @@ bool keyboard_control = false;
 bool started_icc = false;
 
 float velocityRef[3] = {0};
+float wheelsPWM[4] = {0,0,0,0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -170,6 +171,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  float wheelsPWM2[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
+//	  float wheelsPWM2[4] = {0,0,0,-0};
+	  wheels_SetOutput(wheelsPWM2);
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 	 ballsensorMeasurementLoop();
 	 if(irqRead(&hspi2)){
@@ -189,7 +193,7 @@ int main(void)
 			  float angularVelRef = rotSign * (float)(dataStruct.angularVelocity/180.0)*M_PI;
 			  velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
 			  velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
-			  velocityRef[body_w] = angularVelRef;
+			  velocityRef[body_w] = -angularVelRef;
 
 			  //float wheels[4];
 			  //calcMotorSpeeds((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
@@ -427,15 +431,50 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
+
+		// get xsens data
 		float * accptr;
 		accptr = MT_GetAcceleration();
+		float xsensYaw = MT_GetAngles()[2]/180*M_PI;
+
+		// check for calibration possibilities (if angle has not changed much for a while)
+		int bufferSize = 5;
+		int timesteps = 100;
+		static float offset = 0;
+		static float xsensAngles[5] = {0};
+		static float angle0 = 0;
+		static int counter = 0;
+		if (fabs(angle0 - xsensAngles[0]) < 0.01) {
+			if (counter>timesteps) {
+				float avg_xsens = 0;
+				float avg_vision = 0;
+				for (int i = 0; i<bufferSize; i++) {
+					avg_xsens += xsensAngles[i];
+					avg_vision += 0; //TODO
+				}
+				offset = avg_vision - avg_xsens;
+				uprintf("[%f]\n\r", offset);
+				counter = 0;
+			} else if (counter > timesteps - bufferSize) {
+				xsensAngles[timesteps-counter] = xsensYaw;
+			}
+		} else {
+			angle0 = xsensYaw;
+			counter = 0;
+		}
+		counter++;
+
+		//
 		float xsensData[3];
 		xsensData[body_x] = -accptr[0];
 		xsensData[body_y] = -accptr[1];
-		xsensData[body_w] = MT_GetAngles()[2]/180*M_PI;
+		xsensData[body_w] = xsensYaw + offset;
 		bool DO_enabled = false;
+		bool useAngleControl = false;
 		bool refIsAngle = false;
-		DO_Control(velocityRef, xsensData, DO_enabled, refIsAngle);
+		DO_Control(velocityRef, xsensData, DO_enabled, useAngleControl, refIsAngle, wheelsPWM);
+//		wheelsPWM[0] = -10;
+//		wheelsPWM[2] = -10;
 		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 //		float * euler;

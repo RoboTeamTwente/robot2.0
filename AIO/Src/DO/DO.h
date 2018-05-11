@@ -23,7 +23,7 @@ typedef enum {
 
 DO_States DO_Init();
 
-DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, bool refIsAngle);
+DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, bool useAngleControl, bool refIsAngle, float output[4]);
 
 float constrainAngle(float x);
 void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], float output[3]);
