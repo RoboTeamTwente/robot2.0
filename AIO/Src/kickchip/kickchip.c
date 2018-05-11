@@ -5,7 +5,7 @@
 #include "../PuttyInterface/PuttyInterface.h"
 
 #define Timestep 20
-kick_states kick_state;
+kick_states kick_state = kick_Idle;
 bool TicToc;
 int Callback_time;
 
@@ -22,6 +22,13 @@ void kick_Init(){
 }
 
 
+void kick_DeInit(){
+	HAL_TIM_Base_Stop(&htim13);
+	kick_state = kick_Idle;
+	HAL_GPIO_WritePin(Kick_GPIO_Port, Kick_Pin, GPIO_PIN_RESET);		// Kick off
+	HAL_GPIO_WritePin(Chip_GPIO_Port, Chip_Pin, GPIO_PIN_RESET);		// Chip off
+	HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET);	// kick_Charging on
+}
 /*
  *  Initiates the kick_Kicking of the robot at a percentage of the max power.
  *  Will only do this if in state kick_Ready.
@@ -29,6 +36,9 @@ void kick_Init(){
  */
 void kick_Kick(int percentage)
 {
+	if(percentage < 1){
+		percentage = 1;
+	}
 	if(kick_state == kick_Ready)
 	{
 		kick_state = kick_Kicking;												// Block kick_Charging
@@ -51,6 +61,9 @@ void kick_Kick(int percentage)
  */
 void kick_Chip(int percentage)
 {
+	if(percentage < 1){
+		percentage = 1;
+	}
 	if(kick_state == kick_Ready)
 	{
 		HAL_GPIO_WritePin(Charge_GPIO_Port, Charge_Pin, GPIO_PIN_RESET); 	// Disable kick_Charging

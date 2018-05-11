@@ -26,9 +26,10 @@ float angles[3];
 float acc[3];
 
 enum reception_states{
+	uninitialized,
 	receive_5,
 	receive_rest
-}reception_state = receive_5;
+}reception_state = uninitialized;
 /*
  * static function prototypes
  */
@@ -48,8 +49,9 @@ static inline MT_StatusTypeDef WaitForAck(enum XsMessageId XMID);
  */
 // Initialize controlling the MTi device
 MT_StatusTypeDef MT_Init(){
+	reception_state = receive_5;
+	cplt_mess_stored_flag = 0;
 	ReceivedMessageStorage = malloc(MAX_RAW_MESSAGE_SIZE);				// Reserve memory to store the longest possible message
-
 	HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 0);			// set the MTi in reset state
 	struct XbusParserCallback XBP_callback = {};						// Create a structure to contain the callback functions
 	XBP_callback.handleMessage = XBP_handleMessage;
@@ -59,10 +61,33 @@ MT_StatusTypeDef MT_Init(){
 	if(XBParser == NULL){
 		return MT_failed;
 	}
+
+	if(MT_succes == MT_StartOperation(true)){
+		uprintf("started MTi Operation in config state\n\r");
+		MT_BuildConfig(XDI_PacketCounter, 100, false);
+		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
+		MT_BuildConfig(XDI_EulerAngles, 100, true);
+		MT_GoToMeasure();
+	}else{
+		uprintf("starting MTi Operation failed\n\r");
+		return MT_failed;
+	}
+	return MT_succes;
+}
+
+MT_StatusTypeDef MT_DeInit(){
+	reception_state = uninitialized;
+	if(HAL_OK != HAL_UART_Abort(&huartMT)){
+		return MT_failed;
+	}
+	HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 0);
+	XbusParser_destroy(XBParser);
+	free(ReceivedMessageStorage);
 	return MT_succes;
 }
 
 MT_StatusTypeDef MT_Update(){
+	MT_StatusTypeDef ret = MT_succes;
 	if(RxCpltCallback_flag != 0){
 		RxCpltCallback_flag = 0;
 		if(cplt_mess_stored_flag){
@@ -71,6 +96,7 @@ MT_StatusTypeDef MT_Update(){
 			case XMID_Error:
 				ErrorHandler(ReceivedMessageStorage);
 				MT_Data_succerr[1]++;
+				ret = MT_failed;
 				break;
 			case XMID_MTData2:
 				MT_Data_succerr[0]++;
@@ -95,16 +121,18 @@ MT_StatusTypeDef MT_Update(){
 			case receive_rest:
 
 				break;
+			default:
+				break;
 			}
 		}
 	}
 
 	if(HAL_UART_ErrorCallback_flag != 0){
 		HAL_UART_ErrorCallback_flag = 0;
-		return MT_failed;
+		ret = MT_failed;
 	}
 
-	return MT_succes;
+	return ret;
 }
 
 
@@ -118,13 +146,6 @@ MT_StatusTypeDef MT_StartOperation(bool to_config){
 	}
 }
 
-MT_StatusTypeDef MT_CancelOperation(){
-	HAL_GPIO_WritePin(XSENS_nRST_GPIO_Port, XSENS_nRST_Pin, 0);
-	if(HAL_OK != HAL_UART_Abort(&huartMT)){
-		return MT_failed;
-	}
-	return MT_succes;
-}
 // Callback is called when the HAL_Uart received its wanted amount of bytes
 void MT_UART_RxCpltCallback(){
 	switch(reception_state){
@@ -134,6 +155,8 @@ void MT_UART_RxCpltCallback(){
 	case receive_rest:
 		XbusParser_parseBuffer(XBParser, aRxBuffer, XBParser->currentMessage.length);
 		reception_state = receive_5;
+		break;
+	default:
 		break;
 	}
 	RxCpltCallback_flag = 1;
@@ -297,10 +320,7 @@ static void PrintOutputConfig(struct XbusMessage const* message){
 		uprintf("XDI_RotationMatrix:%u\n\r", freq);
 
 	}
-	if(0 != (freq = XbusMessage_getOutputFreq(XDI_EulerAngles, message))){
-		uprintf("XDI_EulerAngles:%u\n\r", freq);
 
-	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaV, message))){
 		uprintf("XDI_DeltaV:%u\n\r", freq);
 

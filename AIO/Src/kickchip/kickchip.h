@@ -5,10 +5,12 @@
 typedef enum{
 	kick_Ready,
 	kick_Kicking,
-	kick_Charging
+	kick_Charging,
+	kick_Idle
 }kick_states;
 
 void kick_Init();
+void kick_DeInit();
 void kick_Kick(int percentage);
 void kick_Chip(int percentage);
 void kick_Callback();

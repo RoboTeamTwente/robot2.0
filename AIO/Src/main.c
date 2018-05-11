@@ -178,39 +178,58 @@ int main(void)
   while (1)
   {
 	  preparedAckData.roboID = localRobotID;
-	  //ballsensorMeasurementLoop();
-	  if(wheels_testing){
-		  if(keyboard_control){
+	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
-		  }else{
-			  float wheels[4];
-			  if(HAL_GetTick() % 4000 < 2000){
-				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-					  wheels[wheel] = wheels_testing_power;
-				  }
-			  }else{
-				  for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-					  wheels[wheel] = -wheels_testing_power;
-				  }
-			  }
-			  wheels_SetOutput(wheels);
 		  }
+
+			  //geneva
+			  }
+				  }
+					  kick_Kick((dataStruct.kickForce*100)/255);
+				  }else{
+					  kick_Chip((dataStruct.kickForce*100)/255);
+				  if(dataStruct.chipper){
+				  kick_timer = HAL_GetTick() + 1000U;
+			  if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
+
+			  //kicker
+			  dribbler_SetSpeed(dataStruct.driblerSpeed);
+			  //dribbler
+			  wheels_SetOutput(wheels);
+			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
+			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
+			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
+			  }
+				  rotSign = -1;
+			  if(dataStruct.rotationDirection){
+			  int rotSign = 1;
+			  float wheels[4];
+			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+		  roboCallback(&hspi2, &dataStruct);
+		  if(dataStruct.robotID == address){
+		  LastPackageTime = HAL_GetTick();
+	 if(irqRead(&hspi2)){
+	 //ballsensorMeasurementLoop();
 	  }else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
 	  	  float wheel_powers[4] = {0, 0, 0, 0};
 		  wheels_SetOutput(wheel_powers);
 	  }
-	  if(!HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
-		  // BATTERY IS ALMOST EMPTY!!!!!
+	  if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
+		  uprintf("Battery empty!\n\r");
+		  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
+		  wheels_DeInit();
+		  kick_DeInit();
+// 		  BATTERY IS ALMOST EMPTY!!!!!
 //		  battery_empty = true;
 //		  dribbler_SetSpeed(0);
 	  }
 	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
 		  // handle the message
 	  }
-	  geneva_Update();	  MT_Update(); //in some countr.. err.. companies you get stoned for putting two statements in one line. and not in the herbal way.
+	  geneva_Update();	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
-		  //uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 		  //printNRFregisters();
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
@@ -246,9 +265,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLM = 4;
   RCC_OscInitStruct.PLL.PLLN = 192;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -284,37 +303,30 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 #define TEST_WHEELS_COMMAND "test wheels"
 void HandleCommand(char* input){
-	if(strcmp(input, "start") == 0){
-		TextOut("Starting device MTi\n\r");
-		if(MT_succes == MT_StartOperation(true)){
-			TextOut("Communication with MTi started, in config state.\n\r");
+	if(strcmp(input, "mt start") == 0){
+		uprintf("Starting device MTi\n\r");
+		if(MT_succes == MT_Init()){
+			uprintf("MTi started.\n\r");
 		}else{
-			TextOut("No communication with MTi!\n\r");
+			uprintf("No communication with MTi!\n\r");
 		}
-	}else if(strcmp(input, "start2") == 0){
-		TextOut("Starting device MTi\n\r");
-		if(MT_succes == MT_StartOperation(false)){
-			TextOut("Communication with MTi started, going to measure state in .5 seconds.\n\r");
-		}else{
-			TextOut("No communication with MTi!\n\r");
-		}
-	}else if(strcmp(input, "config") == 0){
+	}else if(!strcmp(input, "mt stop")){
+		uprintf("resetting the MTi.\n\r");
+		MT_DeInit();
+	}else if(strcmp(input, "mt config") == 0){
 		MT_GoToConfig();
-	}else if(!strcmp(input, "measure")){
+	}else if(!strcmp(input, "mt measure")){
 		MT_GoToMeasure();
-	}else if(strcmp(input, "factoryreset") == 0){
-		TextOut("Resetting the configuration.\n\r");
+	}else if(strcmp(input, "mt factoryreset") == 0){
+		uprintf("Resetting the configuration.\n\r");
 		MT_FactoryReset();
-	}else if(memcmp(input, "setconfig", strlen("setconfig")) == 0){
+	}else if(memcmp(input, "mt setconfig", strlen("mt setconfig")) == 0){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
 	}else if(strcmp(input, "reqconfig") == 0){
-		TextOut("requesting output configuration mode\n\r");
+		uprintf("requesting output configuration mode\n\r");
 		MT_RequestConfig();
-	}else if(!strcmp(input, "reset")){
-		uprintf("resetting the MTi.\n\r");
-		MT_CancelOperation();
 	}else if(!strcmp(input, "address")){
 		uprintf("address = [%d]\n\r", localRobotID);
 	}else if(!strcmp(input, "example2")){
@@ -328,14 +340,15 @@ void HandleCommand(char* input){
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
 	}else if(!memcmp(input, "kick" , strlen("kick"))){
-		kick_Kick(60);
+		kick_Kick(strtol(input + 1 + strlen("kick"), NULL, 10));
 	}else if(!memcmp(input, "chip" , strlen("chip"))){
-		kick_Chip(60);
+		kick_Chip(strtol(input + 1 + strlen("chip"), NULL, 10));
 	}else if(!memcmp(input, "block" , strlen("block"))){
 		kick_Stateprint();
 	}else if(!memcmp(input, TEST_WHEELS_COMMAND, strlen(TEST_WHEELS_COMMAND))){
 		wheels_testing_power = atoff(input + strlen(TEST_WHEELS_COMMAND));
-		if((wheels_testing = !wheels_testing)){
+		wheels_testing = (wheels_testing_power <= -10 || wheels_testing_power >= 10);
+		if((wheels_testing)){
 			uprintf("wheels test on, pwm [%f]\n\r", wheels_testing_power);
 		}
 	}else if(!memcmp(input, "dribble", strlen("dribble"))){
@@ -382,14 +395,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	}
 }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-	if(huart->Instance == huart3.Instance){
-
-	}else if(huart->Instance == huartMT.Instance){
-		HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
-	}
-}
-
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
@@ -399,11 +404,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		velocity[0] += *accptr++ / 100;
 		velocity[1] += *accptr++ / 100;
 		velocity[2] += *accptr   / 100;
+		if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
+		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 		DO_Control();
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
-		HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 		wheels_Callback();
 	}
 }
