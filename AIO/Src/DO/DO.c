@@ -181,7 +181,7 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], boo
 	float scale = compute_limit_scale(postObserverSignal, 95);
 	scaledInput[body_x] = scale*postObserverSignal[body_x];
 	scaledInput[body_y] = scale*postObserverSignal[body_y];
-	scaledInput[body_w] = scale*postObserverSignal[body_w];
+	scaledInput[body_w] = 1*postObserverSignal[body_w]; // rotation gets some extra room by not scaling it down
 
 	// Output the wheel PWMs (by filling in the output array)
 	body2Wheels(scaledInput, output);

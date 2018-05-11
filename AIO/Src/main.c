@@ -75,6 +75,7 @@ bool wheels_testing = false;
 float wheels_testing_power = 30;
 bool keyboard_control = false;
 bool started_icc = false;
+bool halt = true;
 
 float velocityRef[3] = {0};
 float wheelsPWM[4] = {0,0,0,0};
@@ -171,20 +172,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  float wheelsPWM2[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
-//	  float wheelsPWM2[4] = {0,0,0,-0};
-	  wheels_SetOutput(wheelsPWM2);
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 	 ballsensorMeasurementLoop();
 	 if(irqRead(&hspi2)){
+		  halt = false;
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
 		  if(dataStruct.robotID == address){
 			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
-			  int rotSign = 1;
+			  int rotSign = -1;
 			  if(dataStruct.rotationDirection){
-				  rotSign = -1;
+				  rotSign = 1;
 			  }
 			  //uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
 			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
@@ -193,7 +192,7 @@ int main(void)
 			  float angularVelRef = rotSign * (float)(dataStruct.angularVelocity/180.0)*M_PI;
 			  velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
 			  velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
-			  velocityRef[body_w] = -angularVelRef;
+			  velocityRef[body_w] = angularVelRef;
 
 			  //float wheels[4];
 			  //calcMotorSpeeds((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
@@ -217,9 +216,11 @@ int main(void)
 		  }
 
 	  }else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
-	  	  float wheel_powers[4] = {0, 0, 0, 0};
-		  wheels_SetOutput(wheel_powers);
+//	  	  float wheel_powers[4] = {0, 0, 0, 0};
+//		  wheels_SetOutput(wheel_powers);
+	  	  halt = true;
 	  }
+
 	  if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
 		  uprintf("Battery empty!\n\r");
 		  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
@@ -431,50 +432,62 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
-
-		// get xsens data
-		float * accptr;
-		accptr = MT_GetAcceleration();
-		float xsensYaw = MT_GetAngles()[2]/180*M_PI;
-
-		// check for calibration possibilities (if angle has not changed much for a while)
-		int bufferSize = 5;
-		int timesteps = 100;
-		static float offset = 0;
-		static float xsensAngles[5] = {0};
-		static float angle0 = 0;
-		static int counter = 0;
-		if (fabs(angle0 - xsensAngles[0]) < 0.01) {
-			if (counter>timesteps) {
-				float avg_xsens = 0;
-				float avg_vision = 0;
-				for (int i = 0; i<bufferSize; i++) {
-					avg_xsens += xsensAngles[i];
-					avg_vision += 0; //TODO
-				}
-				offset = avg_vision - avg_xsens;
-				uprintf("[%f]\n\r", offset);
-				counter = 0;
-			} else if (counter > timesteps - bufferSize) {
-				xsensAngles[timesteps-counter] = xsensYaw;
-			}
+		if (halt) { // when communication is lost for too long, we send 0 to the motors
+			float wheel_powers[4] = {0,0,0,0};
+			wheels_SetOutput(wheel_powers);
 		} else {
-			angle0 = xsensYaw;
-			counter = 0;
-		}
-		counter++;
+			// some settings
+			bool DO_enabled = false;
+			bool use_angle_control = false;
+			bool ref_is_angle = false;
+			bool use_vision = false;
 
-		//
-		float xsensData[3];
-		xsensData[body_x] = -accptr[0];
-		xsensData[body_y] = -accptr[1];
-		xsensData[body_w] = xsensYaw + offset;
-		bool DO_enabled = false;
-		bool useAngleControl = false;
-		bool refIsAngle = false;
-		DO_Control(velocityRef, xsensData, DO_enabled, useAngleControl, refIsAngle, wheelsPWM);
-//		wheelsPWM[0] = -10;
-//		wheelsPWM[2] = -10;
+			// get xsens data
+			float * accptr;
+			accptr = MT_GetAcceleration();
+			float xsens_yaw = MT_GetAngles()[2]/180*M_PI;
+
+			// calibration by computing the yaw offset between vision and xsens
+			static float yaw_offset = 0;
+			if (use_vision) { //TOOO: SHOULD CALIBRATE XSENS EXPLICITLY, INSTEAD OF USING OFFSET (because the free accelerations should also use new yaw)
+				// check for calibration possibilities (if angle has not changed much for a while)
+				int duration = 100;
+				static float xsens_angles[10] = {0};
+				int buffer_size = 10;
+				static float angle0 = 0;
+				static int counter = 0;
+				if (fabs(angle0 - xsens_angles[0]) < 0.01) {
+					if (counter > duration) {
+						float avg_xsens = 0; // average of last few xsens angles
+						float avg_vision = 0; // average of last few vision angles
+						for (int i = 0; i<buffer_size; i++) {
+							avg_xsens += xsens_angles[i]/buffer_size;
+							avg_vision += 0; //TODO
+						}
+						yaw_offset = avg_vision - avg_xsens;
+						uprintf("[%f]\n\r", yaw_offset);
+						counter = 0;
+					} else if (counter > duration - buffer_size) {
+						xsens_angles[duration-counter] = xsens_yaw; // fill in buffer for determining average of last few samples
+					}
+				} else {
+					angle0 = xsens_yaw;
+					counter = 0;
+				}
+				counter++;
+			}
+
+			// call the controller with the (calibrated) data. The output is wheelsPWM, which is used in the main loop
+			float xsensData[3];
+			xsensData[body_x] = -accptr[0];
+			xsensData[body_y] = -accptr[1];
+			xsensData[body_w] = xsens_yaw + yaw_offset;
+			DO_Control(velocityRef, xsensData, DO_enabled, use_angle_control, ref_is_angle, wheelsPWM);
+
+			// copy the controller output, to make sure it doesnt get altered at the wrong time
+			float wheel_powers[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
+			wheels_SetOutput(wheel_powers);
+		}
 		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 //		float * euler;
