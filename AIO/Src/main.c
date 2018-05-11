@@ -69,7 +69,6 @@
 /* Private variables ---------------------------------------------------------*/
 #define STOP_AFTER 250 //ms
 PuttyInterfaceTypeDef puttystruct;
-uint8_t freqChannel = 78;
 bool battery_empty = false;
 bool user_control = false;
 bool print_encoder = false;
@@ -221,14 +220,19 @@ int main(void)
 		  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
 		  wheels_DeInit();
 		  kick_DeInit();
+		  preparedAckData.batteryState = 0;
 // 		  BATTERY IS ALMOST EMPTY!!!!!
 //		  battery_empty = true;
 //		  dribbler_SetSpeed(0);
 	  }
+	  else {
+		  preparedAckData.batteryState = 1;
+	  }
 	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
 		  // handle the message
 	  }
-	  geneva_Update();	  MT_Update();
+	  geneva_Update();
+	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
 		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
@@ -418,23 +422,27 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == SPI1_IRQ_Pin){
-		if(isNrfInitialized) {
-				LastPackageTime = HAL_GetTick();
-				uprintf("\n\nInterrupt fired.\n");
-
-
-				int8_t error_code = roboCallback(localRobotID);
-				if(error_code) {
-					uprintf("RoboCallback failed with error: %i\n", error_code);
-				}
-
-				//flushRX();
-				clearInterrupts(); //should not be needed
-			}
+		Wireless_newPacketHandler();
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
 		geneva_SensorCallback();
 	}
+}
+
+void Wireless_newPacketHandler() {
+	if(isNrfInitialized) {
+			LastPackageTime = HAL_GetTick();
+			uprintf("\n\nInterrupt fired.\n");
+
+
+			int8_t error_code = roboCallback(localRobotID);
+			if(error_code) {
+				uprintf("RoboCallback failed with error: %i\n", error_code);
+			}
+
+			//flushRX();
+			clearInterrupts(); //should not be needed
+		}
 }
 
 void Wireless_Init() {

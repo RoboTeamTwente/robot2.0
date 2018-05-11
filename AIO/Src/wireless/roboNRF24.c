@@ -203,7 +203,7 @@ int8_t roboCallback(uint8_t localRobotID){
 	else
 		ackDataLength = SHORTACKPKTLEN;
 
-	fillAckData(ackDataLength);
+	//fillAckData(ackDataLength);
 	roboAckDataToPacket(&preparedAckData, txPacket);
 	printRoboAckData(&preparedAckData,txPacket,ackDataLength);
 
