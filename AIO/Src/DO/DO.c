@@ -13,23 +13,6 @@
 #include "../PuttyInterface/PuttyInterface.h"
 
 
-//These structs speak for themselves. Theyre just here so I can return these from functions.
-struct Vector3 {
-	float x;
-	float y;
-	float w;
-};
-
-//ditto
-struct Vector4 {
-	float a;
-	float b;
-	float c;
-	float d;
-};
-
-
-
 static float do_output[3];
 
 DO_States DO_Init(){
@@ -42,6 +25,12 @@ DO_States DO_Init(){
 	return DO_succes;
 }
 
+float constrainAngle(float x){
+    x = fmodf(x + M_PI, 2*M_PI);
+    if (x < 0)
+        x += 2*M_PI;
+    return x - M_PI;
+}
 
 void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], float output[3]){
 
@@ -114,7 +103,7 @@ void rotate(float yaw, float input[3], float output[3]){
 void pController(float input[3], float kp[3], float output[3]){
 	// These limits are meant to prevent slipping
 	float w_limit = 500;
-	float PWM_limit = 30;
+	float PWM_limit = 95;
 
 	float pre_out[3];
 	pre_out[body_x] = kp[body_x]*input[body_x];
@@ -162,8 +151,8 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], boo
 
 	float localVel[3];
 	wheels2Body(w_wheels, localVel);
-	uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
-	//uprintf("[%f %f %f]\n\r", xsensData[body_x], xsensData[body_y], xsensData[body_w]);
+	//uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
+//	uprintf("[%f %f %f]\n\r", xsensData[body_x], xsensData[body_y], xsensData[body_w]);
 	//uprintf("[%f, %f, %f]\n\r", localReference[body_x], localReference[body_y],  localReference[body_w]);
 
 	float error[3];
@@ -212,8 +201,14 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], boo
 	//uprintf("[%f, %f, %f, %f, %f, %f]\n\r", localVel[body_x], error[body_x], localVel[body_y], error[body_y], localVel[body_w], error[body_w]);
 }
 
+float angleController(float angleRef, float yaw){
+	float angleError = constrainAngle(angleRef - yaw);
+//	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, angleError);
+	return angleError*0;
+}
 
-DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled){
+
+DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, bool refIsAngle){
 
 //	velocityRef[0] = 1;
 //	velocityRef[1] = 0;
@@ -239,15 +234,25 @@ DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled){
 	w_prev[wheels_LB] = w_wheels[wheels_LB];
 	w_prev[wheels_LF] = w_wheels[wheels_LF];
 
+//	float newVelocityRef[3] = {velocityRef[body_x], 1/*velocityRef[body_y]*/, 0};
+//	float angleRef;
+//	if (refIsAngle) {
+//		angleRef = velocityRef[body_w];
+//	} else {
+//		static float prevAngleRef = 0;
+//		angleRef = prevAngleRef + 0.01 * velocityRef[body_w];
+//		prevAngleRef = angleRef;
+//	}
+//	newVelocityRef[body_w] = angleController(angleRef, xsensData[body_w]);
+
 	float wheelsPWM[4];
 	controller(velocityRef, w_wheels, xsensData, DO_enabled, wheelsPWM);
 
 //	uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
 //	uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
 
-//	float wheelsPWM2[4] = {0,0,-0,-0};
-//	wheelsPWM2[wheels_LB] = -(30*1.5 - w_wheels[wheels_LB])*0.0;
-	wheels_SetOutput(wheelsPWM);
+	float wheelsPWM2[4] = {0,20,-0,-0};
+	wheels_SetOutput(wheelsPWM2);
 
 //	static float counter = 0;
 //	counter = counter+0.01;
