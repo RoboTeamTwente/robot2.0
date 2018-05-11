@@ -165,6 +165,7 @@ int8_t roboCallback(uint8_t localRobotID){
 		if(verbose) uprintf("Received RobotID was wrong. Local ID: %i (0x%02x); Rx'd: %i (0x%02x)\n", localRobotID, localRobotID, receivedRobotID, receivedRobotID);
 		return -3; //packet wasn't for me (or, more likely: we did not receive any packet and read bullshit from the buffer)
 	}
+	HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 	//putting the new data from the packet on the struct
 	packetToRoboData(dataArray+misalignOffset, &receivedRoboData);
 	printRoboData(&receivedRoboData,dataArray+misalignOffset);

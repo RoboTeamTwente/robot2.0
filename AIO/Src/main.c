@@ -82,6 +82,7 @@ float velocity[3] = {0};
 
 uint8_t isNrfInitialized = 0;
 uint8_t localRobotID = 0xff; //"uninitialized"
+uint LastPackageTime = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -165,7 +166,7 @@ int main(void)
   MT_Init();
 
   kick_Init();
-  uint LastPackageTime = 0;
+
   uint printtime = 0;
   uint kick_timer = 0;
 
@@ -180,37 +181,38 @@ int main(void)
 	  preparedAckData.roboID = localRobotID;
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
-		  }
+	  /*if(irqRead(&hspi2)){
+	        LastPackageTime = HAL_GetTick();
+	        roboCallback(&hspi2, &dataStruct);
+	        if(dataStruct.robotID == address){
+	          HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+	          float wheels[4];
+	          int rotSign = 1;
+	          if(dataStruct.rotationDirection){
+	            rotSign = -1;
+	          }
+	          //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
+	          calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
+	          //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
+	          wheels_SetOutput(wheels);
+	          //dribbler
+	          dribbler_SetSpeed(dataStruct.driblerSpeed);
+	          //kicker
+	                  if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
+	                    kick_timer = HAL_GetTick() + 1000U;
+	                    if(dataStruct.chipper){
+	                      kick_Chip((dataStruct.kickForce*100)/255);
+	                    }else{
+	                      kick_Kick((dataStruct.kickForce*100)/255);
+	                    }
+	                  }
+	                  //geneva
 
-			  //geneva
-			  }
-				  }
-					  kick_Kick((dataStruct.kickForce*100)/255);
-				  }else{
-					  kick_Chip((dataStruct.kickForce*100)/255);
-				  if(dataStruct.chipper){
-				  kick_timer = HAL_GetTick() + 1000U;
-			  if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
+	                }
 
-			  //kicker
-			  dribbler_SetSpeed(dataStruct.driblerSpeed);
-			  //dribbler
-			  wheels_SetOutput(wheels);
-			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
-			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
-			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
-			  }
-				  rotSign = -1;
-			  if(dataStruct.rotationDirection){
-			  int rotSign = 1;
-			  float wheels[4];
-			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-		  roboCallback(&hspi2, &dataStruct);
-		  if(dataStruct.robotID == address){
-		  LastPackageTime = HAL_GetTick();
-	 if(irqRead(&hspi2)){
-	 //ballsensorMeasurementLoop();
-	  }else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
+	              }*/
+
+	  if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
 	  	  float wheel_powers[4] = {0, 0, 0, 0};
 		  wheels_SetOutput(wheel_powers);
 	  }
@@ -417,6 +419,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == SPI1_IRQ_Pin){
 		if(isNrfInitialized) {
+				LastPackageTime = HAL_GetTick();
 				uprintf("\n\nInterrupt fired.\n");
 
 
