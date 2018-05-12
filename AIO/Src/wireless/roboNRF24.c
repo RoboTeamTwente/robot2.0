@@ -130,7 +130,7 @@ int8_t roboCallback(uint8_t localRobotID){
 	readData(dataArray, ROBOPKTLEN+misalignOffset+1); //+3 for misalignment +1 for cheksum byte.
 
 
-	if(verbose) {
+/*	if(verbose) {
 		uprintf("Raw packet data in DEC: ");
 		for(int i=0; i<32; i++) {
 			uprintf("%i ", dataArray[i]);
@@ -142,7 +142,7 @@ int8_t roboCallback(uint8_t localRobotID){
 			uprintf("%02x ", dataArray[i]);
 		}
 		uprintf("\n");
-	}
+	}*/
 
 	//calculate the checksum for what I received
 	uint8_t calculated_checksum = 0;
