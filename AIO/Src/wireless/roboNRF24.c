@@ -217,11 +217,7 @@ int8_t roboCallback(uint8_t localRobotID){
 	return 0; //success
 }
 
-/*
-	 * TODO
-	 * Fill Ack with actual data instead of dummy stuff
-*/
-void fillAckData(uint8_t ackDataLength) {
+void fillDummyAckData(uint8_t ackDataLength) {
 
 	preparedAckData.roboID = 5;
 	preparedAckData.wheelLeftFront = 1;
@@ -248,6 +244,24 @@ void fillAckData(uint8_t ackDataLength) {
 		preparedAckData.yAcceleration = counter;
 		preparedAckData.angularRate = counter;
 	}
+
+}
+
+void fillXSensData(float data[3]) {
+
+
+	union float_bytes {
+	       float val;
+	       uint32_t bytes;
+	    } x,y,w;
+
+	x.val = data[0];
+	y.val = data[1];
+	w.val = data[2];
+
+	preparedAckData.xAcceleration = x.bytes;
+	preparedAckData.yAcceleration = y.bytes;
+	preparedAckData.angularRate = w.bytes;
 
 }
 

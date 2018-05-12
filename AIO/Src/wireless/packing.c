@@ -9,6 +9,18 @@
 #include <stdio.h>
 #include "../PuttyInterface/PuttyInterface.h" //should be removed after debugging
 
+float uint32tofloat(uint32_t raw) {
+
+	union float_bytes {
+	       float val;
+	       uint32_t bytes;
+	    } data;
+
+	data.bytes = raw;
+	return data.val;
+
+}
+
 void printRoboData(roboData *input, uint8_t dataArray[ROBOPKTLEN]) {
 	uprintf("--------------------------------------------FROM BASESTATION------------------------------------------------\n");
 	for(int i=0; i<ROBOPKTLEN; i++) {
@@ -45,7 +57,7 @@ void printRoboAckData(roboAckData *input, uint8_t dataArray[32], uint8_t ackData
 	uprintf("Orientation: %i \n", input->orientation);
 	uprintf("Angular velocity: %i \n", input->angularVelocity);
 	uprintf("Ball sensor: %i \n", input->ballSensor);
-	uprintf("ACCEL \t| x: %lu \t y: %lu \t angular: %lu\n", input->xAcceleration, input->yAcceleration, input->angularRate);
+	uprintf("ACCEL \t| x: %.6f \t y: %.6f \t angular: %.6f\n", uint32tofloat(input->xAcceleration), uint32tofloat(input->yAcceleration), uint32tofloat(input->angularRate));
 }
 
 /*

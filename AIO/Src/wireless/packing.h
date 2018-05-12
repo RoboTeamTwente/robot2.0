@@ -69,6 +69,7 @@ typedef struct roboAckData{
 
 
 //for debugging
+float uint32tofloat(uint32_t raw);
 void printRoboData(roboData *input, uint8_t dataArray[ROBOPKTLEN]);
 void printRoboAckData(roboAckData *input, uint8_t dataArray[32], uint8_t ackDataLength);
 
@@ -76,7 +77,6 @@ void robotDataToPacket(roboData *input, uint8_t output[ROBOPKTLEN]);
 void packetToRoboData(uint8_t input[ROBOPKTLEN], roboData *output);
 void roboAckDataToPacket(roboAckData *input, uint8_t output[FULLACKPKTLEN]);
 void ackPacketToRoboAckData(uint8_t input[FULLACKPKTLEN], uint8_t packetlength, roboAckData *output);
-
 
 #endif /* PACKING_H_ */
 

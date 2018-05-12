@@ -25,7 +25,8 @@ roboAckData preparedAckData; //ready-to-wrap data to build a packet for sending 
 //any distrubance with other teams (e.g. opponents).
 #define RADIO_CHANNEL 78
 
-void fillAckData(uint8_t ackDataLength);
+void fillDummyAckData(uint8_t ackDataLength);
+void fillXSensData(float data[3]);
 
 int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t address);
 

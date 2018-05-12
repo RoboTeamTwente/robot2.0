@@ -185,7 +185,6 @@ int main(void)
 	  float wheelsPWM2[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
 	  wheels_SetOutput(wheelsPWM2);
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
-	 ballsensorMeasurementLoop();
 
 	  if(kickchip_command) { //received instruction to kick or chip
 		  if ((HAL_GetTick() - kick_timer) > 0) {
@@ -233,7 +232,7 @@ int main(void)
 			  started_icc = true;
 			  MT_UseIcc();
 		  }
-		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
+		  //uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		  //uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
@@ -441,7 +440,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 					avg_vision += 0; //TODO
 				}
 				offset = avg_vision - avg_xsens;
-				uprintf("[%f]\n\r", offset);
+				//uprintf("[%f]\n\r", offset);
 				counter = 0;
 			} else if (counter > timesteps - bufferSize) {
 				xsensAngles[timesteps-counter] = xsensYaw;
@@ -457,6 +456,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		xsensData[body_x] = -accptr[0];
 		xsensData[body_y] = -accptr[1];
 		xsensData[body_w] = xsensYaw + offset;
+		//uprintf("[x: %.6f \t y: %.6f \t angular: %.6f]\n",xsensData[body_x], xsensData[body_y], xsensData[body_w]);
+
+		fillXSensData(xsensData);
+
 		bool DO_enabled = false;
 		bool useAngleControl = false;
 		bool refIsAngle = false;
@@ -502,7 +505,7 @@ void Wireless_newPacketHandler() {
 	        if(receivedRoboData.driving_reference){
 	            rotSign = -1;
 	        }
-	        calcMotorSpeed ((float)receivedRoboData.rho/ 1000.0F, (float)receivedRoboData.theta * (2*M_PI/512), rotSign, (float)(receivedRoboData.velocity_angular/180.0)*M_PI, wheels);
+	        calcMotorSpeeds ((float)receivedRoboData.rho/ 1000.0F, (float)receivedRoboData.theta * (2*M_PI/512), rotSign, (float)(receivedRoboData.velocity_angular/180.0)*M_PI, wheels);
 	        //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
 	        wheels_SetOutput(wheels);
 
