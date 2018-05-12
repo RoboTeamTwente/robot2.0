@@ -72,15 +72,15 @@ PuttyInterfaceTypeDef puttystruct;
 bool battery_empty = false;
 bool user_control = false;
 bool print_encoder = false;
-
+bool print_euler = false;
 bool wheels_testing = false;
 float wheels_testing_power = 30;
 bool keyboard_control = false;
+bool started_icc = false;
 
+float velocityRef[3] = {0};
+float wheelsPWM[4] = {0,0,0,0};
 bool kickchip_command = false;
-
-float velocity[3] = {0};
-
 uint8_t isNrfInitialized = 0;
 uint8_t localRobotID = 0xff; //"uninitialized"
 uint LastPackageTime = 0;
@@ -164,7 +164,7 @@ int main(void)
 //  geneva_Init();
   DO_Init();
   dribbler_Init();
-  //ballsensorInit();
+  ballsensorInit();
   wheels_Init();
   MT_Init();
 
@@ -182,7 +182,10 @@ int main(void)
   while (1)
   {
 	  preparedAckData.roboID = localRobotID;
+	  float wheelsPWM2[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
+	  wheels_SetOutput(wheelsPWM2);
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
+	 ballsensorMeasurementLoop();
 
 	  if(kickchip_command) { //received instruction to kick or chip
 		  if ((HAL_GetTick() - kick_timer) > 0) {
@@ -221,9 +224,17 @@ int main(void)
 	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
-		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  //printNRFregisters();
+
+		  if(*MT_GetStatusWord() & 0b00011000){
+			  uprintf("in NRU; ")
+		  }else if(started_icc == false){
+			  started_icc = true;
+			  MT_UseIcc();
+		  }
+		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
+		  //uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
   /* USER CODE END WHILE */
@@ -294,6 +305,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 #define TEST_WHEELS_COMMAND "test wheels"
+#define SET_FILTER_COMMAND "mt filter"
 void HandleCommand(char* input){
 	if(strcmp(input, "mt start") == 0){
 		uprintf("Starting device MTi\n\r");
@@ -309,9 +321,22 @@ void HandleCommand(char* input){
 		MT_GoToConfig();
 	}else if(!strcmp(input, "mt measure")){
 		MT_GoToMeasure();
+	}else if(!strcmp(input, "mt options")){
+		MT_ReqOptions();
+	}else if(!strcmp(input, "mt setoptions")){
+		MT_SetOptions();
+	}else if(!strcmp(input, "mt icc")){
+		MT_UseIcc();
+	}else if(!strcmp(input, "mt norotation")){
+		MT_NoRotation(10);
+	}else if(!memcmp(input, SET_FILTER_COMMAND , strlen(SET_FILTER_COMMAND))){
+		MT_SetFilterProfile(strtol(input + 1 + strlen(SET_FILTER_COMMAND), NULL, 10));
 	}else if(strcmp(input, "mt factoryreset") == 0){
 		uprintf("Resetting the configuration.\n\r");
 		MT_FactoryReset();
+	}else if(strcmp(input, "mt reqfilter") == 0){
+		uprintf("requesting current filter profile.\n\r");
+		MT_ReqFilterProfile();
 	}else if(memcmp(input, "mt setconfig", strlen("mt setconfig")) == 0){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
@@ -327,6 +352,9 @@ void HandleCommand(char* input){
 		uprintf("position = [%u]\n\r", geneva_GetPosition());
 	}else if(!strcmp(input, "geneva stop")){
 		geneva_SetState(geneva_idle);
+	}else if(!strcmp(input, "euler")){
+		print_euler = ! print_euler;
+		uprintf("print_euler = %d\n\r", print_euler);
 	}else if(!memcmp(input, "geneva" , strlen("geneva"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
 	}else if(!memcmp(input, "control" , strlen("control"))){
@@ -391,14 +419,55 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
+
+		// get xsens data
 		float * accptr;
 		accptr = MT_GetAcceleration();
-		velocity[0] += *accptr++ / 100;
-		velocity[1] += *accptr++ / 100;
-		velocity[2] += *accptr   / 100;
-		if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
+		float xsensYaw = MT_GetAngles()[2]/180*M_PI;
+
+		// check for calibration possibilities (if angle has not changed much for a while)
+		int bufferSize = 5;
+		int timesteps = 100;
+		static float offset = 0;
+		static float xsensAngles[5] = {0};
+		static float angle0 = 0;
+		static int counter = 0;
+		if (fabs(angle0 - xsensAngles[0]) < 0.01) {
+			if (counter>timesteps) {
+				float avg_xsens = 0;
+				float avg_vision = 0;
+				for (int i = 0; i<bufferSize; i++) {
+					avg_xsens += xsensAngles[i];
+					avg_vision += 0; //TODO
+				}
+				offset = avg_vision - avg_xsens;
+				uprintf("[%f]\n\r", offset);
+				counter = 0;
+			} else if (counter > timesteps - bufferSize) {
+				xsensAngles[timesteps-counter] = xsensYaw;
+			}
+		} else {
+			angle0 = xsensYaw;
+			counter = 0;
+		}
+		counter++;
+
+		//
+		float xsensData[3];
+		xsensData[body_x] = -accptr[0];
+		xsensData[body_y] = -accptr[1];
+		xsensData[body_w] = xsensYaw + offset;
+		bool DO_enabled = false;
+		bool useAngleControl = false;
+		bool refIsAngle = false;
+		DO_Control(velocityRef, xsensData, DO_enabled, useAngleControl, refIsAngle, wheelsPWM);
+//		wheelsPWM[0] = -10;
+//		wheelsPWM[2] = -10;
+		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
-		DO_Control();
+//		float * euler;
+//		euler = MT_GetAngles();
+//		if(Xsens_state == Xsens_Measure && print_euler)	uprintf("euler angles[%f, %f, %f]\n\r", euler[0], euler[1], euler[2]);
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
@@ -411,6 +480,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		Wireless_newPacketHandler();
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
+		uprintf("geneva sensor callback\n\r");
 		geneva_SensorCallback();
 	}
 }

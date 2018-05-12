@@ -165,6 +165,29 @@ enum XsFormatCoordinateSystem{
 	XDI_NWU		= 0x8
 };
 
+enum XsOptionFlags{
+	XOF_DisableAutoStore				= 0x00000001U,
+	XOF_DisableAutoMeasurement 			= 0x00000002U,
+	XOF_EnableAhs						= 0x00000010U,
+	XOF_EnableInRunCompassCalibration	= 0x00000080U
+};
+
+enum XsIcc{
+	XsIcc_Start  	= 0,	//Representative Motion | Measurement State
+	XsIcc_Stop		= 1, 	//Representative Motion | Measurement State
+	XsIcc_Store		= 2,	//ICC parameters Config | State
+	XsIcc_Get		= 3,	//Representative Motion | State Measurement State
+};
+
+enum XsFilterProfile{
+	XFP_General 		= 50,//Suitable for most applications.
+	XFP_High_mag_dep 	= 51,//Heading corrections strongly rely on the magnetic field measured and should be used when magnetic field is homogeneous.
+	XFP_Dynamic			= 52,//Assumes that the motion is highly dynamic.
+	XFP_North_referenced= 53,//Assumes a good Magnetic Field Mapping (MFM) and a homogeneous magnetic field. Given stable initialization procedures and observability of the gyro bias, after dynamics,
+						//this filter profile will trust more on the gyro solution and the heading will slowly converge to the disturbed mag field over the course of time.
+	XFP_VRU_general		= 54//Magnetometers are not used to determine heading. Consider using VRU_general in environments that have a heavily disturbed magnetic field or when the application only requires
+						//unreferenced heading (see also Section 4.3.3)
+};
 /*!
  * \brief Low level format to use when formating Xbus messages for transmission.
  */

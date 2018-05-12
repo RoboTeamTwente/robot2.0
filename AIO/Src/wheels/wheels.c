@@ -12,7 +12,7 @@
 #include "tim.h"
 #include "../PuttyInterface/PuttyInterface.h"
 
-#define PWM_CUTOFF 10.0F
+#define PWM_CUTOFF 3.0F
 #define ROBOT_RADIUS 0.0775F
 #define WHEEL_RADIUS 0.0275F
 #define HTIM5_FREQ 1000000.0F
@@ -36,10 +36,10 @@ enum {
 static inline void ResetEncoder(wheels_handles wheel){
 	switch(wheel){
 	case wheels_RF:
-		__HAL_TIM_SET_COUNTER(&htim8, 0);
+		__HAL_TIM_SET_COUNTER(&htim1, 0);
 		break;
 	case wheels_RB:
-		__HAL_TIM_SET_COUNTER(&htim1, 0);
+		__HAL_TIM_SET_COUNTER(&htim8, 0);
 		break;
 	case wheels_LB:
 		__HAL_TIM_SET_COUNTER(&htim3, 0);
@@ -77,7 +77,7 @@ void wheels_DeInit(){
 	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2);
 }
 
-void calcMotorSpeed (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]){
+void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]){
 	// Jelle's variant, using forces instead of velocities (for testing)
 	static float cos_a0 = cosf(60.0F  * 3.1415F/180.0F);
 	static float sin_a0 = sinf(60.0F  * 3.1415F/180.0F);
@@ -134,7 +134,7 @@ void wheels_SetOutput(float power[4]){
 			HAL_TIM_Base_Stop(&htim14);											// Stop timer
 			__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 2000);
+			__HAL_TIM_SET_AUTORELOAD(&htim14, 1000);
 			HAL_TIM_Base_Start_IT(&htim14);   									// Start timer for kick off
 			//HAL_Delay(1);
 
@@ -158,11 +158,11 @@ void wheels_SetOutput(float power[4]){
 inline int16_t wheels_GetEncoder(wheels_handles wheel){
 	switch(wheel){
 	case wheels_RF:
-		return __HAL_TIM_GET_COUNTER(&htim8);
-	case wheels_RB:
 		return __HAL_TIM_GET_COUNTER(&htim1);
+	case wheels_RB:
+		return __HAL_TIM_GET_COUNTER(&htim8);
 	case wheels_LB:
-		return -__HAL_TIM_GET_COUNTER(&htim3);
+		return -__HAL_TIM_GET_COUNTER(&htim3); //  minus due to inverted routing (right leon?)
 	case wheels_LF:
 		return __HAL_TIM_GET_COUNTER(&htim4);
 	default:
