@@ -11,12 +11,14 @@
 #include "tim.h"
 #include "../wheels/wheels.h"
 #include "../PuttyInterface/PuttyInterface.h"
+#include "../MTi/MTiControl.h"
 
 
 static float do_output[3];
 
 DO_States DO_Init(){
 	HAL_TIM_Base_Start_IT(&htim7);
+	MT_SetFilterProfile(2); // dynamic profile for xsens to keep up with fast rotation
 
 	do_output[body_x] = 0;
 	do_output[body_y] = 0;
@@ -37,8 +39,7 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 	// Requires transformation to global coordinates and back
 	float globalInput[3];
 	rotate(-yaw, localInput, globalInput);
-//	float globalAcc[3];
-//	rotate(-yaw, localAcc, globalAcc);
+	// accelerations are already global (free acceleration)
 	float accX = globalAcc[body_x];
 	float accY = globalAcc[body_y];
 //	if (fabs(accX)<0.3) {
@@ -51,8 +52,8 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 	float globalOut[3] = {0,0,0};
 	static float prevOut[3] = {0,0,0};
 	if (!isnan(prevOut[0])){ // lowpass filtering
-		globalOut[body_x] = 0.07*(accX*2000 - globalInput[body_x]) + 0.93*prevOut[body_x];
-		globalOut[body_y] = 0.07*(accY*2000 - globalInput[body_y]) + 0.93*prevOut[body_y];
+		globalOut[body_x] = 0.07*(accX*3000 - globalInput[body_x]) + 0.93*prevOut[body_x];
+		globalOut[body_y] = 0.07*(accY*3000 - globalInput[body_y]) + 0.93*prevOut[body_y];
 	}
 	prevOut[body_x] = globalOut[body_x];
 	prevOut[body_y] = globalOut[body_y];
@@ -73,7 +74,7 @@ void body2Wheels(float v[3], float output[4]){
 	float R = 0.0775;
 	float r = 0.0275;
 
-	//Applying M_inv matrix.
+	//Applying M_inv matrix. (minus sign in front is due to wheels spinning in opposite direction to motors)
 	output[wheels_RF] = -(1/s*v[body_x] + 1/c*v[body_y] - 1/R*v[body_w])*r/4;
 	output[wheels_RB] = -(1/s*v[body_x] - 1/c*v[body_y] - 1/R*v[body_w])*r/4;
 	output[wheels_LB] = -(-1/s*v[body_x] - 1/c*v[body_y] - 1/R*v[body_w])*r/4;
@@ -94,10 +95,14 @@ void wheels2Body(float w[4], float output[3]){
 	output[body_w] = (-1/R*w[wheels_RF] - 1/R*w[wheels_RB] - 1/R*w[wheels_LB] - 1/R*w[wheels_LF])*r/4;
 }
 
+// rotates coordinate system by yaw
 void rotate(float yaw, float input[3], float output[3]){
 
-	output[body_x] = cosf(yaw)*input[body_x] + sinf(yaw)*input[body_y];
-	output[body_y] = -sinf(yaw)*input[body_x] + cosf(yaw)*input[body_y];
+	float outX = cosf(yaw)*input[body_x] + sinf(yaw)*input[body_y];
+	float outY = -sinf(yaw)*input[body_x] + cosf(yaw)*input[body_y];
+
+	output[body_x] = outX;
+	output[body_y] = outY;
 	output[body_w] = input[body_w];
 
 }
@@ -150,17 +155,15 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], boo
 	// Compute the error in local body coordinates
 	float localReference[3];
 	rotate(xsensData[body_w], velocityRef, localReference);
-
 	float localVel[3];
 	wheels2Body(w_wheels, localVel);
-//	uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
-//	uprintf("[%f %f %f]\n\r", xsensData[body_x], xsensData[body_y], xsensData[body_w]);
-	//uprintf("[%f, %f, %f]\n\r", localReference[body_x], localReference[body_y],  localReference[body_w]);
-
 	float error[3];
 	error[body_x] = localReference[body_x] - localVel[body_x];
 	error[body_y] = localReference[body_y] - localVel[body_y];
 	error[body_w] = localReference[body_w] - localVel[body_w];
+	//	uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
+	//	uprintf("[%f %f %f]\n\r", xsensData[body_x], xsensData[body_y], xsensData[body_w]);
+		//uprintf("[%f, %f, %f]\n\r", localReference[body_x], localReference[body_y],  localReference[body_w]);
 
 	// P-control
 	float controllerGain[3];
@@ -217,38 +220,31 @@ float angleController(float angleRef, float yaw){
 }
 
 
-DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, bool useAngleControl, bool refIsAngle, float output[4]){
+DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, bool useYawControl, bool refIsAngle, float output[4]){
 
 //	velocityRef[0] = 1;
 //	velocityRef[1] = 0;
 //	velocityRef[2] = 0;
 //	xsensData[2] = 0;
 	static float w_prev[4] = {0,0,0,0};
-
 	float w_wheels[4];
-	if (!isnan(w_prev[0])){ // filtering wheel speeds
-		w_wheels[wheels_RF] = 0.4*(-wheels_GetSpeed(wheels_RF)) + 0.6*w_prev[wheels_RF];
-		w_wheels[wheels_RB] = 0.4*(-wheels_GetSpeed(wheels_RB)) + 0.6*w_prev[wheels_RB];
-		w_wheels[wheels_LB] = 0.4*(-wheels_GetSpeed(wheels_LB)) + 0.6*w_prev[wheels_LB];
-		w_wheels[wheels_LF] = 0.4*(-wheels_GetSpeed(wheels_LF)) + 0.6*w_prev[wheels_LF];
-	} else {
-		w_wheels[wheels_RF] = (-wheels_GetSpeed(wheels_RF));
-		w_wheels[wheels_RB] = (-wheels_GetSpeed(wheels_RB));
-		w_wheels[wheels_LB] = (-wheels_GetSpeed(wheels_LB));
-		w_wheels[wheels_LF] = (-wheels_GetSpeed(wheels_LF));
+	 // filtering wheel speeds
+	for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
+		if (!isnan(w_prev[i])){
+			w_wheels[i] = 0.4*(-wheels_GetSpeed(i)) + 0.6*w_prev[i];
+		} else {
+			w_wheels[i] = -wheels_GetSpeed(i);
+		}
+		w_prev[i] = w_wheels[i];
 	}
 
-	w_prev[wheels_RF] = w_wheels[wheels_RF];
-	w_prev[wheels_RB] = w_wheels[wheels_RB];
-	w_prev[wheels_LB] = w_wheels[wheels_LB];
-	w_prev[wheels_LF] = w_wheels[wheels_LF];
-
-	if (useAngleControl) {
+	// yaw controller
+	if (useYawControl) {
 		float newVelocityRef[3] = {velocityRef[body_x], velocityRef[body_y], 0};
 		float angleRef;
-		if (refIsAngle) {
-			angleRef = velocityRef[body_w];
-		} else {
+		if (refIsAngle) { // the joystick could be used here to directly set the angle reference
+			angleRef = velocityRef[body_w]*180/2048;
+		} else { // for the keyboard the angle reference is ramped up by integrating the signal
 			static float prevAngleRef = 0;
 			angleRef = prevAngleRef + 0.01 * velocityRef[body_w];
 			prevAngleRef = angleRef;
@@ -259,20 +255,8 @@ DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, 
 		controller(velocityRef, w_wheels, xsensData, DO_enabled, output);
 	}
 
-//	newVelocityRef[body_x] = 1;
-
 //	uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
 //	uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
-
-//	float wheelsPWM2[4];//= {-10,-10,-10,-10};
-
-//	output[wheels_RF] = wheelsPWM2[wheels_RF];
-//	output[wheels_RB] = wheelsPWM2[wheels_RB];
-//	output[wheels_LB] = wheelsPWM2[wheels_LB];
-//	output[wheels_LF] = wheelsPWM2[wheels_LF];
-//	output[0] = -10;
-//	output[2] = -10;
-
 //	static float counter = 0;
 //	counter = counter+0.01;
 	//uprintf("[%f]\n\r", counter);

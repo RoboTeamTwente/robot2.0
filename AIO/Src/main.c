@@ -76,9 +76,9 @@ float wheels_testing_power = 30;
 bool keyboard_control = false;
 bool started_icc = false;
 bool halt = true;
+bool offset_found_once = false;
 
 float velocityRef[3] = {0};
-float wheelsPWM[4] = {0,0,0,0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -166,6 +166,7 @@ int main(void)
   uint LastPackageTime = 0;
   uint printtime = 0;
   uint kick_timer = 0;
+  uint start_time = HAL_GetTick();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -175,7 +176,9 @@ int main(void)
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 	 ballsensorMeasurementLoop();
 	 if(irqRead(&hspi2)){
-		  halt = false;
+		  if (halt && HAL_GetTick() - start_time >11000) {
+			  halt = false; // robot is only allowed to move after xsens is calibrated and packages are received
+		  }
 		  LastPackageTime = HAL_GetTick();
 		  roboCallback(&hspi2, &dataStruct);
 		  if(dataStruct.robotID == address){
@@ -438,7 +441,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		} else {
 			// some settings
 			bool DO_enabled = false;
-			bool use_angle_control = false;
+			bool use_yaw_control = false;
 			bool ref_is_angle = false;
 			bool use_vision = false;
 
@@ -449,40 +452,58 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 
 			// calibration by computing the yaw offset between vision and xsens
 			static float yaw_offset = 0;
-			if (use_vision) { //TOOO: SHOULD CALIBRATE XSENS EXPLICITLY, INSTEAD OF USING OFFSET (because the free accelerations should also use new yaw)
-				// check for calibration possibilities (if angle has not changed much for a while)
-				int duration = 100;
-				static float xsens_angles[10] = {0};
-				int buffer_size = 10;
-				static float angle0 = 0;
+			// if vision data is available, the yaw will be calibrated to the vision yaw when possible
+			// If no vision data is available, the yaw will be calibrated to zero, but just once
+			if (use_vision || !offset_found_once) {
+				int duration = 100;		// time steps of no rotation required before calibrating
+				int avg_size = 10; 		// amount of samples to take the average of
+				static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
+				static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
+				static float yaw0 = 0; 	// starting yaw, which is used to detect a change in yaw within the duration
 				static int counter = 0;
-				if (fabs(angle0 - xsens_angles[0]) < 0.01) {
+				// check for calibration possibility (which is when the yaw has not changed much for a while)
+				if (fabs(yaw0 - xsens_yaw) < 0.01) {
 					if (counter > duration) {
-						float avg_xsens = 0; // average of last few xsens angles
-						float avg_vision = 0; // average of last few vision angles
-						for (int i = 0; i<buffer_size; i++) {
-							avg_xsens += xsens_angles[i]/buffer_size;
-							avg_vision += 0; //TODO
+						float avg_xsens_yaw = atan2f(avg_xsens_vec[1], avg_xsens_vec[0]);
+						float avg_vision_yaw = 0;
+						if (use_vision) { // if vision would not be used, the yaw would simply be reset to 0;
+							avg_vision_yaw = atan2f(avg_vision_vec[1], avg_vision_vec[0]);
 						}
-						yaw_offset = avg_vision - avg_xsens;
+						// calculate offset
+						yaw_offset = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
 						uprintf("[%f]\n\r", yaw_offset);
+						offset_found_once = true;
+						// reset timer and averages
 						counter = 0;
-					} else if (counter > duration - buffer_size) {
-						xsens_angles[duration-counter] = xsens_yaw; // fill in buffer for determining average of last few samples
+						avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
+						avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
+					} else if (counter > duration - avg_size) {
+						// averaging angles requires summing their unit vectors
+						avg_xsens_vec[0] += cosf(xsens_yaw);
+						avg_xsens_vec[1] += sinf(xsens_yaw);
+						avg_vision_vec[0] += 0; //TODO
+						avg_vision_vec[1] += 0; //TODO
 					}
 				} else {
-					angle0 = xsens_yaw;
+					// reset compare yaw to current yaw
+					yaw0 = xsens_yaw;
+					// reset timer and averages
 					counter = 0;
+					avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
+					avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
 				}
 				counter++;
 			}
 
-			// call the controller with the (calibrated) data. The output is wheelsPWM, which is used in the main loop
+			// call the controller with the (calibrated) data. The output is wheelsPWM
 			float xsensData[3];
+			xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
 			xsensData[body_x] = -accptr[0];
 			xsensData[body_y] = -accptr[1];
-			xsensData[body_w] = xsens_yaw + yaw_offset;
-			DO_Control(velocityRef, xsensData, DO_enabled, use_angle_control, ref_is_angle, wheelsPWM);
+			rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also use the new yaw
+
+			float wheelsPWM[4] = {0,0,0,0};
+			DO_Control(velocityRef, xsensData, DO_enabled, use_yaw_control, ref_is_angle, wheelsPWM);
 
 			// copy the controller output, to make sure it doesnt get altered at the wrong time
 			float wheel_powers[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
