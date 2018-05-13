@@ -149,18 +149,16 @@ float compute_limit_scale(float input[3], float limit){
 }
 
 //observer output should just be pre-declared as 0 before any looping starts
-void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], bool DO_enabled, float output[4]){
+void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3], bool DO_enabled, float output[4]){
 	// uses global variable: do_output which is reset to 0 in the init function
 
 	// Compute the error in local body coordinates
-	float localReference[3];
-	rotate(xsensData[body_w], velocityRef, localReference);
 	float localVel[3];
 	wheels2Body(w_wheels, localVel);
 	float error[3];
-	error[body_x] = localReference[body_x] - localVel[body_x];
-	error[body_y] = localReference[body_y] - localVel[body_y];
-	error[body_w] = localReference[body_w] - localVel[body_w];
+	error[body_x] = localVelocityRef[body_x] - localVel[body_x];
+	error[body_y] = localVelocityRef[body_y] - localVel[body_y];
+	error[body_w] = localVelocityRef[body_w] - localVel[body_w];
 	//	uprintf("[%f, %f, %f]\n\r", localVel[body_x], localVel[body_y],  localVel[body_w]);
 	//	uprintf("[%f %f %f]\n\r", xsensData[body_x], xsensData[body_y], xsensData[body_w]);
 		//uprintf("[%f, %f, %f]\n\r", localReference[body_x], localReference[body_y],  localReference[body_w]);
@@ -201,9 +199,9 @@ void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], boo
 	}
 
 //	uprintf("[%f, %f]\n\r", w_wheels[wheels_RF], output[wheels_RF]);
-	//uprintf("[%f, %f, %f, %f]\n\r", output[wheels_RF],  output[wheels_RB], output[wheels_LB], output[wheels_LF]);
-	//uprintf("[%f, %f, %f, %f, %f, %f]\n\r", localVel[body_x], scaledInput[body_x], localVel[body_y], scaledInput[body_y], localVel[body_w], scaledInput[body_w]);
-	//uprintf("[%f, %f, %f, %f, %f, %f]\n\r", localVel[body_x], error[body_x], localVel[body_y], error[body_y], localVel[body_w], error[body_w]);
+//	uprintf("[%f, %f, %f, %f]\n\r", output[wheels_RF],  output[wheels_RB], output[wheels_LB], output[wheels_LF]);
+//	uprintf("[%f, %f, %f, %f, %f, %f]\n\r", localVel[body_x], scaledInput[body_x], localVel[body_y], scaledInput[body_y], localVel[body_w], scaledInput[body_w]);
+//	uprintf("[%f, %f, %f, %f, %f, %f]\n\r", localVel[body_x], error[body_x], localVel[body_y], error[body_y], localVel[body_w], error[body_w]);
 }
 
 float angleController(float angleRef, float yaw){
@@ -221,11 +219,13 @@ float angleController(float angleRef, float yaw){
 
 
 DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, bool useYawControl, bool refIsAngle, float output[4]){
+	//TODO: ADD ANGULAR TO DISTURBANCE OBSERVER
 
 //	velocityRef[0] = 1;
 //	velocityRef[1] = 0;
 //	velocityRef[2] = 0;
 //	xsensData[2] = 0;
+
 	static float w_prev[4] = {0,0,0,0};
 	float w_wheels[4];
 	 // filtering wheel speeds

@@ -444,6 +444,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			bool use_yaw_control = false;
 			bool ref_is_angle = false;
 			bool use_vision = false;
+			bool use_global_ref = true;
 
 			// get xsens data
 			float * accptr;
@@ -495,15 +496,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 				counter++;
 			}
 
-			// call the controller with the (calibrated) data. The output is wheelsPWM
+			// call the controller with the (calibrated) xsens data. The output is wheelsPWM
 			float xsensData[3];
-			xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
 			xsensData[body_x] = -accptr[0];
 			xsensData[body_y] = -accptr[1];
+			xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
 			rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also use the new yaw
-
+			float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
+			if (use_global_ref) { // coordinate transform from global to local for the velocity reference
+				rotate(xsensData[body_w], velocityRef, localVelocityRef);
+			}
 			float wheelsPWM[4] = {0,0,0,0};
-			DO_Control(velocityRef, xsensData, DO_enabled, use_yaw_control, ref_is_angle, wheelsPWM);
+			DO_Control(localVelocityRef, xsensData, DO_enabled, use_yaw_control, ref_is_angle, wheelsPWM);
 
 			// copy the controller output, to make sure it doesnt get altered at the wrong time
 			float wheel_powers[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
