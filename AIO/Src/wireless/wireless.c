@@ -7,6 +7,13 @@
 
 #include "wireless.h"
 
+bool isNrfInitialized = 0;
+uint8_t localRobotID = 0xff; //"uninitialized"
+uint LastPackageTime = 0;
+bool wireless_irq_prev = 0;
+bool kickchip_command = 0;
+
+//detect falling edges on IRQ pin
 bool Wireless_newData() {
 	uint8_t irq_pin = HAL_GPIO_ReadPin(SPI1_IRQ_GPIO_Port, SPI1_IRQ_Pin);
 	if(!irq_pin && wireless_irq_prev) {
@@ -18,18 +25,17 @@ bool Wireless_newData() {
 		return 0;
 	}
 }
+
 void Wireless_newPacketHandler() {
-	if(isNrfInitialized) {
+	if(isNrfInitialized) { //wait till module is fully initialized before calling roboCallback, otherwise everything fucks up
 			LastPackageTime = HAL_GetTick();
-			uprintf("\n\nnew wireless message (interrupt fired)\n");
+			//uprintf("\n\nnew wireless message (interrupt fired)\n");
 
 			int8_t error_code = roboCallback(localRobotID);
 			if(error_code) {
 				uprintf("RoboCallback failed with error: %i\n", error_code);
 			}
 			clearInterrupts(); //should not be needed
-
-
 
 			//kicker
 			if (receivedRoboData.kick_chip_forced) {
@@ -39,8 +45,8 @@ void Wireless_newPacketHandler() {
 		}
 }
 
-void Wireless_Init() {
-	localRobotID = ReadAddress();
+void Wireless_Init(uint8_t address) {
+	localRobotID = address;
 	uprintf("Robot ID: %i\n", localRobotID);
 
 	while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {

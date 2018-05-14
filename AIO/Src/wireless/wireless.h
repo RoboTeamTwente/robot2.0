@@ -14,14 +14,14 @@
 #include "roboNRF24.h"
 #include "debugNRF24.h"
 
-uint8_t isNrfInitialized = 0;
-uint8_t localRobotID = 0xff; //"uninitialized"
-uint LastPackageTime = 0;
-uint8_t wireless_irq_prev = 0;
-uint8_t kickchip_command = 0;
+bool isNrfInitialized;
+uint8_t localRobotID; //"uninitialized"
+uint LastPackageTime;
+bool wireless_irq_prev;
+bool kickchip_command;
 
 bool Wireless_newData();
 void Wireless_newPacketHandler();
-void Wireless_Init();
+void Wireless_Init(uint8_t address);
 
 #endif /* WIRELESS_WIRELESS_H_ */

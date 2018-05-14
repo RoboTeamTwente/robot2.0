@@ -97,10 +97,6 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds);
 void dribbler_SetSpeed(uint8_t percentage);
 void dribbler_Init();
 
-bool Wireless_newData();
-void Wireless_Init();
-void Wireless_newPacketHandler();
-
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -169,7 +165,7 @@ int main(void)
   uint printtime = 0;
 
 
-  Wireless_Init();
+  Wireless_Init(ReadAddress());
 
   /* USER CODE END 2 */
 
@@ -194,7 +190,7 @@ int main(void)
 		}
 		calcMotorSpeeds ((float)receivedRoboData.rho/ 1000.0F, (float)receivedRoboData.theta * (2*M_PI/512), rotSign, (float)(receivedRoboData.velocity_angular/180.0)*M_PI, wheels);
 		//uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
-		wheels_SetOutput(wheels);
+		//wheels_SetOutput(wheels);
 
 		//dribbler
 		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
