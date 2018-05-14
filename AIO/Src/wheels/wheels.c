@@ -12,7 +12,8 @@
 #include "tim.h"
 #include "../PuttyInterface/PuttyInterface.h"
 
-#define PWM_CUTOFF 3.0F
+#define PWM_CUTOFF 2.00F
+#define PWM_ROUNDUP 4.00F
 #define ROBOT_RADIUS 0.0775F
 #define WHEEL_RADIUS 0.0275F
 #define HTIM5_FREQ 1000000.0F
@@ -106,16 +107,21 @@ void wheels_SetOutput(float power[4]){
 	case wheels_ready:
 		memcpy(prev_reverse, reverse, 4);
 		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-			if(power[i] < -0.1 ){
+			if(power[i] < -1.0 ){
 				power[i] = -power[i];
 				reverse[i] = 1;
-			}else if(power[i] > 0.1 ){
+			}else if(power[i] > 1.0 ){
 				reverse[i] = 0;
 			}
 			if(power[i] > 100){
 				power[i] = 100;
-			}else if(power[i] < PWM_CUTOFF){
-				power[i] = 0;
+			}else if(power[i] < PWM_ROUNDUP){
+				if(power[i] < PWM_CUTOFF) {
+					power[i] = 0;
+				} else {
+					power[i] = PWM_ROUNDUP;
+				}
+
 			}
 		}
 		delay = memcmp(prev_reverse, reverse, 4);
@@ -148,6 +154,8 @@ void wheels_SetOutput(float power[4]){
 			__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, pwm[wheels_RB]);
 			__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, pwm[wheels_LB]);
 			__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, pwm[wheels_LF]);
+
+//			uprintf("[%f]\n\r", (-reverse[0]*2+1)*power[0]);
 		}
 		return;
 	default:

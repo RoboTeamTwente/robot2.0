@@ -18,7 +18,8 @@ static float do_output[3];
 
 DO_States DO_Init(){
 	HAL_TIM_Base_Start_IT(&htim7);
-	MT_SetFilterProfile(2); // dynamic profile for xsens to keep up with fast rotation
+//	MT_GoToConfig();
+//	MT_SetFilterProfile(2); // dynamic profile for xsens to keep up with fast rotation
 
 	do_output[body_x] = 0;
 	do_output[body_y] = 0;
@@ -206,13 +207,17 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 
 float angleController(float angleRef, float yaw){
 	float angleError = constrainAngle(angleRef - yaw);
-	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, angleError);
+	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, yaw/M_PI*180);
 	float output = -angleError*20.0;
-	float limit = 20;
-	if (output > limit) {
-		output = limit;
-	} else if (output < -limit) {
-		output = -limit;
+	float upper_lim = 20;
+	float lower_lim = 0.5;
+	float lower_roundup = 1.0;
+	if (fabs(output) > upper_lim) {
+		output = output / fabs(output) * upper_lim;
+	} else if (fabs(output) < lower_lim) {
+		output = 0;
+	} else if (fabs(output) < lower_roundup) {
+		output = output / fabs(output) * lower_roundup;
 	}
 	return output;
 }
@@ -243,7 +248,7 @@ DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, 
 		float newVelocityRef[3] = {velocityRef[body_x], velocityRef[body_y], 0};
 		float angleRef;
 		if (refIsAngle) { // the joystick could be used here to directly set the angle reference
-			angleRef = velocityRef[body_w]*180/2048;
+			angleRef = velocityRef[body_w]*180/2047;
 		} else { // for the keyboard the angle reference is ramped up by integrating the signal
 			static float prevAngleRef = 0;
 			angleRef = prevAngleRef + 0.01 * velocityRef[body_w];

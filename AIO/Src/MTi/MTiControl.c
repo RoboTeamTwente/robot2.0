@@ -72,9 +72,10 @@ MT_StatusTypeDef MT_Init(){
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_StatusWord, 10, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
+		MT_SetFilterProfile(1); // dynamic profile for xsens to keep up with fast rotation
 		ret = MT_GoToMeasure();
 		HAL_Delay(50);
-		ret = MT_NoRotation(10);
+		ret = MT_NoRotation(6);
 		//MT_UseIcc();
 	}else{
 		uprintf("starting MTi Operation failed\n\r");

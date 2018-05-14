@@ -64,6 +64,8 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 #define STOP_AFTER 250 //ms
+#define MOVE_AFTER 7500 //ms
+#define CALIBRATE_AFTER 6500 //ms
 PuttyInterfaceTypeDef puttystruct;
 int8_t address = -1;
 uint8_t freqChannel = 78;
@@ -77,7 +79,9 @@ bool keyboard_control = false;
 bool started_icc = false;
 bool halt = true;
 bool offset_found_once = false;
+uint start_time;
 
+//float wheelsPWM[4] = {0};
 float velocityRef[3] = {0};
 /* USER CODE END PV */
 
@@ -154,11 +158,11 @@ int main(void)
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
 //  geneva_Init();
-  DO_Init();
   dribbler_Init();
   ballsensorInit();
   wheels_Init();
   MT_Init();
+  DO_Init();
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
   kick_Init();
@@ -166,7 +170,7 @@ int main(void)
   uint LastPackageTime = 0;
   uint printtime = 0;
   uint kick_timer = 0;
-  uint start_time = HAL_GetTick();
+  start_time = HAL_GetTick();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -176,7 +180,7 @@ int main(void)
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 	 ballsensorMeasurementLoop();
 	 if(irqRead(&hspi2)){
-		  if (halt && HAL_GetTick() - start_time >11000) {
+		  if (halt && HAL_GetTick() - start_time > MOVE_AFTER) {
 			  halt = false; // robot is only allowed to move after xsens is calibrated and packages are received
 		  }
 		  LastPackageTime = HAL_GetTick();
@@ -435,84 +439,86 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
-		if (halt) { // when communication is lost for too long, we send 0 to the motors
-			float wheel_powers[4] = {0,0,0,0};
-			wheels_SetOutput(wheel_powers);
-		} else {
-			// some settings
-			bool DO_enabled = false;
-			bool use_yaw_control = false;
-			bool ref_is_angle = false;
-			bool use_vision = false;
-			bool use_global_ref = true;
+		// some settings
+		bool DO_enabled = false;
+		bool use_yaw_control = true;
+		bool ref_is_angle = true;
+		bool use_vision = false;
+		bool use_global_ref = true;
 
-			// get xsens data
-			float * accptr;
-			accptr = MT_GetAcceleration();
-			float xsens_yaw = MT_GetAngles()[2]/180*M_PI;
+		// get xsens data
+		float * accptr;
+		accptr = MT_GetAcceleration();
+		float xsens_yaw = MT_GetAngles()[2]/180*M_PI;
 
-			// calibration by computing the yaw offset between vision and xsens
-			static float yaw_offset = 0;
-			// if vision data is available, the yaw will be calibrated to the vision yaw when possible
-			// If no vision data is available, the yaw will be calibrated to zero, but just once
-			if (use_vision || !offset_found_once) {
-				int duration = 100;		// time steps of no rotation required before calibrating
-				int avg_size = 10; 		// amount of samples to take the average of
-				static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
-				static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
-				static float yaw0 = 0; 	// starting yaw, which is used to detect a change in yaw within the duration
-				static int counter = 0;
-				// check for calibration possibility (which is when the yaw has not changed much for a while)
-				if (fabs(yaw0 - xsens_yaw) < 0.01) {
-					if (counter > duration) {
-						float avg_xsens_yaw = atan2f(avg_xsens_vec[1], avg_xsens_vec[0]);
-						float avg_vision_yaw = 0;
-						if (use_vision) { // if vision would not be used, the yaw would simply be reset to 0;
-							avg_vision_yaw = atan2f(avg_vision_vec[1], avg_vision_vec[0]);
-						}
-						// calculate offset
-						yaw_offset = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
-						uprintf("[%f]\n\r", yaw_offset);
-						offset_found_once = true;
-						// reset timer and averages
-						counter = 0;
-						avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
-						avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
-					} else if (counter > duration - avg_size) {
-						// averaging angles requires summing their unit vectors
-						avg_xsens_vec[0] += cosf(xsens_yaw);
-						avg_xsens_vec[1] += sinf(xsens_yaw);
-						avg_vision_vec[0] += 0; //TODO
-						avg_vision_vec[1] += 0; //TODO
+		// calibration by computing the yaw offset between vision and xsens
+		static float yaw_offset = 0;
+		// if vision data is available, the yaw will be calibrated to the vision yaw when possible
+		// If no vision data is available, the yaw will be calibrated to zero, but just once
+		if (use_vision || (!offset_found_once && HAL_GetTick() - start_time > CALIBRATE_AFTER)) {
+			int duration = 50;		// time steps of no rotation required before calibrating
+			int avg_size = 10; 		// amount of samples to take the average of
+			static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
+			static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
+			static float yaw0 = 0; 	// starting yaw, which is used to detect a change in yaw within the duration
+			static int counter = 0;
+			// check for calibration possibility (which is when the yaw has not changed much for a while)
+			if (fabs(yaw0 - xsens_yaw) < 0.01) {
+				if (counter > duration) {
+					float avg_xsens_yaw = atan2f(avg_xsens_vec[1], avg_xsens_vec[0]);
+					float avg_vision_yaw = 0;
+					if (use_vision) { // if vision would not be used, the yaw would simply be reset to 0;
+						avg_vision_yaw = atan2f(avg_vision_vec[1], avg_vision_vec[0]);
 					}
-				} else {
-					// reset compare yaw to current yaw
-					yaw0 = xsens_yaw;
+					// calculate offset
+					yaw_offset = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
+					uprintf("[%f]\n\r", yaw_offset);
+					offset_found_once = true;
 					// reset timer and averages
 					counter = 0;
 					avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
 					avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
+				} else if (counter > duration - avg_size) {
+					// averaging angles requires summing their unit vectors
+					avg_xsens_vec[0] += cosf(xsens_yaw);
+					avg_xsens_vec[1] += sinf(xsens_yaw);
+					avg_vision_vec[0] += 0; //TODO
+					avg_vision_vec[1] += 0; //TODO
 				}
-				counter++;
+			} else {
+				// reset compare yaw to current yaw
+				yaw0 = xsens_yaw;
+				// reset timer and averages
+				counter = 0;
+				avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
+				avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
 			}
+			counter++;
+		}
 
-			// call the controller with the (calibrated) xsens data. The output is wheelsPWM
-			float xsensData[3];
-			xsensData[body_x] = -accptr[0];
-			xsensData[body_y] = -accptr[1];
-			xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
-			rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also use the new yaw
-			float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
-			if (use_global_ref) { // coordinate transform from global to local for the velocity reference
-				rotate(xsensData[body_w], velocityRef, localVelocityRef);
-			}
-			float wheelsPWM[4] = {0,0,0,0};
-			DO_Control(localVelocityRef, xsensData, DO_enabled, use_yaw_control, ref_is_angle, wheelsPWM);
+		// call the controller with the (calibrated) xsens data. The output is wheelsPWM
+		float xsensData[3];
+		xsensData[body_x] = -accptr[0];
+		xsensData[body_y] = -accptr[1];
+		xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
+		rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also use the new yaw
+		float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
+		if (use_global_ref) { // coordinate transform from global to local for the velocity reference
+			rotate(xsensData[body_w], velocityRef, localVelocityRef);
+		}
+		float wheelsPWM[4] = {0,0,0,0};
+		DO_Control(localVelocityRef, xsensData, DO_enabled, use_yaw_control, ref_is_angle, wheelsPWM);
 
+		 // send PWM to motors
+		if (halt) { // when communication is lost for too long, we send 0 to the motors
+			float wheel_powers[4] = {0,0,0,0};
+			wheels_SetOutput(wheel_powers);
+		} else {
 			// copy the controller output, to make sure it doesnt get altered at the wrong time
 			float wheel_powers[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
 			wheels_SetOutput(wheel_powers);
 		}
+
 		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 //		float * euler;
@@ -530,7 +536,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		//wireless message received
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
-		uprintf("geneva sensor callback\n\r");
+//		uprintf("geneva sensor callback\n\r");
 		geneva_SensorCallback();
 	}
 }
