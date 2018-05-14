@@ -17,7 +17,7 @@ geneva_states geneva_state = geneva_idle;
 uint geneva_cnt;
 
 
-int geneva_Encodervalue();
+
 
 PID_controller_HandleTypeDef Geneva_pid = {
 		.pid = {0,0,0},
@@ -107,6 +107,11 @@ void geneva_SensorCallback(){
 
 void geneva_SetState(geneva_states state){
 	geneva_state = state;
+}
+
+
+geneva_states geneva_GetState(){
+	return geneva_state;
 }
 
 

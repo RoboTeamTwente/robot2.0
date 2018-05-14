@@ -31,6 +31,8 @@ void geneva_Update();
 void geneva_Control();
 void geneva_SensorCallback();
 void geneva_SetState(geneva_states state);
+geneva_states geneva_GetState();
 geneva_positions geneva_SetPosition(geneva_positions position);
 geneva_positions geneva_GetPosition();
+int geneva_Encodervalue();
 #endif /* GENEVA_GENEVA_H_ */
