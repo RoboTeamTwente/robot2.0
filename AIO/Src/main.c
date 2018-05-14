@@ -57,9 +57,7 @@
 #include "wheels/wheels.h"
 #include "kickchip/kickchip.h"
 #include "MTi/MTiControl.h"
-#include "wireless/myNRF24.h"
-#include "wireless/roboNRF24.h"
-#include "wireless/debugNRF24.h"
+#include "wireless/wireless.h"
 
 /* USER CODE END Includes */
 
@@ -80,10 +78,7 @@ bool started_icc = false;
 
 float velocityRef[3] = {0};
 float wheelsPWM[4] = {0,0,0,0};
-bool kickchip_command = false;
-uint8_t isNrfInitialized = 0;
-uint8_t localRobotID = 0xff; //"uninitialized"
-uint LastPackageTime = 0;
+
 uint kick_timer = 0;
 /* USER CODE END PV */
 
@@ -102,6 +97,7 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds);
 void dribbler_SetSpeed(uint8_t percentage);
 void dribbler_Init();
 
+bool Wireless_newData();
 void Wireless_Init();
 void Wireless_newPacketHandler();
 
@@ -181,12 +177,29 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  preparedAckData.roboID = localRobotID;
-	  float wheelsPWM2[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
-	  wheels_SetOutput(wheelsPWM2);
-	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
+		preparedAckData.roboID = localRobotID;
+		float wheelsPWM2[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
+		wheels_SetOutput(wheelsPWM2);
+		HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
-	  if(kickchip_command) { //received instruction to kick or chip
+		if(Wireless_newData()) {
+			Wireless_newPacketHandler();
+		}
+
+		//wheels
+		float wheels[4];
+		int rotSign = 1;
+		if(receivedRoboData.driving_reference){
+			rotSign = -1;
+		}
+		calcMotorSpeeds ((float)receivedRoboData.rho/ 1000.0F, (float)receivedRoboData.theta * (2*M_PI/512), rotSign, (float)(receivedRoboData.velocity_angular/180.0)*M_PI, wheels);
+		//uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
+		wheels_SetOutput(wheels);
+
+		//dribbler
+		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
+
+		if(kickchip_command) { //received instruction to kick or chip
 		  if ((HAL_GetTick() - kick_timer) > 0) {
 				kick_timer = HAL_GetTick() + 1000U;
 				if(receivedRoboData.do_chip) {
@@ -197,7 +210,7 @@ int main(void)
 				}
 				kickchip_command = false;
 			}
-	  }
+		}
 
 	  if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
 	  	  float wheel_powers[4] = {0, 0, 0, 0};
@@ -480,7 +493,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == SPI1_IRQ_Pin){
-		Wireless_newPacketHandler();
+		//Wireless_newPacketHandler();
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
 		uprintf("geneva sensor callback\n\r");
@@ -488,50 +501,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	}
 }
 
-void Wireless_newPacketHandler() {
-	if(isNrfInitialized) {
-			LastPackageTime = HAL_GetTick();
-			uprintf("\n\nnew wireless message (interrupt fired)\n");
 
-			int8_t error_code = roboCallback(localRobotID);
-			if(error_code) {
-				uprintf("RoboCallback failed with error: %i\n", error_code);
-			}
-			clearInterrupts(); //should not be needed
-
-			//wheels
-	        float wheels[4];
-	        int rotSign = 1;
-	        if(receivedRoboData.driving_reference){
-	            rotSign = -1;
-	        }
-	        calcMotorSpeeds ((float)receivedRoboData.rho/ 1000.0F, (float)receivedRoboData.theta * (2*M_PI/512), rotSign, (float)(receivedRoboData.velocity_angular/180.0)*M_PI, wheels);
-	        //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
-	        wheels_SetOutput(wheels);
-
-			//dribbler
-			dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
-
-			//kicker
-			if (receivedRoboData.kick_chip_forced) {
-				uprintf("FORCE KICK\n\n");
-				kickchip_command = true;
-			}
-		}
-}
-
-void Wireless_Init() {
-	localRobotID = ReadAddress();
-	uprintf("Robot ID: %i\n", localRobotID);
-
-	while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
-		uprintf("Error while initializing nRF wireless module. Check connections.\n");
-	}
-	isNrfInitialized = 1;
-	uprintf("nRF wireless module successfully initialized.\n");
-
-	nrfPrintStatus();
-}
 
 
 /* USER CODE END 4 */
