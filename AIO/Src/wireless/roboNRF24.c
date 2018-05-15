@@ -12,10 +12,29 @@
 #include "roboNRF24.h"
 #include "../PuttyInterface/PuttyInterface.h" //should be removed after debugging
 
+uint8_t roboid = 0xFF;
+
+void HAL_SPI_RxCpltCallback (SPI_HandleTypeDef *hspi) {
+	uprintf("rxcallback\n\n");
+	if(state == readData_1) {
+			state = readData_2;
+			roboCallback(10);
+		}
+}
+
+void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef *hspi) {
+	nssHigh();
+	uprintf("txcallback\n\n");
+	if(state == readData_0) {
+		state = readData_1;
+		//roboCallback(10);
+	}
+}
+
 uint8_t counter = 0;
 
 int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t roboID){
-
+	roboid = roboID;
 	nrf24nssHigh(); //moved from main, ulf hates me
 
 	//reset and flush buffer
@@ -76,6 +95,7 @@ int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t roboI
 	//go to RX mode and start listening
 	powerUpRX();
 
+	state = callback_0;
 
 	return 0;
 }
@@ -94,126 +114,85 @@ int8_t roboCallback(uint8_t localRobotID){
 
 	uint8_t misalignOffset = 0; //sometimes we need to hack our way trough the received bytes. Sometimes we receive 3 Bytes of bullshit before the actual data.
 
-	//clear RX interrupt
-	writeReg(STATUS, RX_DR);
-
-	/*
-	uint8_t status_reg = readReg(STATUS);
-	if( (status_reg & RX_DR) == 0) {
-		//if no packet arrived, abort
-		if(verbose) uprintf("No new packet arrived.\n");
-		//return -1;
+	if(state == callback_0) {
+		//clear RX interrupt
+		writeReg(STATUS, RX_DR);
+		nrf24ceLow();
+		//actually reading the payload
+		uprintf("callback0\n\n");
+		state = readData_0;
 	}
-
-	for(uint8_t i=0; i<3; i++) {
-		status_reg = readReg(STATUS);
+	if((state == readData_0) || (state == readData_1) || (state == readData_2)) {
+		/*
+		 * For some reason the payload is always off by 3 bytes.. so we need to apply a hack here
+		 * Also, the status register isn't read properly. So, we need to assume a static payload length..
+		 */
+		readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1); //+3 for misalignment +1 for cheksum byte.
+		//state = readData_done;
 	}
-	*/
-	//check on which pipe number the new packet arrived
-	//uint8_t dataPipeNo = (status_reg >> 1) & 0b111; //reading RX_P_NO
+	if(state == readData_done) {
+		uprintf("readdata done\n\n");
 
-	//if(verbose) uprintf("New packet on Pipe Number: %i   ", dataPipeNo);
+			//calculate the checksum for what I received
+			uint8_t calculated_checksum = 0;
 
-	//uint8_t bytesReceived = getDynamicPayloadLength();
-	//if(verbose) uprintf("with payload length: %i Bytes  --  ", bytesReceived);
+			//start at 3 for the misaligment
+			for(uint8_t i=misalignOffset; i<(ROBOPKTLEN+misalignOffset); i++) {
+				calculated_checksum ^= dataArray[i];
+			}
 
-	/*
-	 * Put that into a readPayload() function ?
-	 */
-	nrf24ceLow();
-	//actually reading the payload
+			//building a packet from the current roboAckData struct
+			uint8_t txPacket[32];
+			uint8_t received_checksum = dataArray[ROBOPKTLEN+misalignOffset];
 
-	/*
-	 * For some reason the payload is always off by 3 bytes.. so we need to apply a hack here
-	 * Also, the status register isn't read properly. So, we need to assume a static payload length..
-	 */
-	readData(dataArray, ROBOPKTLEN+misalignOffset+1); //+3 for misalignment +1 for cheksum byte.
+			printRoboData(&receivedRoboData,dataArray+misalignOffset);
+			printRoboAckData(&preparedAckData,txPacket,SHORTACKPKTLEN);
+
+			//compare the calculated checksum with the received checksum
+			if(calculated_checksum != received_checksum) {
+				//checksums don't match.
+				state = callback_0;
+				flushRX();
+				return -4;
+			}
+
+			uint8_t receivedRobotID = (dataArray+misalignOffset)[0]>>3; //see packet format
+
+			if(receivedRobotID != localRobotID) {
+				if(verbose) uprintf("Received RobotID was wrong. Local ID: %i (0x%02x); Rx'd: %i (0x%02x)\n", localRobotID, localRobotID, receivedRobotID, receivedRobotID);
+				state = callback_0;
+				flushRX();
+				return -3; //packet wasn't for me (or, more likely: we did not receive any packet and read bullshit from the buffer)
+			}
+			HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+			//putting the new data from the packet on the struct
+			packetToRoboData(dataArray+misalignOffset, &receivedRoboData);
+
+			//if(verbose) uprintf("Clearing RX_DR interrupt.\n");
+			nrf24ceHigh();
+
+			flushRX();
 
 
-/*	if(verbose) {
-		uprintf("Raw packet data in DEC: ");
-		for(int i=0; i<32; i++) {
-			uprintf("%i ", dataArray[i]);
-		}
-		uprintf("\n");
 
-		uprintf("Raw packet data in HEX: ");
-		for(int i=0; i<32; i++) {
-			uprintf("%02x ", dataArray[i]);
-		}
-		uprintf("\n");
-	}*/
+			uint8_t ackDataLength;
+			if(receivedRoboData.debug_info)
+				ackDataLength = FULLACKPKTLEN; //adding xsense data
+			else
+				ackDataLength = SHORTACKPKTLEN;
 
-	//calculate the checksum for what I received
-	uint8_t calculated_checksum = 0;
+			//fillAckData(ackDataLength);
+			roboAckDataToPacket(&preparedAckData, txPacket);
 
-	//start at 3 for the misaligment
-	for(uint8_t i=misalignOffset; i<(ROBOPKTLEN+misalignOffset); i++) {
-		calculated_checksum ^= dataArray[i];
+
+			//robotDataToPacket(&receivedRoboData, txPacket); //sending back the packet we just received
+
+			if(writeACKpayload(txPacket, ackDataLength, 1) != 0) { //just for testing sending a robot packet to the basestation.
+				//if(verbose) uprintf("Error writing ACK payload. TX FIFO full?\n");
+				return -2; //error while writing ACK payload to buffer
+			}
+			state = callback_0;
 	}
-
-	uint8_t received_checksum = dataArray[ROBOPKTLEN+misalignOffset];
-	//compare the calculated checksum with the received checksum
-	if(calculated_checksum != received_checksum) {
-		//checksums don't match.
-		return -4;
-	}
-
-	uint8_t receivedRobotID = (dataArray+misalignOffset)[0]>>3; //see packet format
-
-	if(receivedRobotID != localRobotID) {
-		if(verbose) uprintf("Received RobotID was wrong. Local ID: %i (0x%02x); Rx'd: %i (0x%02x)\n", localRobotID, localRobotID, receivedRobotID, receivedRobotID);
-		return -3; //packet wasn't for me (or, more likely: we did not receive any packet and read bullshit from the buffer)
-	}
-	HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-	//putting the new data from the packet on the struct
-	packetToRoboData(dataArray+misalignOffset, &receivedRoboData);
-	printRoboData(&receivedRoboData,dataArray+misalignOffset);
-	//if(verbose) uprintf("Clearing RX_DR interrupt.\n");
-	nrf24ceHigh();
-
-
-	/*
-	if(verbose) {
-		uprintf("Raw packet data in DEC: ");
-		for(int i=0; i<bytesReceived; i++) {
-			uprintf("%i ", dataArray[i]);
-		}
-		uprintf("\n");
-
-		uprintf("Raw packet data in HEX: ");
-		for(int i=0; i<bytesReceived; i++) {
-			uprintf("%02x ", dataArray[i]);
-		}
-		uprintf("\n");
-	}
-	*/
-
-
-	flushRX();
-
-
-
-	//building a packet from the current roboAckData struct
-	uint8_t txPacket[32];
-
-	uint8_t ackDataLength;
-	if(receivedRoboData.debug_info)
-		ackDataLength = FULLACKPKTLEN; //adding xsense data
-	else
-		ackDataLength = SHORTACKPKTLEN;
-
-	//fillAckData(ackDataLength);
-	roboAckDataToPacket(&preparedAckData, txPacket);
-	printRoboAckData(&preparedAckData,txPacket,ackDataLength);
-
-	//robotDataToPacket(&receivedRoboData, txPacket); //sending back the packet we just received
-
-	if(writeACKpayload(txPacket, ackDataLength, 1) != 0) { //just for testing sending a robot packet to the basestation.
-		//if(verbose) uprintf("Error writing ACK payload. TX FIFO full?\n");
-		return -2; //error while writing ACK payload to buffer
-	}
-
 	return 0; //success
 }
 

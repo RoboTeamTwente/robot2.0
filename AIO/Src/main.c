@@ -236,12 +236,12 @@ int main(void)
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 
 		  if(*MT_GetStatusWord() & 0b00011000){
-			  uprintf("in NRU; ")
+			  //uprintf("in NRU; ")
 		  }else if(started_icc == false){
 			  started_icc = true;
 			  MT_UseIcc();
 		  }
-		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
+		  //uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		  //uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }

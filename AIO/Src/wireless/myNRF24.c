@@ -19,6 +19,7 @@
 
 #include "myNRF24.h"
 #include "myNRF24basic.h"
+#include "../PuttyInterface/PuttyInterface.h" //should be removed after debugging
 
 //global defines which we need in the whole library
 //They have previously been defined as global variables in myNRF24basic.h
@@ -28,6 +29,9 @@ void (*nssLow)();
 void (*ceHigh)();
 void (*ceLow)();
 uint8_t (*irqRead)();
+
+
+
 
 //****************************high level library**************************//
 //********************the user may use these functions********************//
@@ -301,11 +305,46 @@ void sendData(uint8_t data[], uint8_t length){
 
 //read received bytes from the rx buffer
 void readData(uint8_t* receiveBuffer, uint8_t length){
-	nssLow();
-	uint8_t command = NRF_R_RX_PAYLOAD;
-	HAL_SPI_Transmit(spiHandle, &command, 1, 100);
-	HAL_SPI_Receive(spiHandle, receiveBuffer, length, 100);
-	nssHigh();
+
+		nssLow();
+		uint8_t command = NRF_R_RX_PAYLOAD;
+		HAL_SPI_Transmit(spiHandle, &command, 1,100);
+
+		HAL_SPI_Receive(spiHandle, receiveBuffer, length,100);
+
+		nssHigh();
+
+}
+
+//read received bytes from the rx buffer
+void readData_IT(uint8_t* receiveBuffer, uint8_t length){
+	if(state == readData_0) {
+		uprintf("readdata_0\n\n");
+		nssLow();
+		uint8_t command = NRF_R_RX_PAYLOAD;
+		uprintf("0 - HAL SPI status: %i\n", HAL_SPI_GetState(spiHandle));
+		while(HAL_SPI_Transmit_IT(spiHandle, &command, 1) != HAL_OK);
+
+
+	}
+	else if(state == readData_1) {
+
+		uprintf("readdata_1\n\n");
+		uprintf("1 - HAL SPI status: %i\n", HAL_SPI_GetState(spiHandle));
+		nssLow();
+		uint8_t error;
+		while(HAL_OK != (error = HAL_SPI_Receive_IT(spiHandle, receiveBuffer, length))) {
+					uprintf("error: %i\n", error);
+				}
+		uprintf("2 - HAL SPI status: %i\n", HAL_SPI_GetState(spiHandle));
+		uprintf("kaas is love kaas is life\n\n");
+
+	}
+	if(state == readData_2) {
+		uprintf("readdata_2\n\n");
+		nssHigh();
+		state = readData_done;
+	}
 }
 
 

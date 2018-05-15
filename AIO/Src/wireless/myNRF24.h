@@ -16,6 +16,15 @@
 #include "myNRF24basic.h"
 
 
+enum states{
+	callback_0,
+	readData_0,
+	readData_1,
+	readData_2,
+	readData_done
+}state;
+
+
 //--------------------initialization and configuration--------------------//
 
 //initialize the system:
@@ -101,6 +110,7 @@ void sendData(uint8_t data[], uint8_t length);
 
 //read a byte from the buffer. only used in RX mode
 void readData(uint8_t* receiveBuffer, uint8_t length);
+void readData_IT(uint8_t* receiveBuffer, uint8_t length);
 
 void setLowSpeed();
 
