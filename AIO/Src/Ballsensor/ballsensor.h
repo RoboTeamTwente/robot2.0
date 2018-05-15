@@ -14,11 +14,11 @@
 #include "../kickchip/kickchip.h"
 
 #define NOBALL -1
-#define NOBALL_TIMEOUT 50 //TODO: find appropriate value for this?
+#define NOBALL_TIMEOUT 100 //TODO: find appropriate value for this?
 
 typedef struct Position{
-	uint8_t x;
-	uint8_t y;
+	uint32_t x;
+	uint32_t y;
 	uint lastSeen;
 
 } Position;
@@ -63,7 +63,7 @@ void ballsensorReset();
 uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint8_t power);
 
 void noBall();
-uint8_t getBallPos();
+uint32_t getBallPos();
 void resetKickChipData();
 
 #endif /* BALLSENSOR_H_ */

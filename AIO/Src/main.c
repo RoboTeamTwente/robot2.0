@@ -180,6 +180,7 @@ int main(void)
 
 		if(Wireless_newData()) {
 			Wireless_newPacketHandler();
+			printBallPosition();
 		}
 
 		//wheels
@@ -195,7 +196,7 @@ int main(void)
 		//dribbler
 		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
 
-		if(kickchip_command) { //received instruction to kick or chip
+/*		if(kickchip_command) { //received instruction to kick or chip
 		  if ((HAL_GetTick() - kick_timer) > 0) {
 				kick_timer = HAL_GetTick() + 1000U;
 				if(receivedRoboData.do_chip) {
@@ -206,7 +207,7 @@ int main(void)
 				}
 				kickchip_command = false;
 			}
-		}
+		}*/
 
 	  if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
 	  	  float wheel_powers[4] = {0, 0, 0, 0};
@@ -226,7 +227,9 @@ int main(void)
 		  preparedAckData.batteryState = 1;
 	  }
 
+
 	  preparedAckData.ballSensor = ballsensorMeasurementLoop(receivedRoboData.do_kick, receivedRoboData.do_chip, receivedRoboData.kick_chip_power);
+	  //uprintf("ball: %i\n",preparedAckData.ballSensor);
 
 	  geneva_Update();
 	  MT_Update();
@@ -241,7 +244,7 @@ int main(void)
 			  started_icc = true;
 			  MT_UseIcc();
 		  }
-		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
+		  //uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		  //uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
@@ -492,7 +495,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		//Wireless_newPacketHandler();
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
-		uprintf("geneva sensor callback\n\r");
+		//uprintf("geneva sensor callback\n\r");
 		geneva_SensorCallback();
 	}
 }

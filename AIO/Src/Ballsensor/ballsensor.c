@@ -74,22 +74,28 @@ void printRawData(uint8_t data[]) {
     uprintf("]\n\r");
 }
 
-void printPosition(uint8_t data[]) {
+void printBallPosition() {
+	uprintf("BALLSENSOR - x:\t %d \t y:\t %d \n\r", ballPosition.x, ballPosition.y);
+}
+
+void updatePosition(uint8_t data[]) {
   uint16_t x;
   x = data[12] << 8;
   x |= data[13];
   uint16_t y;
   y = data[14] << 8;
   y |= data[15];
-  uint16_t ball_position = x;
-  uprintf("BALLSENSOR - x:\t %d \t y:\t %d \n\r", ball_position,y);
-  ballHandler(x,y);
+  //uprintf("BALLSENSOR - x:\t %d \t y:\t %d \n\r", x,y);
+	ballPosition.x = x;
+	ballPosition.y = y;
 }
 
 
 void ballHandler(uint16_t x, uint16_t y) {
+
 	if(kickWhenBall.enable) {
 		kick_Kick(kickWhenBall.power);
+		//kick_Kick(60);
 		noBall();
 	}
 	else if(chipWhenBall.enable) {
@@ -110,18 +116,19 @@ void parseMessage() {
 		zForceState = zForce_setFreq;
 	}
 	else if(!memcmp(data,measurement_rx, sizeof(measurement_rx))) { //ball detected
-		printPosition(data);
+		updatePosition(data);
+		ballHandler(ballPosition.x,ballPosition.y);
 		ballPosition.lastSeen = HAL_GetTick();
 		zForceState = zForce_WaitForDR;
 	}
 	else if(!memcmp(data,set_freq_response, sizeof(set_freq_response))) {
 		uprintf("Set frequency:\r\n");
-		printRawData(data);
+		//printRawData(data);
 		ballsensorInitialized = 1;
 		zForceState = zForce_WaitForDR;
 	}
 	else { //ignore any other data
-	  printRawData(data);
+	  //printRawData(data);
 	  noBall();
 	  zForceState = zForce_WaitForDR;
 	  //uprintf("going to waitfordr\n\r");
@@ -200,6 +207,8 @@ uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint
 	}
 
 		//PuttyInterface_Update(&puttystruct);
+	//uprintf("ball: %i\n",getBallPos());
+	//uprintf("ball: %i\n",getBallPos());
 	return getBallPos();
 }
 
@@ -207,8 +216,11 @@ void noBall() {
 	ballPosition.x = ballPosition.y = NOBALL;
 }
 
-uint8_t getBallPos() {
-	return ballPosition.y;
+uint32_t getBallPos() {
+	if(ballPosition.x != NOBALL) {
+		return ballPosition.x/10;
+	}
+	return NOBALL;
 }
 
 void resetKickChipData() {
