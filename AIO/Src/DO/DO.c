@@ -53,19 +53,23 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 	float globalOut[3] = {0,0,0};
 	static float prevOut[3] = {0,0,0};
 	if (!isnan(prevOut[0])){ // lowpass filtering
-		globalOut[body_x] = 0.07*(accX*2000 - globalInput[body_x]) + 0.93*prevOut[body_x];
-		globalOut[body_y] = 0.07*(accY*2000 - globalInput[body_y]) + 0.93*prevOut[body_y];
+		globalOut[body_x] = 0.07*(accX*1500 - globalInput[body_x]) + 0.93*prevOut[body_x];
+		globalOut[body_y] = 0.07*(accY*1500 - globalInput[body_y]) + 0.93*prevOut[body_y];
 	}
 	prevOut[body_x] = globalOut[body_x];
 	prevOut[body_y] = globalOut[body_y];
 
 	// safety: reduce effect, while testing
-	globalOut[body_x] = globalOut[body_x]*0.25;//0.25;
-	globalOut[body_y] = globalOut[body_y]*0.25;//0.25;
+//	globalOut[body_x] = globalOut[body_x]*0.25;//0.25;
+//	globalOut[body_y] = globalOut[body_y]*0.25;//0.25;
 
 	// rotate back to local and fill in the output
 	//TODO: differentiate for strafing direction?
-	rotate(yaw, globalOut, output);
+	float out[3];
+	rotate(yaw, globalOut, out);
+	output[body_x] = out[body_x]*0.3;//0.25;
+	output[body_y] = out[body_y]*0.1;//0.25;
+	output[body_w] = 0;
 }
 
 //multiplies a 4*3 matrix by a vector of 3 elements.
@@ -184,7 +188,7 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 	float scale = compute_limit_scale(postObserverSignal, 95);
 	scaledInput[body_x] = scale*postObserverSignal[body_x];
 	scaledInput[body_y] = scale*postObserverSignal[body_y];
-	scaledInput[body_w] = 1*postObserverSignal[body_w]; // rotation gets some extra room by not scaling it down
+	scaledInput[body_w] = scale*postObserverSignal[body_w];
 
 	// Output the wheel PWMs (by filling in the output array)
 	body2Wheels(scaledInput, output);

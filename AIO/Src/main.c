@@ -202,8 +202,9 @@ int main(void)
 			  velocityRef[body_w] = angularVelRef;
 			  //
 			  //TODO: TEMPORARY: abuse kickforce for use as the vision angle.
-			  vision_yaw = ((float)dataStruct.kickForce/255.0F - 0.5F)*2.0F*M_PI;
-
+			  if (dataStruct.kickForce!=0) {
+				  vision_yaw = ((float)dataStruct.kickForce/255.0F - 0.5F)*2.0F*M_PI;
+			  }
 //			  if (dataStruct.kickForce!=0) {
 //				  uprintf("[%f]\n\r", ((float)dataStruct.kickForce/255.0F)*2.0F*M_PI);
 //			  }
@@ -451,7 +452,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		bool DO_enabled = true;
 		bool use_yaw_control = true;
 		bool ref_is_angle = true;
-		static bool use_vision = true;
+		bool use_vision = true;
 		bool use_global_ref = true;
 
 		// get xsens data
