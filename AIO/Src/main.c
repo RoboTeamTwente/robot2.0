@@ -180,7 +180,7 @@ int main(void)
 
 		if(Wireless_newData()) {
 			Wireless_newPacketHandler();
-			printBallPosition();
+			//printBallPosition();
 		}
 
 		//wheels
@@ -239,7 +239,7 @@ int main(void)
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
 
 		  if(*MT_GetStatusWord() & 0b00011000){
-			  uprintf("in NRU; ")
+			  //uprintf("in NRU; ")
 		  }else if(started_icc == false){
 			  started_icc = true;
 			  MT_UseIcc();

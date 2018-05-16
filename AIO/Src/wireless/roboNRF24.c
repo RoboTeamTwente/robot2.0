@@ -168,7 +168,7 @@ int8_t roboCallback(uint8_t localRobotID){
 	HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 	//putting the new data from the packet on the struct
 	packetToRoboData(dataArray+misalignOffset, &receivedRoboData);
-	printRoboData(&receivedRoboData,dataArray+misalignOffset);
+	//printRoboData(&receivedRoboData,dataArray+misalignOffset);
 	//if(verbose) uprintf("Clearing RX_DR interrupt.\n");
 	nrf24ceHigh();
 
@@ -205,7 +205,7 @@ int8_t roboCallback(uint8_t localRobotID){
 
 	//fillAckData(ackDataLength);
 	roboAckDataToPacket(&preparedAckData, txPacket);
-	printRoboAckData(&preparedAckData,txPacket,ackDataLength);
+	//printRoboAckData(&preparedAckData,txPacket,ackDataLength);
 
 	//robotDataToPacket(&receivedRoboData, txPacket); //sending back the packet we just received
 

@@ -39,7 +39,7 @@ void Wireless_newPacketHandler() {
 
 			//kicker
 			if (receivedRoboData.kick_chip_forced) {
-				uprintf("FORCE KICK\n\n");
+				//uprintf("FORCE KICK\n\n");
 				kickchip_command = 1;
 			}
 		}
