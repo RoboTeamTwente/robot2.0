@@ -68,7 +68,7 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 	float out[3];
 	rotate(yaw, globalOut, out);
 	output[body_x] = out[body_x]*0.3;//0.25;
-	output[body_y] = out[body_y]*0.1;//0.25;
+	output[body_y] = out[body_y]*0.0;//0.25;
 	output[body_w] = 0;
 }
 
@@ -116,7 +116,7 @@ void rotate(float yaw, float input[3], float output[3]){
 void pController(float input[3], float kp[3], float output[3]){
 	// These limits are meant to prevent slipping
 	float w_limit = 500;
-	float PWM_limit = 50;
+	float PWM_limit = 95;
 
 	float pre_out[3];
 	pre_out[body_x] = kp[body_x]*input[body_x];
@@ -142,7 +142,7 @@ float compute_limit_scale(float input[3], float limit){
 	float scale;
 	float intermediaryOutput[4];
 	body2Wheels(input, intermediaryOutput);
-	float maxEl = fmax(fmax(intermediaryOutput[wheels_RF],intermediaryOutput[wheels_RB]),fmax(intermediaryOutput[wheels_LB],intermediaryOutput[wheels_LF]));
+	float maxEl = 0;//fmax(fmax(intermediaryOutput[wheels_RF],intermediaryOutput[wheels_RB]),fmax(intermediaryOutput[wheels_LB],intermediaryOutput[wheels_LF]));
 
 	if (fabs(maxEl) > limit){
 		scale = limit/fabs(maxEl);
@@ -150,6 +150,7 @@ float compute_limit_scale(float input[3], float limit){
 	else {
 		scale = 1;
 	}
+	scale=1;
 
 	return scale;
 }
@@ -185,7 +186,7 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 
 	// Limiting the output to prevent saturation of the PWM signals for any of the wheels
 	float scaledInput[3];
-	float scale = compute_limit_scale(postObserverSignal, 95);
+	float scale = 1;//compute_limit_scale(postObserverSignal, 95);
 	scaledInput[body_x] = scale*postObserverSignal[body_x];
 	scaledInput[body_y] = scale*postObserverSignal[body_y];
 	scaledInput[body_w] = scale*postObserverSignal[body_w];
@@ -265,7 +266,7 @@ DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, 
 		controller(velocityRef, w_wheels, xsensData, DO_enabled, output);
 	}
 
-	uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
+//	uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
 //	uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
 //	static float counter = 0;
 //	counter = counter+0.01;

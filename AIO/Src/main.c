@@ -448,8 +448,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
 		//TODO
+//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		// some settings
-		bool DO_enabled = true;
+		bool DO_enabled = false;
 		bool use_yaw_control = true;
 		bool ref_is_angle = true;
 		bool use_vision = true;
@@ -487,7 +488,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 						calibrated_once = true;
 					}
 
-					uprintf("[%f]\n\r", yaw_offset);
+//					uprintf("[%f]\n\r", yaw_offset);
 
 					// reset timer and averages
 					counter = 0;
@@ -531,9 +532,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		} else {
 			// copy the controller output, to make sure it doesnt get altered at the wrong time
 			float wheel_powers[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
+//			float wheel_powers[4] = {20,20,20,20};
 			wheels_SetOutput(wheel_powers);
 		}
 
+//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 0);
 		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
 //		float * euler;
