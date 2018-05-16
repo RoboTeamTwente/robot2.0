@@ -107,10 +107,10 @@ void wheels_SetOutput(float power[4]){
 	case wheels_ready:
 		memcpy(prev_reverse, reverse, 4);
 		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-			if(power[i] < -1.0 ){
+			if(power[i] < -0.1 ){
 				power[i] = -power[i];
 				reverse[i] = 1;
-			}else if(power[i] > 1.0 ){
+			}else if(power[i] > 0.1 ){
 				reverse[i] = 0;
 			}
 			if(power[i] > 100){

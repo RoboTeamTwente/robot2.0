@@ -53,17 +53,18 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 	float globalOut[3] = {0,0,0};
 	static float prevOut[3] = {0,0,0};
 	if (!isnan(prevOut[0])){ // lowpass filtering
-		globalOut[body_x] = 0.07*(accX*3000 - globalInput[body_x]) + 0.93*prevOut[body_x];
-		globalOut[body_y] = 0.07*(accY*3000 - globalInput[body_y]) + 0.93*prevOut[body_y];
+		globalOut[body_x] = 0.07*(accX*2000 - globalInput[body_x]) + 0.93*prevOut[body_x];
+		globalOut[body_y] = 0.07*(accY*2000 - globalInput[body_y]) + 0.93*prevOut[body_y];
 	}
 	prevOut[body_x] = globalOut[body_x];
 	prevOut[body_y] = globalOut[body_y];
 
 	// safety: reduce effect, while testing
-	globalOut[body_x] = globalOut[body_x]*0.25;
-	globalOut[body_y] = globalOut[body_y]*0.25;
+	globalOut[body_x] = globalOut[body_x]*0.25;//0.25;
+	globalOut[body_y] = globalOut[body_y]*0.25;//0.25;
 
 	// rotate back to local and fill in the output
+	//TODO: differentiate for strafing direction?
 	rotate(yaw, globalOut, output);
 }
 
@@ -166,7 +167,7 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 
 	// P-control
 	float controllerGain[3];
-	controllerGain[body_x] = 20000/10;
+	controllerGain[body_x] = 20000/5;
 	controllerGain[body_y] = 20000/10;
 	controllerGain[body_w] = 200/10;
 	float pOut[3];
@@ -207,7 +208,7 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 
 float angleController(float angleRef, float yaw){
 	float angleError = constrainAngle(angleRef - yaw);
-	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, yaw/M_PI*180);
+//	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, yaw/M_PI*180);
 	float output = -angleError*20.0;
 	float upper_lim = 20;
 	float lower_lim = 0.5;
@@ -260,7 +261,7 @@ DO_States DO_Control(float velocityRef[3], float xsensData[3], bool DO_enabled, 
 		controller(velocityRef, w_wheels, xsensData, DO_enabled, output);
 	}
 
-//	uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
+	uprintf("[%f, %f, %f, %f]\n\r", w_wheels[wheels_RF], w_wheels[wheels_RB],  w_wheels[wheels_LB], w_wheels[wheels_LF]);
 //	uprintf("[%f, %f, %f]\n\r", velocityRef[body_x], velocityRef[body_y],  velocityRef[body_w]);
 //	static float counter = 0;
 //	counter = counter+0.01;

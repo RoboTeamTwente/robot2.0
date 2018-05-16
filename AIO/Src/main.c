@@ -64,7 +64,6 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 #define STOP_AFTER 250 //ms
-#define MOVE_AFTER 7500 //ms
 #define CALIBRATE_AFTER 6500 //ms
 PuttyInterfaceTypeDef puttystruct;
 int8_t address = -1;
@@ -78,11 +77,12 @@ float wheels_testing_power = 30;
 bool keyboard_control = false;
 bool started_icc = false;
 bool halt = true;
-bool offset_found_once = false;
+bool calibrated_once = false;
 uint start_time;
 
 //float wheelsPWM[4] = {0};
 float velocityRef[3] = {0};
+float vision_yaw = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -180,7 +180,7 @@ int main(void)
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 	 ballsensorMeasurementLoop();
 	 if(irqRead(&hspi2)){
-		  if (halt && HAL_GetTick() - start_time > MOVE_AFTER) {
+		  if (halt && calibrated_once) {
 			  halt = false; // robot is only allowed to move after xsens is calibrated and packages are received
 		  }
 		  LastPackageTime = HAL_GetTick();
@@ -200,7 +200,13 @@ int main(void)
 			  velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
 			  velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
 			  velocityRef[body_w] = angularVelRef;
+			  //
+			  //TODO: TEMPORARY: abuse kickforce for use as the vision angle.
+			  vision_yaw = ((float)dataStruct.kickForce/255.0F - 0.5F)*2.0F*M_PI;
 
+//			  if (dataStruct.kickForce!=0) {
+//				  uprintf("[%f]\n\r", ((float)dataStruct.kickForce/255.0F)*2.0F*M_PI);
+//			  }
 			  //float wheels[4];
 			  //calcMotorSpeeds((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
 			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
@@ -209,15 +215,16 @@ int main(void)
 			  //dribbler
 			  dribbler_SetSpeed(dataStruct.driblerSpeed);
 
+			  //TODO: turned off for now
 			  //kicker
-			  if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
+			  /*if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
 				  kick_timer = HAL_GetTick() + 1000U;
 				  if(dataStruct.chipper){
 					  kick_Chip((dataStruct.kickForce*100)/255);
 				  }else{
 					  kick_Kick((dataStruct.kickForce*100)/255);
 				  }
-			  }
+			  }*/
 			  //geneva
 
 		  }
@@ -439,11 +446,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
+		//TODO
 		// some settings
-		bool DO_enabled = false;
+		bool DO_enabled = true;
 		bool use_yaw_control = true;
 		bool ref_is_angle = true;
-		bool use_vision = false;
+		static bool use_vision = true;
 		bool use_global_ref = true;
 
 		// get xsens data
@@ -455,7 +463,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		static float yaw_offset = 0;
 		// if vision data is available, the yaw will be calibrated to the vision yaw when possible
 		// If no vision data is available, the yaw will be calibrated to zero, but just once
-		if (use_vision || (!offset_found_once && HAL_GetTick() - start_time > CALIBRATE_AFTER)) {
+		if ((use_vision || !calibrated_once) && HAL_GetTick() - start_time > CALIBRATE_AFTER) {
 			int duration = 50;		// time steps of no rotation required before calibrating
 			int avg_size = 10; 		// amount of samples to take the average of
 			static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
@@ -465,15 +473,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			// check for calibration possibility (which is when the yaw has not changed much for a while)
 			if (fabs(yaw0 - xsens_yaw) < 0.01) {
 				if (counter > duration) {
+					// calculate offset (calibrate)
 					float avg_xsens_yaw = atan2f(avg_xsens_vec[1], avg_xsens_vec[0]);
-					float avg_vision_yaw = 0;
 					if (use_vision) { // if vision would not be used, the yaw would simply be reset to 0;
-						avg_vision_yaw = atan2f(avg_vision_vec[1], avg_vision_vec[0]);
+						float avg_vision_yaw = atan2f(avg_vision_vec[1], avg_vision_vec[0]);
+						yaw_offset = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
+						if (avg_vision_yaw != 0){
+							calibrated_once = true;
+						}
+					} else {
+						yaw_offset = -avg_xsens_yaw;
+						calibrated_once = true;
 					}
-					// calculate offset
-					yaw_offset = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
+
 					uprintf("[%f]\n\r", yaw_offset);
-					offset_found_once = true;
+
 					// reset timer and averages
 					counter = 0;
 					avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
@@ -482,8 +496,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 					// averaging angles requires summing their unit vectors
 					avg_xsens_vec[0] += cosf(xsens_yaw);
 					avg_xsens_vec[1] += sinf(xsens_yaw);
-					avg_vision_vec[0] += 0; //TODO
-					avg_vision_vec[1] += 0; //TODO
+					avg_vision_vec[0] += cosf(vision_yaw);
+					avg_vision_vec[1] += sinf(vision_yaw);
 				}
 			} else {
 				// reset compare yaw to current yaw
