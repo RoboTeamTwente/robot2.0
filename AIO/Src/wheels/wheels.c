@@ -12,15 +12,14 @@
 #include "tim.h"
 #include "../PuttyInterface/PuttyInterface.h"
 
-#define PWM_CUTOFF 5.00F
-#define PWM_ROUNDUP 10.00F
+#define PWM_CUTOFF 5.00F		// arbitrary treshold below PWM_ROUNDUP
+#define PWM_ROUNDUP 10.00F 		// below this value the motor driver is unreliable
 #define ROBOT_RADIUS 0.0775F
 #define WHEEL_RADIUS 0.0275F
-#define HTIM5_FREQ 1000000.0F
+#define HTIM5_FREQ 1000000.0F	//Hz
 #define PULSES_PER_ROTATION 1024
-#define GEAR_RATIO 2.5F
-#define X__ENCODING 4 // counts per pulse X1, X2 or X4
-#define N_WHEELS 4 // number of wheels
+#define GEAR_RATIO 2.5F			// motor to wheel
+#define X__ENCODING 4			// counts per pulse X1, X2 or X4
 
 bool reverse[N_WHEELS] = {0};
 float global_power[N_WHEELS];
@@ -28,17 +27,20 @@ float global_power[N_WHEELS];
 enum {
 	wheels_uninitialized,
 	wheels_ready,
-}wheels_state;
+	wheels_braking
+}wheels_state;// keeps track of the state of this system
 
 enum wheel_braking_states{
 	no_brake,
 	first_brake_period,
 	second_brake_period,
 	third_brake_period,
-}brake_state[N_WHEELS];
+}brake_state[N_WHEELS];// keeps track of the braking state of each wheel
 
 /*----------------------------------static functions-------------------------------*/
-
+/*	Set an encoder to zero
+ *
+ */
 static inline void ResetEncoder(wheels_handles wheel){
 	switch(wheel){
 	case wheels_RF:
@@ -55,7 +57,9 @@ static inline void ResetEncoder(wheels_handles wheel){
 		break;
 	}
 }
-
+/*	Set Pwm for one wheel
+ *
+ */
 static inline void SetPWM(wheels_handles wheel, float power){
 	switch(wheel){
 	case wheels_RF:
@@ -72,7 +76,9 @@ static inline void SetPWM(wheels_handles wheel, float power){
 		break;
 	}
 }
-
+/*	Set direction for one wheel
+ *
+ */
 static inline void SetDir(wheels_handles wheel, bool reverse){
 	switch(wheel){
 	case wheels_RF:
@@ -164,11 +170,11 @@ void wheels_SetOutput(float power[N_WHEELS]){
 			}
 		}
 
+		memcpy(global_power, power, 4 * sizeof(float));
+
 		for(wheels_handles wheel = wheels_RF; wheel < N_WHEELS; wheel++){
 			delay[wheel] = prev_reverse[wheel] != reverse[wheel];
 		}
-
-		memcpy(global_power, power, 4 * sizeof(float));
 
 
 		for(wheels_handles wheel = wheels_RF; wheel < N_WHEELS; wheel++){

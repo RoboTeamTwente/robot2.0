@@ -73,7 +73,7 @@ bool user_control = false;
 bool print_encoder = false;
 bool print_euler = false;
 bool wheels_testing = false;
-float wheels_testing_power = 30;
+float wheels_testing_power = 3000;
 bool keyboard_control = false;
 bool started_icc = false;
 bool halt = true;
@@ -179,6 +179,19 @@ int main(void)
   {
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 	 ballsensorMeasurementLoop();
+	 if(wheels_testing){
+		 float velRefAmp = wheels_testing_power;
+		 float velRefDir;
+		 if(HAL_GetTick() % 4000 < 2000){
+			  velRefDir = 0;
+		 }else{
+			  velRefDir = 2 * M_PI;
+		 }
+
+		 velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
+		 velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
+
+	 }else
 	 if(irqRead(&hspi2)){
 		  if (halt && calibrated_once) {
 			  halt = false; // robot is only allowed to move after xsens is calibrated and packages are received

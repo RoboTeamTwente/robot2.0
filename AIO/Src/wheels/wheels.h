@@ -10,6 +10,10 @@
 
 #include <stdint.h>
 
+#define FOREACHWHEEL(X) for(wheels_handles X = wheels_RF; X <= wheels_LF; X++)
+
+#define N_WHEELS 4				// number of wheels
+
 typedef enum {
 	wheels_RF,
 	wheels_RB,
