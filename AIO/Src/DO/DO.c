@@ -172,9 +172,9 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 
 	// P-control
 	float controllerGain[3];
-	controllerGain[body_x] = 20000/5;
-	controllerGain[body_y] = 20000/10;
-	controllerGain[body_w] = 200/10;
+	controllerGain[body_x] = 20000/10;
+	controllerGain[body_y] = 20000/20;
+	controllerGain[body_w] = 200/20;
 	float pOut[3];
 	pController(error, controllerGain, pOut);
 

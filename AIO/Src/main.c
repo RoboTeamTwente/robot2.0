@@ -179,19 +179,19 @@ int main(void)
   {
 	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 	 ballsensorMeasurementLoop();
-	 if(wheels_testing){
-		 float velRefAmp = wheels_testing_power;
-		 float velRefDir;
-		 if(HAL_GetTick() % 4000 < 2000){
-			  velRefDir = 0;
-		 }else{
-			  velRefDir = 2 * M_PI;
-		 }
-
-		 velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
-		 velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
-
-	 }else
+//	 if(wheels_testing){
+//		 float velRefAmp = wheels_testing_power;
+//		 float velRefDir;
+//		 if(HAL_GetTick() % 4000 < 2000){
+//			  velRefDir = 0;
+//		 }else{
+//			  velRefDir = 2 * M_PI;
+//		 }
+//
+//		 velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
+//		 velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
+//
+//	 }else
 	 if(irqRead(&hspi2)){
 		  if (halt && calibrated_once) {
 			  halt = false; // robot is only allowed to move after xsens is calibrated and packages are received
@@ -465,9 +465,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		// some settings
 		bool DO_enabled = false;
 		bool use_yaw_control = false;
-		bool ref_is_angle = true;
-		bool use_vision = true;
-		bool use_global_ref = true;
+		bool ref_is_angle = false;
+		bool use_vision = false;
+		bool use_global_ref = false;
 
 		// get xsens data
 		float * accptr;
