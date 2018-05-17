@@ -451,7 +451,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		// some settings
 		bool DO_enabled = false;
-		bool use_yaw_control = true;
+		bool use_yaw_control = false;
 		bool ref_is_angle = true;
 		bool use_vision = true;
 		bool use_global_ref = true;
