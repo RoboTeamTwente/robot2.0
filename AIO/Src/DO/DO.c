@@ -82,10 +82,10 @@ void body2Wheels(float v[3], float output[4]){
 	float r = 0.0275;
 
 	//Applying M_inv matrix. (minus sign in front is due to wheels spinning in opposite direction to motors)
-	output[wheels_RF] = -(1/s*v[body_x] + 1/c*v[body_y] - 1/R*v[body_w])*r/4;
-	output[wheels_RB] = -(1/s*v[body_x] - 1/c*v[body_y] - 1/R*v[body_w])*r/4;
-	output[wheels_LB] = -(-1/s*v[body_x] - 1/c*v[body_y] - 1/R*v[body_w])*r/4;
-	output[wheels_LF] = -(-1/s*v[body_x] + 1/c*v[body_y] - 1/R*v[body_w])*r/4;
+	output[wheels_RF] = -(1/s*v[body_x] + 1/c*v[body_y] + 1/R*v[body_w])*r/4;
+	output[wheels_RB] = -(1/s*v[body_x] - 1/c*v[body_y] + 1/R*v[body_w])*r/4;
+	output[wheels_LB] = -(-1/s*v[body_x] - 1/c*v[body_y] + 1/R*v[body_w])*r/4;
+	output[wheels_LF] = -(-1/s*v[body_x] + 1/c*v[body_y] + 1/R*v[body_w])*r/4;
 }
 
 //multiplies a 3*4 matrix by a vector of 4 elements.
@@ -214,10 +214,16 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 float angleController(float angleRef, float yaw){
 	float angleError = constrainAngle(angleRef - yaw);
 //	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, yaw/M_PI*180);
-	float output = -angleError*20.0;
+	float output = angleError*20.0;
 	float upper_lim = 20;
-	float lower_lim = 0.5*2.5;
-	float lower_roundup = 1.0*3;
+	float lower_lim = 0.5;
+	float lower_roundup = 1.0;
+
+	if (no_vel_control) {
+		lower_lim = 1.25;
+		lower_roundup = 3.0;
+	}
+
 	if (fabs(output) > upper_lim) {
 		output = output / fabs(output) * upper_lim;
 	} else if (fabs(output) < lower_lim) {
@@ -278,8 +284,6 @@ bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
 					calibrated_once = true;
 				}
 
-//					uprintf("[%f]\n\r", yaw_offset);
-
 				// reset timer and averages
 				counter = 0;
 				avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
@@ -307,50 +311,44 @@ bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
 	xsensData[body_x] = -accptr[0];
 	xsensData[body_y] = -accptr[1];
 	xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
-	rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also use the new yaw
-	float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
+	rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also be calibrated to the offset yaw
 
-	if (use_global_ref) { // coordinate transform from global to local for the velocity reference
-		rotate(xsensData[body_w], velocityRef, localVelocityRef);
-	} else if (!use_yaw_control) { // TODO: THIS SHOULD BE NEATER (THE SIGN CHANGES)
-		localVelocityRef[body_w] = -velocityRef[body_w];
+	float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
+	if (use_global_ref) {
+		rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
 	}
 
-	// yaw controller
+	// yaw  and velocity controllers
 	if (use_yaw_control) {
 		float angleRef;
-		if (ref_is_angle) { // the joystick could be used here to directly set the angle reference
-			angleRef = velocityRef[body_w]*180/2047;
+		if (ref_is_angle) { // the joystick/software could be used here to directly set the angle reference
+			angleRef = localVelocityRef[body_w]*180/2047;
 		} else { // for the keyboard the angle reference is ramped up by integrating the signal
 			static float prevAngleRef = 0;
-			angleRef = prevAngleRef + 0.01 * velocityRef[body_w];
+			angleRef = prevAngleRef + 0.01 * localVelocityRef[body_w];
 			prevAngleRef = angleRef;
 		}
 
 		if (no_vel_control) {
-			float forceRef[3] = {velocityRef[body_x]*1000, velocityRef[body_y]*1000, 0};
+			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1000, 0};
 			forceRef[body_w] = angleController(angleRef, xsensData[body_w])*10;
 			body2Wheels(forceRef, output);
 		} else {
-			float newVelocityRef[3] = {velocityRef[body_x], velocityRef[body_y], 0};
+			float newVelocityRef[3] = {localVelocityRef[body_x], localVelocityRef[body_y], 0};
 			newVelocityRef[body_w] = angleController(angleRef, xsensData[body_w]);
-			controller(newVelocityRef, w_wheels, xsensData, output); //TODO: does this construction still work?
+			controller(newVelocityRef, w_wheels, xsensData, output);
 		}
 
 	} else { // no yaw control
+		localVelocityRef[body_w] = velocityRef[body_w];
 		if (no_vel_control) {
-			float forceRef[3] = {velocityRef[body_x]*1000, velocityRef[body_y]*1000, velocityRef[body_w]*10};
+			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1000, localVelocityRef[body_w]*10};
 			body2Wheels(forceRef,output);
 		} else {
-			controller(velocityRef, w_wheels, xsensData, output); //TODO: does this construction still work?
+			controller(localVelocityRef, w_wheels, xsensData, output);
 		}
 
-	}
-
-//TODO: check this once more
-//	static float counter = 0;
-//	counter = counter+0.01;
-	//uprintf("[%f]\n\r", counter);
+	} /////////////////////////
 
 	return calibrated_once;
 }
