@@ -37,43 +37,6 @@ float constrainAngle(float x){
     return x - M_PI;
 }
 
-void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], float output[3]){
-
-	// Requires transformation to global coordinates and back
-	float globalInput[3];
-	rotate(-yaw, localInput, globalInput);
-	// accelerations are already global (free acceleration)
-	float accX = globalAcc[body_x];
-	float accY = globalAcc[body_y];
-//	if (fabs(accX)<0.3) {
-//		accX = 0;
-//	}
-//	if (fabs(accY)<0.3) {
-//		accY=0;
-//	}
-
-	float globalOut[3] = {0,0,0};
-	static float prevOut[3] = {0,0,0};
-	if (!isnan(prevOut[0])){ // lowpass filtering
-		globalOut[body_x] = 0.07*(accX*500 - globalInput[body_x]) + 0.93*prevOut[body_x];
-		globalOut[body_y] = 0.07*(accY*500 - globalInput[body_y]) + 0.93*prevOut[body_y];
-	}
-	prevOut[body_x] = globalOut[body_x];
-	prevOut[body_y] = globalOut[body_y];
-
-	// safety: reduce effect, while testing
-//	globalOut[body_x] = globalOut[body_x]*0.25;//0.25;
-//	globalOut[body_y] = globalOut[body_y]*0.25;//0.25;
-
-	// rotate back to local and fill in the output
-	//TODO: differentiate for strafing direction?
-	float out[3];
-	rotate(yaw, globalOut, out);
-	output[body_x] = out[body_x]*0.5;//0.25;
-	output[body_y] = out[body_y]*0.5;//0.25;
-	output[body_w] = 0;
-}
-
 //multiplies a 4*3 matrix by a vector of 3 elements.
 void body2Wheels(float v[3], float output[4]){
 
@@ -115,6 +78,60 @@ void rotate(float yaw, float input[3], float output[3]){
 
 }
 
+float compute_limit_scale(float input[3], float limit){
+
+	float scale;
+	float intermediaryOutput[4];
+	body2Wheels(input, intermediaryOutput);
+	float maxEl = fmax(fmax(fabs(intermediaryOutput[wheels_RF]),fabs(intermediaryOutput[wheels_RB])),fmax(fabs(intermediaryOutput[wheels_LB]),fabs(intermediaryOutput[wheels_LF])));
+
+	if ((maxEl) > limit){
+		scale = limit/(maxEl);
+	}
+	else {
+		scale = 1;
+	}
+
+	return scale;
+}
+
+void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], float output[3]){
+
+	// Requires transformation to global coordinates and back
+	float globalInput[3];
+	rotate(-yaw, localInput, globalInput);
+	// accelerations are already global (free acceleration)
+	float accX = globalAcc[body_x];
+	float accY = globalAcc[body_y];
+//	if (fabs(accX)<0.3) {
+//		accX = 0;
+//	}
+//	if (fabs(accY)<0.3) {
+//		accY=0;
+//	}
+
+	float globalOut[3] = {0,0,0};
+	static float prevOut[3] = {0,0,0};
+	if (!isnan(prevOut[0])){ // lowpass filtering
+		globalOut[body_x] = 0.07*(accX*500 - globalInput[body_x]) + 0.93*prevOut[body_x];
+		globalOut[body_y] = 0.07*(accY*500 - globalInput[body_y]) + 0.93*prevOut[body_y];
+	}
+	prevOut[body_x] = globalOut[body_x];
+	prevOut[body_y] = globalOut[body_y];
+
+	// safety: reduce effect, while testing
+//	globalOut[body_x] = globalOut[body_x]*0.25;//0.25;
+//	globalOut[body_y] = globalOut[body_y]*0.25;//0.25;
+
+	// rotate back to local and fill in the output
+	//TODO: differentiate for strafing direction?
+	float out[3];
+	rotate(yaw, globalOut, out);
+	output[body_x] = out[body_x]*0.5;//0.25;
+	output[body_y] = out[body_y]*0.5;//0.25;
+	output[body_w] = 0;
+}
+
 void pController(float input[3], float kp[3], float output[3]){
 	// These limits are meant to prevent slipping
 	float w_limit = 500;
@@ -137,23 +154,6 @@ void pController(float input[3], float kp[3], float output[3]){
 	output[body_y] = pre_out[body_y] * scale;
 	output[body_w] = pre_out[body_w];
 
-}
-
-float compute_limit_scale(float input[3], float limit){
-
-	float scale;
-	float intermediaryOutput[4];
-	body2Wheels(input, intermediaryOutput);
-	float maxEl = fmax(fmax(fabs(intermediaryOutput[wheels_RF]),fabs(intermediaryOutput[wheels_RB])),fmax(fabs(intermediaryOutput[wheels_LB]),fabs(intermediaryOutput[wheels_LF])));
-
-	if ((maxEl) > limit){
-		scale = limit/(maxEl);
-	}
-	else {
-		scale = 1;
-	}
-
-	return scale;
 }
 
 //observer output should just be pre-declared as 0 before any looping starts
@@ -244,9 +244,9 @@ float angleController(float angleRef, float yaw){
 }
 
 
-bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
+bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
 	//TODO
-	static bool calibrated_once = false;
+	static bool calibration_needed = true;
 
 	// get xsens data
 	float * accptr;
@@ -266,54 +266,79 @@ bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
 		w_prev[i] = w_wheels[i];
 	}
 
-	// calibration by computing the yaw offset between vision and xsens
+		 /////////////////////////////
+		// CALIBRATION OF YAW OFFSET //
+		 /////////////////////////////
+
 	static float yaw_offset = 0;
-	// if vision data is available, the yaw will be calibrated to the vision yaw when possible
-	// If no vision data is available, the yaw will be calibrated to zero, but just once
-	if ((use_vision || !calibrated_once) && HAL_GetTick() - start_time > CALIBRATE_AFTER) {
-		int duration = 50;		// time steps of no rotation required before calibrating
-		int avg_size = 10; 		// amount of samples to take the average of
-		static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
-		static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
+	static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
+	static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
+	static int no_rot_counter = 0;	// keeps track of the amount of time steps without rotation
+	int no_rot_duration = 20;		// time steps of no rotation required before calibrating
+	int avg_size = 10; 				// amount of samples to take the average of, for the yaws
+
+	// check whether recalibration of yaw is necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
+	if (vision_available) {
+		// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
+		static int check_counter = 0;
+		if (constrainAngle(vision_yaw - xsens_yaw) > 0.01) {
+			check_counter++;
+		} else {
+			check_counter = 0;
+		}
+		if (check_counter > 4) {
+			calibration_needed = true;
+			check_counter = 0;
+		}
+	}
+
+	// if calibration is necessary
+	if (calibration_needed && HAL_GetTick() - start_time > CALIBRATE_AFTER) {
 		static float yaw0 = 0; 	// starting yaw, which is used to detect a change in yaw within the duration
-		static int counter = 0;
-		// check for calibration possibility (which is when the yaw has not changed much for a while)
+		// check for calibration possibility (which is when the yaw has not changed much for sufficiently long)
 		if (fabs(yaw0 - xsens_yaw) < 0.01) {
-			if (counter > duration) {
+			if (no_rot_counter > no_rot_duration) {
 				// calculate offset (calibrate)
 				float avg_xsens_yaw = atan2f(avg_xsens_vec[1], avg_xsens_vec[0]);
-				if (use_vision) { // if vision would not be used, the yaw would simply be reset to 0;
+				if (vision_available) { // if vision would not be availabe, the yaw would simply be reset to 0;
 					float avg_vision_yaw = atan2f(avg_vision_vec[1], avg_vision_vec[0]);
 					yaw_offset = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
-					if (avg_vision_yaw != 0){
-						calibrated_once = true;
-					}
 				} else {
 					yaw_offset = -avg_xsens_yaw;
-					calibrated_once = true;
+
 				}
+				calibration_needed = false;
 
 				// reset timer and averages
-				counter = 0;
+				no_rot_counter = 0;
 				avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
 				avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
-			} else if (counter > duration - avg_size) {
+			} else if (no_rot_counter > no_rot_duration - avg_size) {
 				// averaging angles requires summing their unit vectors
 				avg_xsens_vec[0] += cosf(xsens_yaw);
 				avg_xsens_vec[1] += sinf(xsens_yaw);
 				avg_vision_vec[0] += cosf(vision_yaw);
 				avg_vision_vec[1] += sinf(vision_yaw);
 			}
-		} else {
-			// reset compare yaw to current yaw
+		} else { // so fabs(yaw0 - xsens_yaw) > 0.01
+			// reset comparation yaw to current yaw
 			yaw0 = xsens_yaw;
 			// reset timer and averages
-			counter = 0;
+			no_rot_counter = 0;
 			avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
 			avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
 		}
-		counter++;
+		no_rot_counter++;
+	} else {
+		// reset timer and averages
+		no_rot_counter = 0;
+		avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
+		avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
 	}
+
+		 ///////////////////////
+		// ACTUAL CONTROL PART //
+		 ///////////////////////
 
 	// call the controller with the (calibrated) xsens data. The output is wheelsPWM
 	float xsensData[3];
@@ -339,7 +364,7 @@ bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
 	if (use_yaw_control) {
 		float angleRef;
 		if (ref_is_angle) { // the joystick/software could be used here to directly set the angle reference
-			angleRef = localVelocityRef[body_w]*180/2047;
+			angleRef = localVelocityRef[body_w] / 16;
 		} else { // for the keyboard the angle reference is ramped up by integrating the signal
 			static float prevAngleRef = 0;
 			angleRef = prevAngleRef + TIME_DIFF * localVelocityRef[body_w];
@@ -349,6 +374,10 @@ bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
 		if (no_vel_control) {
 			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1000, 0};
 			forceRef[body_w] = angleController(angleRef, xsensData[body_w]);
+			float scale = compute_limit_scale(forceRef, 90);
+			forceRef[body_x] = scale*forceRef[body_x];
+			forceRef[body_y] = scale*forceRef[body_y];
+			forceRef[body_w] = 1*forceRef[body_w];
 			body2Wheels(forceRef, output);
 		} else {
 			float newVelocityRef[3] = {localVelocityRef[body_x], localVelocityRef[body_y], 0};
@@ -359,19 +388,16 @@ bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
 	} else { // no yaw control
 		if (no_vel_control) {
 			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1000, localVelocityRef[body_w]*10};
-			float wheelsPWM[4];
-			body2Wheels(forceRef,wheelsPWM);
 			float scale = compute_limit_scale(forceRef, 90);
 			forceRef[body_x] = scale*forceRef[body_x];
 			forceRef[body_y] = scale*forceRef[body_y];
 			forceRef[body_w] = 1*forceRef[body_w];
+			body2Wheels(forceRef,output);
 		} else {
 			controller(localVelocityRef, w_wheels, xsensData, output);
 		}
 
-	} /////////////////////////
+	}
 
-
-
-	return calibrated_once;
+	return calibration_needed;
 }
