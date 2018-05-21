@@ -13,21 +13,24 @@
 #include "../PuttyInterface/PuttyInterface.h" //should be removed after debugging
 
 uint8_t roboid = 0xFF;
+uint8_t dataArray[32];
+uint8_t misalignOffset = 0; //sometimes we need to hack our way trough the received bytes. Sometimes we receive 3 Bytes of bullshit before the actual data.
+
 
 void HAL_SPI_RxCpltCallback (SPI_HandleTypeDef *hspi) {
 	uprintf("rxcallback\n\n");
 	if(state == readData_1) {
 			state = readData_2;
-			roboCallback(10);
 		}
+	if(state == readData_0) {
+		state = readData_2;
+	}
 }
 
 void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef *hspi) {
-	nssHigh();
 	uprintf("txcallback\n\n");
 	if(state == readData_0) {
 		state = readData_1;
-		//roboCallback(10);
 	}
 }
 
@@ -108,11 +111,18 @@ int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t roboI
  */
 //negative values on erros.
 //0 on success
+
+void checkSPIWirelessState() {
+	if(state == readData_1 || state == readData_2) {
+		//uprintf("checking state\n");
+		readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1);
+	}
+}
+
 int8_t roboCallback(uint8_t localRobotID){
-	uint8_t dataArray[32];
+
 	uint8_t verbose = 1;
 
-	uint8_t misalignOffset = 0; //sometimes we need to hack our way trough the received bytes. Sometimes we receive 3 Bytes of bullshit before the actual data.
 
 	if(state == callback_0) {
 		//clear RX interrupt
@@ -123,10 +133,7 @@ int8_t roboCallback(uint8_t localRobotID){
 		state = readData_0;
 	}
 	if((state == readData_0) || (state == readData_1) || (state == readData_2)) {
-		/*
-		 * For some reason the payload is always off by 3 bytes.. so we need to apply a hack here
-		 * Also, the status register isn't read properly. So, we need to assume a static payload length..
-		 */
+
 		readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1); //+3 for misalignment +1 for cheksum byte.
 		//state = readData_done;
 	}

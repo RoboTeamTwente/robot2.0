@@ -173,7 +173,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		preparedAckData.roboID = localRobotID;
+	  checkSPIWirelessState();
+
+	  preparedAckData.roboID = localRobotID;
 		float wheelsPWM2[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
 		wheels_SetOutput(wheelsPWM2);
 		HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);

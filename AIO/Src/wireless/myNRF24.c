@@ -318,26 +318,27 @@ void readData(uint8_t* receiveBuffer, uint8_t length){
 
 //read received bytes from the rx buffer
 void readData_IT(uint8_t* receiveBuffer, uint8_t length){
+	uint8_t error;
 	if(state == readData_0) {
 		uprintf("readdata_0\n\n");
 		nssLow();
 		uint8_t command = NRF_R_RX_PAYLOAD;
+
 		uprintf("0 - HAL SPI status: %i\n", HAL_SPI_GetState(spiHandle));
-		while(HAL_SPI_Transmit_IT(spiHandle, &command, 1) != HAL_OK);
+
+
+
+		while(HAL_OK != (error = HAL_SPI_Transmit_IT(spiHandle, &command, 1))) {
+			uprintf("TX error: %i\n", error);
+		}
+
 
 
 	}
 	else if(state == readData_1) {
-
-		uprintf("readdata_1\n\n");
-		uprintf("1 - HAL SPI status: %i\n", HAL_SPI_GetState(spiHandle));
-		nssLow();
-		uint8_t error;
 		while(HAL_OK != (error = HAL_SPI_Receive_IT(spiHandle, receiveBuffer, length))) {
-					uprintf("error: %i\n", error);
-				}
-		uprintf("2 - HAL SPI status: %i\n", HAL_SPI_GetState(spiHandle));
-		uprintf("kaas is love kaas is life\n\n");
+			printf("RX error: %i\n", error);
+		}
 
 	}
 	if(state == readData_2) {
