@@ -21,26 +21,27 @@ float uint32tofloat(uint32_t raw) {
 
 }
 
-void printRoboData(roboData *input, uint8_t dataArray[ROBOPKTLEN]) {
+void printRoboData(roboData *input, uint8_t dataArray[ROBOPKTLEN], uint8_t verbose) {
 	uprintf("----->FROM BASESTATION----->\n");
 	for(int i=0; i<ROBOPKTLEN; i++) {
 		uprintf("%02x ", dataArray[i]);
 	}
 	uprintf("\n");
-
-	uprintf("\tRoboID: %i \n", input->id);
-	uprintf("\tDebug info: %i \n", input->debug_info);
-	uprintf("\tRho: %i \n\tTheta: %i \n", input->rho, input->theta);
-	uprintf("\tKICKCHIP\n");
-	uprintf("\tKick %i \n\t Chip: %i \n\t Forced: %i \n\t Power: %i \n", input->do_kick, input->do_chip ,input->kick_chip_forced, input->kick_chip_power);
-	uprintf("\tDribbler velocity: %i \n", input->velocity_dribbler);
-	uprintf("\tGeneva drive: %i \n", input->geneva_drive_state);
-	uprintf("\tDriving reference: %i \n", input->driving_reference);
-	uprintf("\tAngular velocity: %i \n", input->velocity_angular);
-	uprintf("\tCAMERA \n\t use cam info: %i \n\t position x: %i \n\t position y: %i \n\t rotation: %i \n\n", input->use_cam_info, input->cam_position_x, input->cam_position_y, input->cam_rotation);
+	if(verbose) {
+		uprintf("\tRoboID: %i \n", input->id);
+		uprintf("\tDebug info: %i \n", input->debug_info);
+		uprintf("\tRho: %i \n\tTheta: %i \n", input->rho, input->theta);
+		uprintf("\tKICKCHIP\n");
+		uprintf("\tKick %i \n\t Chip: %i \n\t Forced: %i \n\t Power: %i \n", input->do_kick, input->do_chip ,input->kick_chip_forced, input->kick_chip_power);
+		uprintf("\tDribbler velocity: %i \n", input->velocity_dribbler);
+		uprintf("\tGeneva drive: %i \n", input->geneva_drive_state);
+		uprintf("\tDriving reference: %i \n", input->driving_reference);
+		uprintf("\tAngular velocity: %i \n", input->velocity_angular);
+		uprintf("\tCAMERA \n\t use cam info: %i \n\t position x: %i \n\t position y: %i \n\t rotation: %i \n\n", input->use_cam_info, input->cam_position_x, input->cam_position_y, input->cam_rotation);
+	}
 }
 
-void printRoboAckData(roboAckData *input, uint8_t dataArray[32], uint8_t ackDataLength) {
+void printRoboAckData(roboAckData *input, uint8_t dataArray[32], uint8_t ackDataLength, uint8_t verbose) {
 	uprintf("<-----TO BASESTATION<-----\n");
 
 	//print ack packet in hex
@@ -49,16 +50,18 @@ void printRoboAckData(roboAckData *input, uint8_t dataArray[32], uint8_t ackData
 	}
 	uprintf("\n");
 
-	uprintf("\tRoboID: %i \n", input->roboID);
-	uprintf("\tWHEELS \n\t leftFront: %i \n\t rightFront: %i \n\t leftBack: %i \n\t rightBack: %i \n", input->wheelLeftFront, input->wheelRightFront, input->wheelLeftBack, input->wheelRightBack);
-	uprintf("\tGeneva drive: %i \n", input->genevaDriveState);
-	uprintf("\tBattery: %i \n", input->batteryState);
-	uprintf("\tPOSITION \n\t x: %i \n\t y: %i \n", input->xPosRobot, input->yPosRobot);
-	uprintf("\tRho: %i \n\tTheta: %i \n", input->rho, input->theta);
-	uprintf("\tOrientation: %i \n", input->orientation);
-	uprintf("\tAngular velocity: %i \n", input->angularVelocity);
-	uprintf("\tBall sensor: %i \n", input->ballSensor);
-	uprintf("\tXSENS \n\t x: %.6f \n\t y: %.6f \n\t w: %.6f\n\n", uint32tofloat(input->xAcceleration), uint32tofloat(input->yAcceleration), uint32tofloat(input->angularRate));
+	if(verbose) {
+		uprintf("\tRoboID: %i \n", input->roboID);
+		uprintf("\tWHEELS \n\t leftFront: %i \n\t rightFront: %i \n\t leftBack: %i \n\t rightBack: %i \n", input->wheelLeftFront, input->wheelRightFront, input->wheelLeftBack, input->wheelRightBack);
+		uprintf("\tGeneva drive: %i \n", input->genevaDriveState);
+		uprintf("\tBattery: %i \n", input->batteryState);
+		uprintf("\tPOSITION \n\t x: %i \n\t y: %i \n", input->xPosRobot, input->yPosRobot);
+		uprintf("\tRho: %i \n\tTheta: %i \n", input->rho, input->theta);
+		uprintf("\tOrientation: %i \n", input->orientation);
+		uprintf("\tAngular velocity: %i \n", input->angularVelocity);
+		uprintf("\tBall sensor: %i \n", input->ballSensor);
+		uprintf("\tXSENS \n\t x: %.6f \n\t y: %.6f \n\t w: %.6f\n\n", uint32tofloat(input->xAcceleration), uint32tofloat(input->yAcceleration), uint32tofloat(input->angularRate));
+	}
 }
 
 /*

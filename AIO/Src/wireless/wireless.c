@@ -31,16 +31,18 @@ void Wireless_newPacketHandler() {
 			LastPackageTime = HAL_GetTick();
 			//uprintf("\n\nnew wireless message (interrupt fired)\n");
 
-			int8_t error_code = roboCallback(localRobotID);
-			if(error_code) {
-				uprintf("RoboCallback failed with error: %i\n", error_code);
-			}
-			clearInterrupts(); //should not be needed
+			if(state == callback_0) {
+				int8_t error_code = roboCallback(localRobotID);
+				if(error_code) {
+					uprintf("RoboCallback failed with error: %i\n", error_code);
+				}
+				clearInterrupts(); //should not be needed
 
-			//kicker
-			if (receivedRoboData.kick_chip_forced) {
-				uprintf("FORCE KICK\n\n");
-				kickchip_command = 1;
+				//kicker
+				if (receivedRoboData.kick_chip_forced) {
+					uprintf("FORCE KICK\n\n");
+					kickchip_command = 1;
+				}
 			}
 		}
 }

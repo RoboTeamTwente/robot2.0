@@ -24,6 +24,8 @@ enum states{
 	readData_done
 }state;
 
+uint8_t recv_started;
+
 
 //--------------------initialization and configuration--------------------//
 

@@ -45,6 +45,8 @@ uint8_t (*irqRead)();
 //arguments: SpiHandle and functions which implement pin setters for NSS and CE and reader for IRQ
 int8_t NRFinit(SPI_HandleTypeDef* nrf24spiHandle, void (*nrf24nssHigh)(), void (*nrf24nssLow)(), void (*nrf24ceHigh)(), void (*nrf24ceLow)(), uint8_t (*nrf24irqRead)() ){
 	//set references to pin setter functions
+	 recv_started = 0;
+
 	nssHigh = nrf24nssHigh;
 	nssLow = nrf24nssLow;
 	ceHigh = nrf24ceHigh;
@@ -320,25 +322,33 @@ void readData(uint8_t* receiveBuffer, uint8_t length){
 void readData_IT(uint8_t* receiveBuffer, uint8_t length){
 	uint8_t error;
 	if(state == readData_0) {
-		uprintf("readdata_0\n\n");
+		//uprintf("readdata_0\n\n");
 		nssLow();
 		uint8_t command = NRF_R_RX_PAYLOAD;
 
-		uprintf("0 - HAL SPI status: %i\n", HAL_SPI_GetState(spiHandle));
+		//uprintf("0 - HAL SPI status: %i\n", HAL_SPI_GetState(spiHandle));
 
 
 
-		while(HAL_OK != (error = HAL_SPI_Transmit_IT(spiHandle, &command, 1))) {
+		while(HAL_OK != HAL_SPI_Transmit_IT(spiHandle, &command, 1)) {
 			uprintf("TX error: %i\n", error);
 		}
 
-
+		//state = readData_1;
 
 	}
-	else if(state == readData_1) {
-		while(HAL_OK != (error = HAL_SPI_Receive_IT(spiHandle, receiveBuffer, length))) {
+	if(state == readData_1) {
+
+	    while (HAL_SPI_GetState(spiHandle) != HAL_SPI_STATE_READY)
+	    {}
+	    recv_started = 1;
+	    //uprintf("rx started\n");
+		while(HAL_OK != (error = HAL_SPI_Receive(spiHandle, receiveBuffer, length,100))) {
 			printf("RX error: %i\n", error);
 		}
+		while (HAL_SPI_GetState(spiHandle) != HAL_SPI_STATE_READY)
+			    {}
+		state = readData_2;
 
 	}
 	if(state == readData_2) {

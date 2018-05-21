@@ -16,6 +16,7 @@ uint8_t roboid = 0xFF;
 uint8_t dataArray[32];
 uint8_t misalignOffset = 0; //sometimes we need to hack our way trough the received bytes. Sometimes we receive 3 Bytes of bullshit before the actual data.
 
+uint32_t lastTX = 0;
 
 void HAL_SPI_RxCpltCallback (SPI_HandleTypeDef *hspi) {
 	uprintf("rxcallback\n\n");
@@ -29,6 +30,7 @@ void HAL_SPI_RxCpltCallback (SPI_HandleTypeDef *hspi) {
 
 void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef *hspi) {
 	uprintf("txcallback\n\n");
+	lastTX = HAL_GetTick();
 	if(state == readData_0) {
 		state = readData_1;
 	}
@@ -113,9 +115,20 @@ int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t roboI
 //0 on success
 
 void checkSPIWirelessState() {
-	if(state == readData_1 || state == readData_2) {
+	if(state == readData_1) {
+
+		if(!recv_started) {
+			//uprintf("checking state - readdata 1\n");
+			//uprintf("rx started\n");
+			readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1);
+		}
+	}
+	else if(state == readData_2) {
 		//uprintf("checking state\n");
-		readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1);
+			readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1);
+	}
+	else if(state == readData_done) {
+		roboCallback(10);
 	}
 }
 
@@ -152,8 +165,8 @@ int8_t roboCallback(uint8_t localRobotID){
 			uint8_t txPacket[32];
 			uint8_t received_checksum = dataArray[ROBOPKTLEN+misalignOffset];
 
-			printRoboData(&receivedRoboData,dataArray+misalignOffset);
-			printRoboAckData(&preparedAckData,txPacket,SHORTACKPKTLEN);
+			printRoboData(&receivedRoboData,dataArray+misalignOffset,0);
+			printRoboAckData(&preparedAckData,txPacket,SHORTACKPKTLEN,0);
 
 			//compare the calculated checksum with the received checksum
 			if(calculated_checksum != received_checksum) {
