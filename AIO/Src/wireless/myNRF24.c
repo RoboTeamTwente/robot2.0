@@ -339,16 +339,16 @@ void readData_IT(uint8_t* receiveBuffer, uint8_t length){
 	}
 	if(state == readData_1) {
 
-	    while (HAL_SPI_GetState(spiHandle) != HAL_SPI_STATE_READY)
-	    {}
+	    //while (HAL_SPI_GetState(spiHandle) != HAL_SPI_STATE_READY)
+	    //{}
 	    recv_started = 1;
 	    //uprintf("rx started\n");
-		while(HAL_OK != (error = HAL_SPI_Receive(spiHandle, receiveBuffer, length,100))) {
+		while(HAL_OK != (error = HAL_SPI_Receive_IT(spiHandle, receiveBuffer, length))) {
 			printf("RX error: %i\n", error);
 		}
 		while (HAL_SPI_GetState(spiHandle) != HAL_SPI_STATE_READY)
 			    {}
-		state = readData_2;
+		//state = readData_2;
 
 	}
 	if(state == readData_2) {

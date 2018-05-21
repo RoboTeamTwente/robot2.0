@@ -115,15 +115,15 @@ int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t roboI
 //0 on success
 
 void checkSPIWirelessState() {
-	if(state == readData_1) {
+/*	if(state == readData_1) {
 
 		if(!recv_started) {
-			//uprintf("checking state - readdata 1\n");
+			uprintf("checking state - readdata 1\n");
 			//uprintf("rx started\n");
 			readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1);
 		}
-	}
-	else if(state == readData_2) {
+	}*/
+	if(state == readData_2) {
 		//uprintf("checking state\n");
 			readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1);
 	}
