@@ -12,28 +12,35 @@
 #include "tim.h"
 #include "../PuttyInterface/PuttyInterface.h"
 
-#define PWM_CUTOFF 2.00F
-#define PWM_ROUNDUP 4.00F
+#define PWM_CUTOFF 5.00F		// arbitrary treshold below PWM_ROUNDUP
+#define PWM_ROUNDUP 10.00F 		// below this value the motor driver is unreliable
 #define ROBOT_RADIUS 0.0775F
 #define WHEEL_RADIUS 0.0275F
-#define HTIM5_FREQ 1000000.0F
+#define HTIM5_FREQ 1000000.0F	//Hz
 #define PULSES_PER_ROTATION 1024
-#define GEAR_RATIO 2.5F
-#define X__ENCODING 4 // counts per pulse X1, X2 or X4
+#define GEAR_RATIO 2.5F			// motor to wheel
+#define X__ENCODING 4			// counts per pulse X1, X2 or X4
 
-bool reverse[4] = {0};
-int pwm[4];
+bool reverse[N_WHEELS] = {0};
+float global_power[N_WHEELS];
 
 enum {
 	wheels_uninitialized,
 	wheels_ready,
-	wheels_first_brake_period,
-	wheels_second_brake_period,
-	wheels_third_brake_period
-}wheels_state;
+	wheels_braking
+}wheels_state;// keeps track of the state of this system
+
+enum wheel_braking_states{
+	no_brake,
+	first_brake_period,
+	second_brake_period,
+	third_brake_period,
+}brake_state[N_WHEELS];// keeps track of the braking state of each wheel
 
 /*----------------------------------static functions-------------------------------*/
-
+/*	Set an encoder to zero
+ *
+ */
 static inline void ResetEncoder(wheels_handles wheel){
 	switch(wheel){
 	case wheels_RF:
@@ -50,7 +57,45 @@ static inline void ResetEncoder(wheels_handles wheel){
 		break;
 	}
 }
+/*	Set Pwm for one wheel
+ *
+ */
+static inline void SetPWM(wheels_handles wheel, float power){
+	switch(wheel){
+	case wheels_RF:
+		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, power / 100 * MAX_PWM);
+		break;
+	case wheels_RB:
+		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, power / 100 * MAX_PWM);
+		break;
+	case wheels_LB:
+		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, power / 100 * MAX_PWM);
+		break;
+	case wheels_LF:
+		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, power / 100 * MAX_PWM);
+		break;
+	}
+}
+/*	Set direction for one wheel
+ *
+ */
+static inline void SetDir(wheels_handles wheel, bool reverse){
+	switch(wheel){
+	case wheels_RF:
+		HAL_GPIO_WritePin(FR_RF_GPIO_Port,FR_RF_Pin, reverse);
+		break;
+	case wheels_RB:
+		HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, reverse);
+		break;
+	case wheels_LB:
+		HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, reverse);
+		break;
+	case wheels_LF:
+		HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, reverse);
+		break;
+	}
 
+}
 /*----------------------------------public functions-------------------------------*/
 
 void wheels_Init(){
@@ -78,7 +123,7 @@ void wheels_DeInit(){
 	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2);
 }
 
-void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]){
+void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadPerSec, float power[N_WHEELS]){
 	// Jelle's variant, using forces instead of velocities (for testing)
 	static float cos_a0 = cosf(60.0F  * 3.1415F/180.0F);
 	static float sin_a0 = sinf(60.0F  * 3.1415F/180.0F);
@@ -97,15 +142,15 @@ void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadP
 
 }
 
-void wheels_SetOutput(float power[4]){
+void wheels_SetOutput(float power[N_WHEELS]){
 	switch(wheels_state){
-	bool prev_reverse[4];
-	bool delay = false;
+	bool prev_reverse[N_WHEELS];
+	bool delay[N_WHEELS] = {false};
 	case wheels_uninitialized:
 		uprintf("ERROR wheels_uninitialized\n\r");
 		return;
 	case wheels_ready:
-		memcpy(prev_reverse, reverse, 4);
+		memcpy(prev_reverse, reverse, N_WHEELS);
 		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
 			if(power[i] < -0.1 ){
 				power[i] = -power[i];
@@ -113,49 +158,46 @@ void wheels_SetOutput(float power[4]){
 			}else if(power[i] > 0.1 ){
 				reverse[i] = 0;
 			}
+			if(power[i] > 1){
+				power[i] = 5.0F + power[i] * (95.0F / 100.0F);
+			}else{
+				power[i] = 0;
+			}
 			if(power[i] > 100){
 				power[i] = 100;
-			}else if(power[i] < PWM_ROUNDUP){
+			}/*else if(power[i] < PWM_ROUNDUP){
 				if(power[i] < PWM_CUTOFF) {
 					power[i] = 0;
 				} else {
 					power[i] = PWM_ROUNDUP;
 				}
 
+			}*/
+		}
+
+		memcpy(global_power, power, 4 * sizeof(float));
+
+		for(wheels_handles wheel = wheels_RF; wheel < N_WHEELS; wheel++){
+			delay[wheel] = prev_reverse[wheel] != reverse[wheel];
+		}
+
+
+		for(wheels_handles wheel = wheels_RF; wheel < N_WHEELS; wheel++){
+			if(delay[wheel]){
+				SetPWM(wheel, 0);
+				brake_state[wheel] = first_brake_period;
+			}else{
+				SetDir(wheel,reverse[wheel]);
+
+				SetPWM(wheel, global_power[wheel]);
 			}
 		}
-		delay = memcmp(prev_reverse, reverse, 4);
-
-
-		for(wheels_handles wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-			pwm[wheel] = power[wheel] / 100 * MAX_PWM;
-		}
-		if(delay){
-			__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_1, 0);
-			__HAL_TIM_SET_COMPARE(&htim9, TIM_CHANNEL_2, 0);
-			__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, 0);
-			__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
-
-			wheels_state = wheels_first_brake_period;
+		if(delay[wheels_RF] || delay[wheels_RB] || delay[wheels_LB] || delay[wheels_LF]){
 			HAL_TIM_Base_Stop(&htim14);											// Stop timer
 			__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
 			__HAL_TIM_SET_AUTORELOAD(&htim14, 2000);
-			HAL_TIM_Base_Start_IT(&htim14);   									// Start timer for kick off
-			//HAL_Delay(1);
-
-		}else{
-			HAL_GPIO_WritePin(FR_RF_GPIO_Port,FR_RF_Pin, reverse[wheels_RF]);
-			HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, reverse[wheels_RB]);
-			HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, reverse[wheels_LB]);
-			HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, reverse[wheels_LF]);
-
-			__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, pwm[wheels_RF]);
-			__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, pwm[wheels_RB]);
-			__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, pwm[wheels_LB]);
-			__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, pwm[wheels_LF]);
-
-//			uprintf("[%f]\n\r", (-reverse[0]*2+1)*power[0]);
+			HAL_TIM_Base_Start_IT(&htim14);
 		}
 		return;
 	default:
@@ -170,15 +212,16 @@ inline int16_t wheels_GetEncoder(wheels_handles wheel){
 	case wheels_RB:
 		return __HAL_TIM_GET_COUNTER(&htim8);
 	case wheels_LB:
-		return -__HAL_TIM_GET_COUNTER(&htim3); //  minus due to inverted routing (right leon?)
+		return -__HAL_TIM_GET_COUNTER(&htim3); //  minus due to inverted routing (right leon?)		 yes - Leon
 	case wheels_LF:
 		return __HAL_TIM_GET_COUNTER(&htim4);
 	default:
 		return 0;
 	}
 }
+
 float wheels_GetSpeed(wheels_handles wheel){
-	static uint prev_time[4];
+	static uint prev_time[N_WHEELS];
 	int16_t counts;
 	uint useconds;
 	float seconds;
@@ -197,32 +240,31 @@ float wheels_GetSpeed(wheels_handles wheel){
 }
 
 void wheels_Callback(){
-	switch(wheels_state){
-	case wheels_uninitialized:
-		uprintf("ERROR wheels_uninitialized\n\r");
-		return;
-	case wheels_ready:
-		uprintf("ERROR wheels_ready\n\r");
-		return;
-	case wheels_first_brake_period:
-		wheels_state = wheels_second_brake_period;
-		return;
-	case wheels_second_brake_period:
-		HAL_GPIO_WritePin(FR_RF_GPIO_Port,FR_RF_Pin, reverse[wheels_RF]);
-		HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, reverse[wheels_RB]);
-		HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, reverse[wheels_LB]);
-		HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, reverse[wheels_LF]);
-		wheels_state = wheels_third_brake_period;
-		return;
-	case wheels_third_brake_period:
+	uint8_t cnt = 0;
+	for(wheels_handles wheel = wheels_RF; wheel < N_WHEELS; wheel++){
+		switch(brake_state[wheel]){
+		case no_brake:
+			cnt++;
+			break;
+		case first_brake_period:
+			brake_state[wheel] = second_brake_period;
+			//__HAL_TIM_SET_AUTORELOAD(&htim14, 8000/2);
+			break;
+		case second_brake_period:
+			SetDir(wheel,reverse[wheel]);
+			brake_state[wheel] = third_brake_period;
+			//__HAL_TIM_SET_AUTORELOAD(&htim14, 1000);
+			break;
+		case third_brake_period:
+			cnt++;
+			SetPWM(wheel, global_power[wheel]);
+			brake_state[wheel] = no_brake;
+			break;
+		}
+	}
+	if(cnt == 4){
 		HAL_TIM_Base_Stop(&htim14);											// Stop timer
 		__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
 		__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
-		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, pwm[wheels_RF]);
-		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, pwm[wheels_RB]);
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, pwm[wheels_LB]);
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, pwm[wheels_LF]);
-		wheels_state = wheels_ready;
-		return;
 	}
 }

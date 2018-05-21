@@ -14,8 +14,9 @@
 #include "../MTi/MTiControl.h"
 
 #define CALIBRATE_AFTER 6500 //time after which yaw calibration will start (ms)
+#define TIME_DIFF 0.01
 uint start_time;
-// some settings
+//TODO: some settings
 bool DO_enabled = false;
 bool use_yaw_control = true;
 bool ref_is_angle = false;
@@ -99,7 +100,7 @@ void wheels2Body(float w[4], float output[3]){
 	//Applying transpose(M_inv) matrix
 	output[body_x] = (1/s*w[wheels_RF] + 1/s*w[wheels_RB] - 1/s*w[wheels_LB] - 1/s*w[wheels_LF])*r/4;
 	output[body_y] = (1/c*w[wheels_RF] - 1/c*w[wheels_RB] - 1/c*w[wheels_LB] + 1/c*w[wheels_LF])*r/4;
-	output[body_w] = (-1/R*w[wheels_RF] - 1/R*w[wheels_RB] - 1/R*w[wheels_LB] - 1/R*w[wheels_LF])*r/4;
+	output[body_w] = -(-1/R*w[wheels_RF] - 1/R*w[wheels_RB] - 1/R*w[wheels_LB] - 1/R*w[wheels_LF])*r/4;
 }
 
 // rotates coordinate system by yaw
@@ -175,6 +176,7 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 	controllerGain[body_x] = 20000/10;
 	controllerGain[body_y] = 20000/10;
 	controllerGain[body_w] = 200/10;
+
 	float pOut[3];
 	pController(error, controllerGain, pOut);
 
@@ -186,10 +188,10 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 
 	// Limiting the output to prevent saturation of the PWM signals for any of the wheels
 	float scaledInput[3];
-	float scale = compute_limit_scale(postObserverSignal, 100);
+	float scale = compute_limit_scale(postObserverSignal, 95);
 	scaledInput[body_x] = scale*postObserverSignal[body_x];
 	scaledInput[body_y] = scale*postObserverSignal[body_y];
-	scaledInput[body_w] = scale*postObserverSignal[body_w];
+	scaledInput[body_w] = 1*postObserverSignal[body_w];
 
 	// Output the wheel PWMs (by filling in the output array)
 	body2Wheels(scaledInput, output);
@@ -212,16 +214,23 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 }
 
 float angleController(float angleRef, float yaw){
+	// PD Control
 	float angleError = constrainAngle(angleRef - yaw);
 //	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, yaw/M_PI*180);
-	float output = angleError*20.0;
+	static float prevError = 0;
+	float dError = constrainAngle(angleError-prevError)/TIME_DIFF;
+	prevError = angleError;
+
+	float output = angleError*15.0 + dError*0.2;
 	float upper_lim = 20;
-	float lower_lim = 0.5;
-	float lower_roundup = 1.0;
+	float lower_lim = 1;
+	float lower_roundup = 10.0;
 
 	if (no_vel_control) {
-		lower_lim = 1.25;
-		lower_roundup = 3.0;
+		output = angleError*100.0 + dError*3.0;
+		upper_lim = 200;
+		lower_lim = 5;
+		lower_roundup = 20;
 	}
 
 	if (fabs(output) > upper_lim) {
@@ -318,6 +327,14 @@ bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
 		rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
 	}
 
+	// Compensation for moving direction when rotating
+	float assumed_delay = 0.06; //s
+	static float prevYaw = 0;
+	float yawVel = constrainAngle(xsensData[body_w] - prevYaw)/TIME_DIFF;
+	prevYaw = xsensData[body_w];
+	float compensation_dir = yawVel*assumed_delay;
+	rotate(compensation_dir, localVelocityRef, localVelocityRef);
+
 	// yaw  and velocity controllers
 	if (use_yaw_control) {
 		float angleRef;
@@ -325,13 +342,13 @@ bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
 			angleRef = localVelocityRef[body_w]*180/2047;
 		} else { // for the keyboard the angle reference is ramped up by integrating the signal
 			static float prevAngleRef = 0;
-			angleRef = prevAngleRef + 0.01 * localVelocityRef[body_w];
+			angleRef = prevAngleRef + TIME_DIFF * localVelocityRef[body_w];
 			prevAngleRef = angleRef;
 		}
 
 		if (no_vel_control) {
 			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1000, 0};
-			forceRef[body_w] = angleController(angleRef, xsensData[body_w])*10;
+			forceRef[body_w] = angleController(angleRef, xsensData[body_w]);
 			body2Wheels(forceRef, output);
 		} else {
 			float newVelocityRef[3] = {localVelocityRef[body_x], localVelocityRef[body_y], 0};
@@ -340,15 +357,21 @@ bool DO_Control(float velocityRef[3], float vision_yaw, float output[4]){
 		}
 
 	} else { // no yaw control
-		localVelocityRef[body_w] = velocityRef[body_w];
 		if (no_vel_control) {
 			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1000, localVelocityRef[body_w]*10};
-			body2Wheels(forceRef,output);
+			float wheelsPWM[4];
+			body2Wheels(forceRef,wheelsPWM);
+			float scale = compute_limit_scale(forceRef, 90);
+			forceRef[body_x] = scale*forceRef[body_x];
+			forceRef[body_y] = scale*forceRef[body_y];
+			forceRef[body_w] = 1*forceRef[body_w];
 		} else {
 			controller(localVelocityRef, w_wheels, xsensData, output);
 		}
 
 	} /////////////////////////
+
+
 
 	return calibrated_once;
 }
