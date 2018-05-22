@@ -270,11 +270,32 @@ void flushTX(){
 
 }
 
+//flush the TX buffer
+void flushTX_IT_basic(){
+	while(!SPIready());
+	nssLow();
+	uint8_t sendData = NRF_FLUSH_TX; //FLUSH_TX
+	HAL_SPI_Transmit_IT(spiHandle, &sendData, 1);
+	while(!SPIready());
+	nssHigh();
+
+}
+
 //flush the RX buffer
 void flushRX(){
 	nssLow();
 	uint8_t sendData = NRF_FLUSH_RX; //FLUSH_RX
-	HAL_SPI_Transmit(spiHandle, &sendData, 1, 100);
+	HAL_SPI_Transmit(spiHandle, &sendData, 1,100);
+	nssHigh();
+}
+
+//flush the RX buffer
+void flushRX_IT_basic(){
+	while(!SPIready());
+	nssLow();
+	uint8_t sendData = NRF_FLUSH_RX; //FLUSH_RX
+	HAL_SPI_Transmit_IT(spiHandle, &sendData, 1);
+	while(!SPIready());
 	nssHigh();
 }
 
@@ -285,23 +306,31 @@ void flushRX(){
 //not doing this will cause the wireless module to stay on, which is a wast of energy.
 void sendData(uint8_t data[], uint8_t length){
 	//TextOut("before sending\n");
-
 	ceLow();
-
 	flushTX();
-
 	nssLow();
 	uint8_t spi_command = NRF_W_TX_PAYLOAD; // W_TX_PAYLOAD
 	uint8_t spi_timeout = 100;
 	HAL_SPI_Transmit(spiHandle, &spi_command, 1, spi_timeout);
-
-
 	HAL_SPI_Transmit(spiHandle, data, length, spi_timeout);
 	nssHigh();
-
-
 	//send over air
+	ceHigh();
+}
 
+void sendData_IT_basic(uint8_t data[], uint8_t length){
+	//TextOut("before sending\n");
+	while(!SPIready());
+	ceLow();
+	flushTX();
+	nssLow();
+	uint8_t spi_command = NRF_W_TX_PAYLOAD; // W_TX_PAYLOAD
+	HAL_SPI_Transmit_IT(spiHandle, &spi_command, 1);
+	while(!SPIready());
+	HAL_SPI_Transmit_IT(spiHandle, data, length);
+	while(!SPIready());
+	nssHigh();
+	//send over air
 	ceHigh();
 }
 
@@ -323,6 +352,18 @@ void readData(uint8_t* receiveBuffer, uint8_t length){
 }
 
 //read received bytes from the rx buffer
+void readData_IT_basic(uint8_t* receiveBuffer, uint8_t length){
+		while(!SPIready());
+		nssLow();
+		uint8_t command = NRF_R_RX_PAYLOAD;
+		HAL_SPI_Transmit_IT(spiHandle, &command, 1);
+		while(!SPIready());
+		HAL_SPI_Receive_IT(spiHandle, receiveBuffer, length);
+		while(!SPIready());
+		nssHigh();
+
+}
+//read received bytes from the rx buffer
 void readData_IT(uint8_t* receiveBuffer, uint8_t length){
 	uint8_t error;
 	if(state == readData_0) {
@@ -334,7 +375,7 @@ void readData_IT(uint8_t* receiveBuffer, uint8_t length){
 
 
 
-		while(HAL_OK != HAL_SPI_Transmit(spiHandle, &command, 1,100)) {
+		while(HAL_OK != HAL_SPI_Transmit_IT(spiHandle, &command, 1)) {
 			uprintf("TX error: %i\n", error);
 		}
 
@@ -428,6 +469,41 @@ uint8_t getStaticPayloadLength(uint8_t dataPipeNo) {
 		return 0;
 	return readReg(RX_PW_P0 + dataPipeNo);
 }
+
+int8_t writeACKpayload_IT_basic(uint8_t* payloadBytes, uint8_t payload_length, uint8_t pipeNo) {
+
+	//This function should be called as often as a packet was received (either before or after reception),
+	//because the module can only hold up to 3 ACK packets.
+	//It will use up one of the packets as a response when it receives a packet.
+	//See: https://shantamraj.wordpress.com/2014/11/30/auto-ack-completely-fixed/ (visited 13th March, 2018)
+
+	//you may want to call writeACKpayload() in the procedure which reads a packet
+
+	if(pipeNo > 5)
+		return -1; //invalid pipe!
+
+	if(readReg(FIFO_STATUS) & FIFO_STATUS_TX_FULL) {
+		flushTX_IT_basic(); //will ensure that we don't overflow with 3 ACK packets or more
+		//return -1; //error: FIFO full
+	}
+	flushTX_IT_basic(); //flush unconditionally because we can't trust the readReg()
+	while(!SPIready());
+	nssLow();
+
+	uint8_t spi_command = NRF_W_ACK_PAYLOAD | pipeNo;
+	//activate spi command
+	if(HAL_SPI_Transmit_IT(spiHandle, &spi_command,1) != HAL_OK)
+		return -1; //HAL/SPI error
+	while(!SPIready());
+	//transmit values for spi command (send payload to nRF module)
+	if(HAL_SPI_Transmit_IT(spiHandle, payloadBytes, payload_length) != HAL_OK)
+		return -1; //HAL/SPI error
+	while(!SPIready());
+	nssHigh();
+
+	return 0; //success
+}
+
 //write ACK payload to module
 //this payload will be included in the payload of ACK packets when automatic acknowledgments are activated
 int8_t writeACKpayload(uint8_t* payloadBytes, uint8_t payload_length, uint8_t pipeNo) {

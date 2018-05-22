@@ -28,7 +28,6 @@ enum states{
 uint8_t recv_started;
 uint8_t ack_sent;
 
-
 //--------------------initialization and configuration--------------------//
 
 //initialize the system:
@@ -101,9 +100,10 @@ void powerUpTX();
 
 //flush the TX buffer
 void flushTX();
-
+void flushTX_IT_basic();
 //flush the RX buffer
 void flushRX();
+void flushRX_IT_basic();
 
 //send a byte. only used in TX mode
 //warning: after sending, the CE pin stays high.
@@ -111,11 +111,13 @@ void flushRX();
 //this can be done using the powerUpTX function
 //not doing this will cause the wireless module to stay on, which is a waste of energy.
 void sendData(uint8_t data[], uint8_t length);
+void sendData_IT_basic(uint8_t data[], uint8_t length);
 
 //read a byte from the buffer. only used in RX mode
 uint8_t SPIready();
 void readData(uint8_t* receiveBuffer, uint8_t length);
 void readData_IT(uint8_t* receiveBuffer, uint8_t length);
+void readData_IT_basic(uint8_t* receiveBuffer, uint8_t length);
 
 void setLowSpeed();
 
@@ -135,6 +137,7 @@ uint8_t getStaticPayloadLength(uint8_t dataPipeNo);
 //write ACK payload to module
 //this payload will be included in the payload of ACK packets when automatic acknowledgments are activated
 int8_t writeACKpayload(uint8_t* payloadBytes, uint8_t payload_length, uint8_t pipeNo);
+int8_t writeACKpayload_IT_basic(uint8_t* payloadBytes, uint8_t payload_length, uint8_t pipeNo);
 
 //called by the basestation to receive ack data
 //if there is data, it will be stored in the given ack_payload array

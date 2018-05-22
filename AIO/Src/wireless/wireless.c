@@ -32,7 +32,7 @@ void Wireless_newPacketHandler() {
 			//uprintf("\n\nnew wireless message (interrupt fired)\n");
 
 			if(state == callback_0) {
-				int8_t error_code = roboCallback(localRobotID);
+				int8_t error_code = roboCallback_IT_basic(localRobotID);
 				if(error_code) {
 					uprintf("RoboCallback failed with error: %i\n", error_code);
 				}

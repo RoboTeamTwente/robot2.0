@@ -173,7 +173,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  checkSPIWirelessState();
+	  //checkSPIWirelessState();
 
 	  preparedAckData.roboID = localRobotID;
 		float wheelsPWM2[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
@@ -181,7 +181,7 @@ int main(void)
 		HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
 		if(Wireless_newData()) {
-			uprintf("new packet\n");
+			//uprintf("new packet\n");
 			Wireless_newPacketHandler();
 		}
 
