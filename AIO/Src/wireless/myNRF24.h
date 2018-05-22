@@ -21,10 +21,12 @@ enum states{
 	readData_0,
 	readData_1,
 	readData_2,
+	readData_3,
 	readData_done
 }state;
 
 uint8_t recv_started;
+uint8_t ack_sent;
 
 
 //--------------------initialization and configuration--------------------//

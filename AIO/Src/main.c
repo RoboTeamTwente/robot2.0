@@ -181,6 +181,7 @@ int main(void)
 		HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
 		if(Wireless_newData()) {
+			uprintf("new packet\n");
 			Wireless_newPacketHandler();
 		}
 

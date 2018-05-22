@@ -18,6 +18,7 @@ uint8_t misalignOffset = 0; //sometimes we need to hack our way trough the recei
 
 uint32_t lastTX = 0;
 
+/*
 void HAL_SPI_RxCpltCallback (SPI_HandleTypeDef *hspi) {
 	uprintf("rxcallback\n\n");
 	if(state == readData_1) {
@@ -35,8 +36,10 @@ void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef *hspi) {
 		state = readData_1;
 	}
 }
+*/
 
 uint8_t counter = 0;
+
 
 int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t roboID){
 	roboid = roboID;
@@ -128,12 +131,29 @@ void checkSPIWirelessState() {
 			readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1);
 		}
 	}
-	if(state == readData_2) {
+	else if(state == readData_2) {
 		//uprintf("checking state\n");
 			readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1);
 	}
+	else if(state == readData_3) {
+		uprintf("checking state - readdata 3\n");
+		if(SPIready() && ack_sent) {
+			uprintf("checking state - readdata done\n");
+			state = readData_done;
+		}
+		else {
+			uprintf("checking state - robocallback\n");
+			if(0 != roboCallback(4)) {
+				uprintf("robocallback error\n");
+				ack_sent = 1;
+				state = callback_0;
+			}
+		}
+	}
 	else if(state == readData_done) {
-		roboCallback(10);
+		uprintf("checking state - callback 0\n");
+		state = callback_0;
+		clearInterrupts();
 	}
 }
 
@@ -143,11 +163,12 @@ int8_t roboCallback(uint8_t localRobotID){
 
 
 	if(state == callback_0) {
+		ack_sent = 0;
 		//clear RX interrupt
 		writeReg(STATUS, RX_DR);
 		nrf24ceLow();
 		//actually reading the payload
-		uprintf("callback0\n\n");
+		//uprintf("callback0\n\n");
 		state = readData_0;
 	}
 	if((state == readData_0) || (state == readData_1) || (state == readData_2)) {
@@ -155,8 +176,9 @@ int8_t roboCallback(uint8_t localRobotID){
 		readData_IT(dataArray, ROBOPKTLEN+misalignOffset+1); //+3 for misalignment +1 for cheksum byte.
 		//state = readData_done;
 	}
-	if(state == readData_done) {
-		uprintf("readdata done\n\n");
+	if(state == readData_3) {
+		//uprintf("readdata done\n\n");
+		ack_sent = 0;
 
 			//calculate the checksum for what I received
 			uint8_t calculated_checksum = 0;
@@ -176,29 +198,32 @@ int8_t roboCallback(uint8_t localRobotID){
 			//compare the calculated checksum with the received checksum
 			if(calculated_checksum != received_checksum) {
 				//checksums don't match.
-				state = callback_0;
+				uprintf("Checksums don't match\n");
 				flushRX();
 				return -4;
 			}
 
 			uint8_t receivedRobotID = (dataArray+misalignOffset)[0]>>3; //see packet format
 
+			//uprintf("la1\n");
+
 			if(receivedRobotID != localRobotID) {
-				if(verbose) uprintf("Received RobotID was wrong. Local ID: %i (0x%02x); Rx'd: %i (0x%02x)\n", localRobotID, localRobotID, receivedRobotID, receivedRobotID);
-				state = callback_0;
+				//if(verbose)
+					uprintf("Received RobotID was wrong. Local ID: %i (0x%02x); Rx'd: %i (0x%02x)\n", localRobotID, localRobotID, receivedRobotID, receivedRobotID);
 				flushRX();
 				return -3; //packet wasn't for me (or, more likely: we did not receive any packet and read bullshit from the buffer)
 			}
+			//uprintf("la2\n");
 			HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 			//putting the new data from the packet on the struct
 			packetToRoboData(dataArray+misalignOffset, &receivedRoboData);
-
+			//uprintf("la3\n");
 			//if(verbose) uprintf("Clearing RX_DR interrupt.\n");
 			nrf24ceHigh();
 
 			flushRX();
 
-
+			//uprintf("la4\n");
 
 			uint8_t ackDataLength;
 			if(receivedRoboData.debug_info)
@@ -208,15 +233,18 @@ int8_t roboCallback(uint8_t localRobotID){
 
 			//fillAckData(ackDataLength);
 			roboAckDataToPacket(&preparedAckData, txPacket);
-
+			//uprintf("la5\n");
 
 			//robotDataToPacket(&receivedRoboData, txPacket); //sending back the packet we just received
 
 			if(writeACKpayload(txPacket, ackDataLength, 1) != 0) { //just for testing sending a robot packet to the basestation.
-				//if(verbose) uprintf("Error writing ACK payload. TX FIFO full?\n");
+				//if(verbose)
+				uprintf("Error writing ACK payload. TX FIFO full?\n");
 				return -2; //error while writing ACK payload to buffer
 			}
-			state = callback_0;
+			ack_sent = 1;
+
+			//uprintf("la6\n");
 	}
 	return 0; //success
 }
