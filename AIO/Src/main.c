@@ -341,12 +341,12 @@ void HandleCommand(char* input){
 		uprintf("address = [%d]\n\r", address);
 	}else if(!strcmp(input, "example2")){
 		uprintf("stop!\n\r");
-	}else if(!strcmp(input, "geneva")){
+	}else if(!strcmp(input, "geneva get")){
 		uprintf("position = [%u]\n\r", geneva_GetPosition());
 	}else if(!strcmp(input, "geneva stop")){
 		geneva_SetState(geneva_idle);
-	}else if(!memcmp(input, "geneva" , strlen("geneva"))){
-		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
+	}else if(!memcmp(input, "geneva set" , strlen("geneva set"))){
+		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva set"), NULL, 10));
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
 	}else if(!memcmp(input, "kick" , strlen("kick"))){
@@ -429,7 +429,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		//wireless message received
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
-		uprintf("geneva sensor\n\r");
+		//uprintf("geneva sensor\n\r");
 		geneva_SensorCallback();
 	}
 }

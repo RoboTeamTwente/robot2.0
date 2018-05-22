@@ -132,7 +132,6 @@
 #define empty_battery_GPIO_Port GPIOD
 #define Geneva_cal_sens_Pin GPIO_PIN_5
 #define Geneva_cal_sens_GPIO_Port GPIOD
-#define Geneva_cal_sens_EXTI_IRQn EXTI9_5_IRQn
 #define Geneva_dir_A_Pin GPIO_PIN_6
 #define Geneva_dir_A_GPIO_Port GPIOD
 #define Geneva_dir_B_Pin GPIO_PIN_7

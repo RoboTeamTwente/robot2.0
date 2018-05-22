@@ -7,9 +7,10 @@
 
 #include "geneva.h"
 #include "pid/pid.h"
+#include "../PuttyInterface/PuttyInterface.h"
 
-#define GENEVA_CAL_SENS_CNT 390
-#define GENEVA_POSITION_DIF_CNT 240
+#define GENEVA_CAL_SENS_CNT 700
+#define GENEVA_POSITION_DIF_CNT 380
 #define GENEVA_MAX_ALLOWED_OFFSET 0.2*240
 
 geneva_states geneva_state = geneva_idle;
@@ -21,7 +22,7 @@ uint geneva_cnt;
 
 PID_controller_HandleTypeDef Geneva_pid = {
 		.pid = {0,0,0},
-		.K_terms = {5.0F, 1.0F, 0.3F},
+		.K_terms = {5.0F, 0.7F, 0.2F},
 		.ref = 0.0F,
 		.timestep = 0.0F,
 		.actuator = &htim10,
@@ -47,18 +48,18 @@ void geneva_Update(){
 	  case geneva_idle:
 		  break;
 	  case geneva_setup:// While in setup, slowly move towards the sensor
-		  if(HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
+		  if(!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
 			  if((HAL_GetTick() - geneva_cnt) < 100){
 				  geneva_state = geneva_too_close;
 			  }else{
-				  HAL_GPIO_EXTI_Callback(Geneva_cal_sens_Pin);
+				  geneva_SensorCallback();
 			  }
 		  }else{
 			  Geneva_pid.ref = (HAL_GetTick() - geneva_cnt)*1;
 		  }
 		  break;
 	  case geneva_too_close:
-		  if(HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
+		  if(!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
 			  Geneva_pid.ref = -200;
 		  }else{
 			  geneva_state = geneva_setup;
@@ -88,6 +89,8 @@ int geneva_Encodervalue(){
 
 
 void geneva_SensorCallback(){
+
+	uprintf("geneva sensor\n\r");
 	switch(geneva_state){
 	case geneva_idle:
 		break;
