@@ -229,6 +229,8 @@ int main(void)
 		HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
 		wheels_DeInit();
 		kick_DeInit();
+		dribbler_Deinit();
+		geneva_Deinit();
 		preparedAckData.batteryState = 0;
 // 		BATTERY IS ALMOST EMPTY!!!!!
 //		battery_empty = true;
@@ -259,8 +261,6 @@ int main(void)
 		//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
 		//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	}
-		  dribbler_Deinit();
-		  geneva_Deinit();
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
