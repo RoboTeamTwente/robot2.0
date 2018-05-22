@@ -111,6 +111,7 @@ void flushRX();
 void sendData(uint8_t data[], uint8_t length);
 
 //read a byte from the buffer. only used in RX mode
+uint8_t SPIready();
 void readData(uint8_t* receiveBuffer, uint8_t length);
 void readData_IT(uint8_t* receiveBuffer, uint8_t length);
 

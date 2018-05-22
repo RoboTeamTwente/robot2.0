@@ -305,6 +305,10 @@ void sendData(uint8_t data[], uint8_t length){
 	ceHigh();
 }
 
+uint8_t SPIready() {
+	return (HAL_SPI_GetState(spiHandle) == HAL_SPI_STATE_READY);
+}
+
 //read received bytes from the rx buffer
 void readData(uint8_t* receiveBuffer, uint8_t length){
 
@@ -322,7 +326,7 @@ void readData(uint8_t* receiveBuffer, uint8_t length){
 void readData_IT(uint8_t* receiveBuffer, uint8_t length){
 	uint8_t error;
 	if(state == readData_0) {
-		//uprintf("readdata_0\n\n");
+		uprintf("readdata_0\n\n");
 		nssLow();
 		uint8_t command = NRF_R_RX_PAYLOAD;
 
@@ -330,31 +334,30 @@ void readData_IT(uint8_t* receiveBuffer, uint8_t length){
 
 
 
-		while(HAL_OK != HAL_SPI_Transmit_IT(spiHandle, &command, 1)) {
+		while(HAL_OK != HAL_SPI_Transmit(spiHandle, &command, 1,100)) {
 			uprintf("TX error: %i\n", error);
 		}
 
-		//state = readData_1;
-
+		state = readData_1;
+		recv_started = 0;
 	}
 	if(state == readData_1) {
-
-	    //while (HAL_SPI_GetState(spiHandle) != HAL_SPI_STATE_READY)
-	    //{}
+		uprintf("readdata_1\n\n");
+	    uprintf("rx started\n");
 	    recv_started = 1;
-	    //uprintf("rx started\n");
 		while(HAL_OK != (error = HAL_SPI_Receive_IT(spiHandle, receiveBuffer, length))) {
-			printf("RX error: %i\n", error);
+			uprintf("RX error: %i\n", error);
 		}
-		while (HAL_SPI_GetState(spiHandle) != HAL_SPI_STATE_READY)
-			    {}
+
 		//state = readData_2;
 
 	}
 	if(state == readData_2) {
-		uprintf("readdata_2\n\n");
-		nssHigh();
-		state = readData_done;
+		if(SPIready()) {
+			uprintf("readdata_2\n\n");
+			nssHigh();
+			state = readData_done;
+		}
 	}
 }
 
