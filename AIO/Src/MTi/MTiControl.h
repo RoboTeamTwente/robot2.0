@@ -22,6 +22,13 @@ typedef enum {
 	MT_failed
 }MT_StatusTypeDef;// Defines the status that most functions will return
 
+enum{
+	Xsens_Reset,
+	Xsens_Config,
+	Xsens_Measure,
+	Xsens_Unknown
+}Xsens_state;
+
 MT_StatusTypeDef MT_Init();
 /*	Call at a High > 200 HZ to ensure all messages will be handled
  * 	Return MT_failed if HAL_UART gives an error
@@ -39,6 +46,39 @@ MT_StatusTypeDef MT_DeInit();
  * 	retval: MT_succes if GoToConfigAck is received MT_failed otherwise
  */
 MT_StatusTypeDef MT_GoToConfig();
+/*	start using the In-run compass calibration
+ *
+ */
+MT_StatusTypeDef MT_UseIcc();
+/* choose which filter the MTi-3 should use
+ * param filter
+ * 		0: general
+ * 		1: High_mag_dep
+ * 		2: Dynamic
+ * 		3: North_referenced
+ * 		4: VRU_general
+ */
+MT_StatusTypeDef MT_SetFilterProfile(uint8_t filter);
+/*request the current filter profile
+ *
+ */
+MT_StatusTypeDef MT_ReqFilterProfile();
+/*	set the option flags
+ *
+ */
+MT_StatusTypeDef MT_SetOptions();
+/*	request the option flags
+ *
+ */
+MT_StatusTypeDef MT_ReqOptions();
+/*	start the no rotation calibration
+ *
+ */
+MT_StatusTypeDef MT_NoRotation(uint16_t seconds);
+/*	returns the statusword in param word if it exists
+ *
+ */
+uint32_t* MT_GetStatusWord();
 /*	Put Xsens into Measurement state
  * 	retval: MT_succes if GoToMeasutementAck is received MT_failed otherwise
  */

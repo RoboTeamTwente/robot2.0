@@ -10,6 +10,10 @@
 
 #include <stdint.h>
 
+#define FOREACHWHEEL(X) for(wheels_handles X = wheels_RF; X <= wheels_LF; X++)
+
+#define N_WHEELS 4				// number of wheels
+
 typedef enum {
 	wheels_RF,
 	wheels_RB,
@@ -19,7 +23,7 @@ typedef enum {
 
 void wheels_Init();
 void wheels_DeInit();
-void calcMotorSpeed (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]);
+void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]);
 void wheels_SetOutput(float power[4]);
 int16_t wheels_GetEncoder(wheels_handles wheel);
 float wheels_GetSpeed(wheels_handles wheel);
