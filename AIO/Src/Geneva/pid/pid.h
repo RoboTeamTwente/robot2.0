@@ -68,6 +68,7 @@ int16_t pid_GetCurrentOutput(PID_controller_HandleTypeDef* pc);
 void pid_SetReference(float ref, PID_controller_HandleTypeDef* pc);
 // calculate the current speed according to the encoder values
 void pid_Init(PID_controller_HandleTypeDef* PID_controller);
+void pid_Deinit(PID_controller_HandleTypeDef* PID_controller);
 // controls the output, to be called on a regular schedule
 void pid_Control(float current_speed, PID_controller_HandleTypeDef* pc);
 #endif /* PID_H_ */

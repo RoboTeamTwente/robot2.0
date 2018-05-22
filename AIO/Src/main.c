@@ -148,17 +148,17 @@ int main(void)
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
   address = ReadAddress();
+  kick_Init();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
-//  geneva_Init();
   DO_Init();
   dribbler_Init();
   //ballsensorInit();
   wheels_Init();
   MT_Init();
+  geneva_Init();
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
-  kick_Init();
   dataPacket dataStruct;
   uint LastPackageTime = 0;
   uint printtime = 0;
@@ -206,13 +206,14 @@ int main(void)
 		  wheels_SetOutput(wheel_powers);
 	  }
 	  if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
+// 		  BATTERY IS ALMOST EMPTY!!!!!
 		  uprintf("Battery empty!\n\r");
 		  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
 		  wheels_DeInit();
 		  kick_DeInit();
-// 		  BATTERY IS ALMOST EMPTY!!!!!
+		  geneva_Deinit();
+		  dribbler_Deinit();
 //		  battery_empty = true;
-//		  dribbler_SetSpeed(0);
 	  }
 	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
 		  // handle the message
@@ -221,9 +222,27 @@ int main(void)
 	  MT_Update();
 	  if((HAL_GetTick() - printtime > 1000)){
 		  printtime = HAL_GetTick();
-		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
+//		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
 		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
+		  uprintf("geneva enc[%i]\n\r", geneva_Encodervalue());
+		  switch(geneva_GetState()){
+		  case geneva_idle:
+			  uprintf("geneva_idle\n\r")
+			  break;
+		  case geneva_setup:
+			  uprintf("geneva_setup\n\r")
+			  break;
+		  case geneva_too_close:
+			  uprintf("geneva_too_close\n\r")
+			  break;
+		  case geneva_returning:
+			  uprintf("geneva_returning\n\r")
+			  break;
+		  case geneva_running:
+			  uprintf("geneva_running\n\r")
+			  break;
+		  }
+//		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 	  }
   /* USER CODE END WHILE */
@@ -323,12 +342,12 @@ void HandleCommand(char* input){
 		uprintf("address = [%d]\n\r", address);
 	}else if(!strcmp(input, "example2")){
 		uprintf("stop!\n\r");
-	}else if(!strcmp(input, "geneva")){
+	}else if(!strcmp(input, "geneva get")){
 		uprintf("position = [%u]\n\r", geneva_GetPosition());
 	}else if(!strcmp(input, "geneva stop")){
 		geneva_SetState(geneva_idle);
-	}else if(!memcmp(input, "geneva" , strlen("geneva"))){
-		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
+	}else if(!memcmp(input, "geneva set" , strlen("geneva set"))){
+		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva set"), NULL, 10));
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
 	}else if(!memcmp(input, "kick" , strlen("kick"))){
@@ -378,6 +397,10 @@ void dribbler_Init(){
 	dribbler_SetSpeed(0);
 }
 
+void dribbler_Deinit(){
+	HAL_TIM_PWM_Stop(&htim11, TIM_CHANNEL_1);
+}
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart3.Instance){//input from the PC
 		puttystruct.huart_Rx_len = 1;
@@ -411,6 +434,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 		//wireless message received
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
+		//uprintf("geneva sensor\n\r");
 		geneva_SensorCallback();
 	}
 }
