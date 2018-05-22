@@ -156,9 +156,9 @@ int main(void)
   //ballsensorInit();
   wheels_Init();
   MT_Init();
+  geneva_Init();
   nssHigh(&hspi2);
   initRobo(&hspi2, freqChannel, address);
-  geneva_Init();
   dataPacket dataStruct;
   uint LastPackageTime = 0;
   uint printtime = 0;
@@ -206,13 +206,14 @@ int main(void)
 		  wheels_SetOutput(wheel_powers);
 	  }
 	  if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
+// 		  BATTERY IS ALMOST EMPTY!!!!!
 		  uprintf("Battery empty!\n\r");
 		  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
 		  wheels_DeInit();
 		  kick_DeInit();
-// 		  BATTERY IS ALMOST EMPTY!!!!!
+		  geneva_Deinit();
+		  dribbler_Deinit();
 //		  battery_empty = true;
-//		  dribbler_SetSpeed(0);
 	  }
 	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
 		  // handle the message
@@ -394,6 +395,10 @@ void dribbler_SetSpeed(uint8_t speed){
 void dribbler_Init(){
 	HAL_TIM_PWM_Start(&htim11, TIM_CHANNEL_1);
 	dribbler_SetSpeed(0);
+}
+
+void dribbler_Deinit(){
+	HAL_TIM_PWM_Stop(&htim11, TIM_CHANNEL_1);
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){

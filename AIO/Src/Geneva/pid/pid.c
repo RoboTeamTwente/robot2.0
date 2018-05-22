@@ -56,6 +56,13 @@ void pid_Init(PID_controller_HandleTypeDef* PID_controller){
 	__HAL_TIM_SET_AUTORELOAD(PID_controller->CallbackTimer, __HAL_TIM_GET_AUTORELOAD(PID_controller->CallbackTimer)/ n_motors);
 }
 
+void pid_Deinit(PID_controller_HandleTypeDef* PID_controller){
+	if(PID_controller == NULL)
+		return;
+	HAL_TIM_PWM_Stop(PID_controller->actuator,TIM_CHANNEL_1);
+	HAL_TIM_Base_Stop(PID_controller->CallbackTimer);
+}
+
 #define FILTER_SIZE 1 // DO NOT USE (BESIDES 1)
 void pid_Control(float sensor_output, PID_controller_HandleTypeDef* pc){
 	static float prev_e[FILTER_SIZE] = {0};
