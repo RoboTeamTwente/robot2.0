@@ -38,6 +38,8 @@ void kick_Kick(int percentage)
 {
 	if(percentage < 1){
 		percentage = 1;
+	}else if(percentage > 100){
+		percentage = 100;
 	}
 	if(kick_state == kick_Ready)
 	{
@@ -61,8 +63,11 @@ void kick_Kick(int percentage)
  */
 void kick_Chip(int percentage)
 {
+	percentage = percentage * 2;	// chipping benefits from longer duration
 	if(percentage < 1){
 		percentage = 1;
+	}else if(percentage > 100){
+		percentage = 100;
 	}
 	if(kick_state == kick_Ready)
 	{
@@ -74,7 +79,7 @@ void kick_Chip(int percentage)
 		HAL_TIM_Base_Stop(&htim13);											// Stop timer
 		__HAL_TIM_CLEAR_IT(&htim13,TIM_IT_UPDATE);
 		__HAL_TIM_SET_COUNTER(&htim13, 0);									// Clear timer
-		__HAL_TIM_SET_AUTORELOAD(&htim13, percentage);						// Set kick time
+		__HAL_TIM_SET_AUTORELOAD(&htim13, percentage << 1);						// Set kick time
 		HAL_TIM_Base_Start_IT(&htim13);   									// Start timer for kick off
 	}
 }

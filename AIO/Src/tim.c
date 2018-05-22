@@ -435,7 +435,7 @@ void MX_TIM13_Init(void)
 {
 
   htim13.Instance = TIM13;
-  htim13.Init.Prescaler = 2400;
+  htim13.Init.Prescaler = 2400*4;
   htim13.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim13.Init.Period = 0;
   htim13.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;

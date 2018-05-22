@@ -42,7 +42,7 @@ void Wireless_newPacketHandler() {
 void Wireless_Init(uint8_t address) {
 	localRobotID = address;
 	uprintf("Robot ID: %i\n", localRobotID);
-
+	preparedAckData.roboID = localRobotID;
 	while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
 		uprintf("Error while initializing nRF wireless module. Check connections.\n");
 	}

@@ -100,6 +100,7 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds);
 
 void dribbler_SetSpeed(uint8_t percentage);
 void dribbler_Init();
+void dribbler_Deinit();
 
 /* USER CODE END PFP */
 
@@ -155,7 +156,6 @@ int main(void)
   MX_TIM13_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  address = ReadAddress();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
 //  geneva_Init();
@@ -178,8 +178,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	ballsensorMeasurementLoop();
-//	preparedAckData.roboID = localRobotID;
 	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
 	if(Wireless_newData()) {
@@ -268,7 +266,7 @@ int main(void)
   } // end while loop
   /* USER CODE END 3 */
 
-} // end main
+}
 
 /**
   * @brief System Clock Configuration
