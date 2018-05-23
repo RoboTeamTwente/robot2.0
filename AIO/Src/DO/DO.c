@@ -20,7 +20,6 @@ uint start_time;
 bool DO_enabled = false;
 bool use_yaw_control = true;
 bool ref_is_angle = false;
-bool use_vision = false;
 bool use_global_ref = true;
 bool no_vel_control = true;
 
@@ -266,9 +265,9 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 		w_prev[i] = w_wheels[i];
 	}
 
-		 /////////////////////////////
-		// CALIBRATION OF YAW OFFSET //
-		 /////////////////////////////
+		  ///////////////////////////////
+		 // CALIBRATION OF YAW OFFSET //
+		///////////////////////////////
 
 	static float yaw_offset = 0;
 	static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
@@ -307,52 +306,46 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 					yaw_offset = -avg_xsens_yaw;
 
 				}
-				calibration_needed = false;
-
-				// reset timer and averages
-				no_rot_counter = 0;
-				avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
-				avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
+				calibration_needed = false; // done with calibrating
+				no_rot_counter = 0;			// reset timer
 			} else if (no_rot_counter > no_rot_duration - avg_size) {
 				// averaging angles requires summing their unit vectors
 				avg_xsens_vec[0] += cosf(xsens_yaw);
 				avg_xsens_vec[1] += sinf(xsens_yaw);
 				avg_vision_vec[0] += cosf(vision_yaw);
 				avg_vision_vec[1] += sinf(vision_yaw);
+			} else {
+				// reset averages
+				avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
+				avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
 			}
-		} else { // so fabs(yaw0 - xsens_yaw) > 0.01
-			// reset comparation yaw to current yaw
-			yaw0 = xsens_yaw;
-			// reset timer and averages
-			no_rot_counter = 0;
-			avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
-			avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
+		} else { // rotation too large
+			yaw0 = xsens_yaw; // reset comparation yaw to current yaw
+			no_rot_counter = 0; // reset timer
 		}
 		no_rot_counter++;
-	} else {
-		// reset timer and averages
-		no_rot_counter = 0;
-		avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
-		avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
+	} else { // calibration not needed
+		no_rot_counter = 0; // reset timer
 	}
 
-		 ///////////////////////
-		// ACTUAL CONTROL PART //
-		 ///////////////////////
+		  /////////////////////////
+		 // ACTUAL CONTROL PART //
+		/////////////////////////
 
-	// call the controller with the (calibrated) xsens data. The output is wheelsPWM
+	// get and offset xsens data
 	float xsensData[3];
 	xsensData[body_x] = -accptr[0];
 	xsensData[body_y] = -accptr[1];
 	xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
 	rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also be calibrated to the offset yaw
 
+	// determine local velocity reference
 	float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
 	if (use_global_ref) {
 		rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
 	}
 
-	// Compensation for moving direction when rotating
+	// compensation for moving direction when rotating
 	float assumed_delay = 0.06; //s
 	static float prevYaw = 0;
 	float yawVel = constrainAngle(xsensData[body_w] - prevYaw)/TIME_DIFF;

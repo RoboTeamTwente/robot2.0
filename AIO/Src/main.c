@@ -199,6 +199,8 @@ int main(void)
 		velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
 		velocityRef[body_w] = angularVelRef;
 
+//		uprintf("[%i]",receivedRoboData.rho);
+
 		//TODO: test vision angle and calibration etc.
 		vision_available = receivedRoboData.use_cam_info;
 		if (vision_available) {
@@ -209,7 +211,7 @@ int main(void)
 		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
 
 		//kicker
-		if (receivedRoboData.kick_chip_forced && ((HAL_GetTick() - kick_timer) > 0)){
+		if (receivedRoboData.do_kick && ((HAL_GetTick() - kick_timer) > 0)){
 			kick_timer = HAL_GetTick() + 1000U;
 			if(receivedRoboData.do_chip){
 				kick_Chip((receivedRoboData.kick_chip_power*100)/255);
@@ -224,7 +226,7 @@ int main(void)
 	}
 
 	if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
-		uprintf("Battery empty!\n\r");
+//		uprintf("Battery empty!\n\r");
 		HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
 		wheels_DeInit();
 		kick_DeInit();
@@ -329,14 +331,14 @@ void SystemClock_Config(void)
 #define SET_FILTER_COMMAND "mt filter"
 void HandleCommand(char* input){
 	if(strcmp(input, "mt start") == 0){
-		uprintf("Starting device MTi\n\r");
+//		uprintf("Starting device MTi\n\r");
 		if(MT_succes == MT_Init()){
-			uprintf("MTi started.\n\r");
+//			uprintf("MTi started.\n\r");
 		}else{
-			uprintf("No communication with MTi!\n\r");
+//			uprintf("No communication with MTi!\n\r");
 		}
 	}else if(!strcmp(input, "mt stop")){
-		uprintf("resetting the MTi.\n\r");
+//		uprintf("resetting the MTi.\n\r");
 		MT_DeInit();
 	}else if(strcmp(input, "mt config") == 0){
 		MT_GoToConfig();
@@ -353,29 +355,29 @@ void HandleCommand(char* input){
 	}else if(!memcmp(input, SET_FILTER_COMMAND , strlen(SET_FILTER_COMMAND))){
 		MT_SetFilterProfile(strtol(input + 1 + strlen(SET_FILTER_COMMAND), NULL, 10));
 	}else if(strcmp(input, "mt factoryreset") == 0){
-		uprintf("Resetting the configuration.\n\r");
+//		uprintf("Resetting the configuration.\n\r");
 		MT_FactoryReset();
 	}else if(strcmp(input, "mt reqfilter") == 0){
-		uprintf("requesting current filter profile.\n\r");
+//		uprintf("requesting current filter profile.\n\r");
 		MT_ReqFilterProfile();
 	}else if(memcmp(input, "mt setconfig", strlen("mt setconfig")) == 0){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
 	}else if(strcmp(input, "reqconfig") == 0){
-		uprintf("requesting output configuration mode\n\r");
+//		uprintf("requesting output configuration mode\n\r");
 		MT_RequestConfig();
 	}else if(!strcmp(input, "address")){
-		uprintf("address = [%d]\n\r", localRobotID);
+//		uprintf("address = [%d]\n\r", localRobotID);
 	}else if(!strcmp(input, "example2")){
-		uprintf("stop!\n\r");
+//		uprintf("stop!\n\r");
 	}else if(!strcmp(input, "geneva")){
-		uprintf("position = [%u]\n\r", geneva_GetPosition());
+//		uprintf("position = [%u]\n\r", geneva_GetPosition());
 	}else if(!strcmp(input, "geneva stop")){
 		geneva_SetState(geneva_idle);
 	}else if(!strcmp(input, "euler")){
 		print_euler = ! print_euler;
-		uprintf("print_euler = %d\n\r", print_euler);
+//		uprintf("print_euler = %d\n\r", print_euler);
 	}else if(!memcmp(input, "geneva" , strlen("geneva"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
 	}else if(!memcmp(input, "control" , strlen("control"))){
@@ -390,16 +392,16 @@ void HandleCommand(char* input){
 		wheels_testing_power = atoff(input + strlen(TEST_WHEELS_COMMAND));
 		wheels_testing = (wheels_testing_power <= -10 || wheels_testing_power >= 10);
 		if((wheels_testing)){
-			uprintf("wheels test on, pwm [%f]\n\r", wheels_testing_power);
+//			uprintf("wheels test on, pwm [%f]\n\r", wheels_testing_power);
 		}
 	}else if(!memcmp(input, "dribble", strlen("dribble"))){
 		uint8_t speed = strtol(input + strlen("dribble"), NULL, 10);
 		dribbler_SetSpeed(speed);
-		uprintf("speed is set to[%lu]\n\r", __HAL_TIM_GET_COMPARE(&htim11, TIM_CHANNEL_1));
+//		uprintf("speed is set to[%lu]\n\r", __HAL_TIM_GET_COMPARE(&htim11, TIM_CHANNEL_1));
 	}
 
 	else if(!strcmp(input, "keyboard control")){
-		uprintf("going to keyboard control\r\npress escape to stop\n\r");
+//		uprintf("going to keyboard control\r\npress escape to stop\n\r");
 		keyboard_control = true;
 		wheels_testing = true;
 	}

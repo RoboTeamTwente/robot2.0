@@ -25,7 +25,7 @@
 									//Description                 Values            Units     	  Represented values    Bits
 typedef struct roboData{
    uint8_t id:5;					//Robot ID                    [0, 15]           -             [0, 15]                  4
-   int16_t rho:11;					//Velocity length             [0, 2047]         0.004m/s      [0, 8.188]              11
+   uint16_t rho:11;					//Velocity length             [0, 2047]         0.004m/s      [0, 8.188]              11
    int16_t theta:11;				//Velocity angle              [-1024, 1023]     0.00307rad    [-pi, pi>               11
    uint8_t driving_reference:1;		//Driving reference           [0, 1]            -             {true, false}            1
    uint8_t use_cam_info:1;			//Use camera information      [0, 1]            -             {true, false}            1
