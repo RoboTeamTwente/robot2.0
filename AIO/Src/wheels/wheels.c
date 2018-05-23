@@ -147,7 +147,7 @@ void wheels_SetOutput(float power[N_WHEELS]){
 	bool prev_reverse[N_WHEELS];
 	bool delay[N_WHEELS] = {false};
 	case wheels_uninitialized:
-		uprintf("ERROR wheels_uninitialized\n\r");
+		//uprintf("ERROR wheels_uninitialized\n\r");
 		return;
 	case wheels_ready:
 		memcpy(prev_reverse, reverse, N_WHEELS);

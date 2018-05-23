@@ -155,10 +155,9 @@ int main(void)
   MX_TIM13_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  address = ReadAddress();
+  //address = ReadAddress();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
-//  geneva_Init();
   DO_Init();
   dribbler_Init();
   ballsensorInit();
@@ -178,6 +177,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
 //	ballsensorMeasurementLoop();
 //	preparedAckData.roboID = localRobotID;
 	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
@@ -217,6 +217,11 @@ int main(void)
 			}else{
 				kick_Kick((receivedRoboData.kick_chip_power*100)/255);
 			}
+		}
+
+		//geneva
+		if (receivedRoboData.geneva_drive_state != 0){
+			geneva_SetPosition(receivedRoboData.geneva_drive_state-1);
 		}
 
 	} else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data

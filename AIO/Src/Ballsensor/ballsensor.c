@@ -137,7 +137,6 @@ void parseMessage() {
 
 void ballsensorInit()
 {
-	PuttyInterface_Init(&puttystruct);
 	uprintf("Initializing ball sensor\r\n");
 	HAL_I2C_Init(&hi2c1);
 	resetKickChipData();
@@ -147,8 +146,14 @@ void ballsensorInit()
 
 	next_message_length = 2;
 	HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 1);
-	while(!HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin));
-	I2CRx();
+	int currentTime = HAL_GetTick();
+	while(  !HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)  &&  (HAL_GetTick()-currentTime < 5)  );
+	if (HAL_GetTick()-currentTime < 5){
+		uprintf("No ball sensor found\n\r");
+		zForceState = zForce_RST;
+	}else{
+		I2CRx();
+	}
 }
 
 void ballsensorReset() {
