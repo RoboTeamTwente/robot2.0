@@ -100,6 +100,7 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds);
 
 void dribbler_SetSpeed(uint8_t percentage);
 void dribbler_Init();
+void dribbler_Deinit();
 
 /* USER CODE END PFP */
 
@@ -177,7 +178,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
 //	ballsensorMeasurementLoop();
 //	preparedAckData.roboID = localRobotID;
 	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
@@ -185,7 +185,7 @@ int main(void)
 	if(Wireless_newData()) {
 		Wireless_newPacketHandler();
 		//printBallPosition();
-		HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+		//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
 		if (halt && !calibration_needed) {
 			  halt = false; // robot is only allowed to move after packages are received and yaw calibration is not needed
@@ -224,7 +224,9 @@ int main(void)
 			geneva_SetPosition(receivedRoboData.geneva_drive_state-1);
 		}
 
-	} else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
+	}else if(wheels_testing){
+		velocityRef[body_w] = wheels_testing_power;
+	}else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
 		halt = true;
 		vision_available = false;
 	}
