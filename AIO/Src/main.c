@@ -167,7 +167,7 @@ int main(void)
   kick_Init();
 
   uint printtime = 0;
-
+  uint battery_count = 0;
 
   Wireless_Init(ReadAddress());
 
@@ -219,19 +219,22 @@ int main(void)
 
 	}else if(wheels_testing){
 		velocityRef[body_w] = wheels_testing_power;
+		halt = false;
 	}else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
 		halt = true;
 		vision_available = false;
 	}
 
 	if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
-		uprintf("Battery empty!\n\r");
-		HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
-		wheels_DeInit();
-		kick_DeInit();
-		dribbler_Deinit();
-		geneva_Deinit();
-		preparedAckData.batteryState = 0;
+		if(battery_count++ > 1000){
+			uprintf("Battery empty!\n\r");
+			HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
+			wheels_DeInit();
+			kick_DeInit();
+			dribbler_Deinit();
+			geneva_Deinit();
+			preparedAckData.batteryState = 0;
+		}
 // 		BATTERY IS ALMOST EMPTY!!!!!
 //		battery_empty = true;
 //		dribbler_SetSpeed(0);
