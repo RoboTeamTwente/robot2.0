@@ -156,7 +156,6 @@ int main(void)
   MX_TIM13_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  //address = ReadAddress();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
   DO_Init();
@@ -168,7 +167,7 @@ int main(void)
   kick_Init();
 
   uint printtime = 0;
-
+  uint battery_count = 0;
 
   Wireless_Init(ReadAddress());
 
@@ -178,8 +177,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//	ballsensorMeasurementLoop();
-//	preparedAckData.roboID = localRobotID;
 	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
 	if(Wireless_newData()) {
@@ -212,11 +209,7 @@ int main(void)
 		//kicker
 		if (receivedRoboData.kick_chip_forced && ((HAL_GetTick() - kick_timer) > 0)){
 			kick_timer = HAL_GetTick() + 1000U;
-			if(receivedRoboData.do_chip){
-				kick_Chip((receivedRoboData.kick_chip_power*100)/255);
-			}else{
-				kick_Kick((receivedRoboData.kick_chip_power*100)/255);
-			}
+			kick_Shoot((receivedRoboData.kick_chip_power*100)/255,!receivedRoboData.do_chip);
 		}
 
 		//geneva
@@ -226,19 +219,22 @@ int main(void)
 
 	}else if(wheels_testing){
 		velocityRef[body_w] = wheels_testing_power;
+		halt = false;
 	}else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
 		halt = true;
 		vision_available = false;
 	}
 
 	if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
-		uprintf("Battery empty!\n\r");
-		HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
-		wheels_DeInit();
-		kick_DeInit();
-		dribbler_Deinit();
-		geneva_Deinit();
-		preparedAckData.batteryState = 0;
+		if(battery_count++ > 1000){
+			uprintf("Battery empty!\n\r");
+			HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
+			wheels_DeInit();
+			kick_DeInit();
+			dribbler_Deinit();
+			geneva_Deinit();
+			preparedAckData.batteryState = 0;
+		}
 // 		BATTERY IS ALMOST EMPTY!!!!!
 //		battery_empty = true;
 //		dribbler_SetSpeed(0);
@@ -275,7 +271,7 @@ int main(void)
   } // end while loop
   /* USER CODE END 3 */
 
-} // end main
+}
 
 /**
   * @brief System Clock Configuration
@@ -390,9 +386,9 @@ void HandleCommand(char* input){
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
 	}else if(!memcmp(input, "kick" , strlen("kick"))){
-		kick_Kick(strtol(input + 1 + strlen("kick"), NULL, 10));
+		kick_Shoot(strtol(input + 1 + strlen("kick"), NULL, 10),KICK);
 	}else if(!memcmp(input, "chip" , strlen("chip"))){
-		kick_Chip(strtol(input + 1 + strlen("chip"), NULL, 10));
+		kick_Shoot(strtol(input + 1 + strlen("chip"), NULL, 10),CHIP);
 	}else if(!memcmp(input, "block" , strlen("block"))){
 		kick_Stateprint();
 	}else if(!memcmp(input, TEST_WHEELS_COMMAND, strlen(TEST_WHEELS_COMMAND))){

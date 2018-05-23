@@ -94,12 +94,12 @@ void updatePosition(uint8_t data[]) {
 void ballHandler(uint16_t x, uint16_t y) {
 
 	if(kickWhenBall.enable) {
-		kick_Kick(kickWhenBall.power);
+		kick_Shoot(kickWhenBall.power,KICK);
 		//kick_Kick(60);
 		noBall();
 	}
 	else if(chipWhenBall.enable) {
-		kick_Chip(chipWhenBall.power);
+		kick_Shoot(chipWhenBall.power,CHIP);
 		noBall();
 	}
 }
