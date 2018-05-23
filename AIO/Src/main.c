@@ -209,11 +209,7 @@ int main(void)
 		//kicker
 		if (receivedRoboData.kick_chip_forced && ((HAL_GetTick() - kick_timer) > 0)){
 			kick_timer = HAL_GetTick() + 1000U;
-			if(receivedRoboData.do_chip){
-				kick_Chip((receivedRoboData.kick_chip_power*100)/255);
-			}else{
-				kick_Kick((receivedRoboData.kick_chip_power*100)/255);
-			}
+			kick_Shoot((receivedRoboData.kick_chip_power*100)/255,!receivedRoboData.do_chip);
 		}
 
 		//geneva
@@ -387,9 +383,9 @@ void HandleCommand(char* input){
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
 	}else if(!memcmp(input, "kick" , strlen("kick"))){
-		kick_Kick(strtol(input + 1 + strlen("kick"), NULL, 10));
+		kick_Shoot(strtol(input + 1 + strlen("kick"), NULL, 10),KICK);
 	}else if(!memcmp(input, "chip" , strlen("chip"))){
-		kick_Chip(strtol(input + 1 + strlen("chip"), NULL, 10));
+		kick_Shoot(strtol(input + 1 + strlen("chip"), NULL, 10),CHIP);
 	}else if(!memcmp(input, "block" , strlen("block"))){
 		kick_Stateprint();
 	}else if(!memcmp(input, TEST_WHEELS_COMMAND, strlen(TEST_WHEELS_COMMAND))){
