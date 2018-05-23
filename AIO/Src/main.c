@@ -49,7 +49,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "PuttyInterface/PuttyInterface.h"
-#include "address/address.h"
+#include "userIO/userIO.h"
 #include "Geneva/geneva.h"
 #include "DO/DO.h"
 #include "Ballsensor/ballsensor.h"
@@ -58,6 +58,7 @@
 #include "kickchip/kickchip.h"
 #include "MTi/MTiControl.h"
 #include "wireless/wireless.h"
+#include "dribbler/dribbler.h"
 
 /* USER CODE END Includes */
 
@@ -92,15 +93,6 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void HandleCommand(char* input);
-/*
- * uint is the value to display
- * n_leds chooses bitwise which leds to show the uint on, 0 means no edit
- */
-void Uint2Leds(uint8_t uint, uint8_t n_leds);
-
-void dribbler_SetSpeed(uint8_t percentage);
-void dribbler_Init();
-void dribbler_Deinit();
 
 /* USER CODE END PFP */
 
@@ -228,7 +220,7 @@ int main(void)
 	if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
 		if(battery_count++ > 1000){
 			uprintf("Battery empty!\n\r");
-			HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
+			ToggleLD(4);
 			wheels_DeInit();
 			kick_DeInit();
 			dribbler_Deinit();
@@ -251,8 +243,7 @@ int main(void)
 	MT_Update();
 	if((HAL_GetTick() - printtime > 1000)){
 		printtime = HAL_GetTick();
-
-		HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
+		ToggleLD(1);
 
 		if(*MT_GetStatusWord() & 0b00011000){
 			//uprintf("in NRU; ")
@@ -410,31 +401,7 @@ void HandleCommand(char* input){
 	}
 }
 
-void Uint2Leds(uint8_t uint, uint8_t n_leds){
-	if(!n_leds) n_leds = 0xff;
-	if(n_leds & 0b00000001) HAL_GPIO_WritePin(LD1_GPIO_Port,LD1_Pin, uint & 0b00000001);
-	if(n_leds & 0b00000010) HAL_GPIO_WritePin(LD2_GPIO_Port,LD2_Pin, uint & 0b00000010);
-	if(n_leds & 0b00000100) HAL_GPIO_WritePin(LD3_GPIO_Port,LD3_Pin, uint & 0b00000100);
-	if(n_leds & 0b00001000) HAL_GPIO_WritePin(LD4_GPIO_Port,LD4_Pin, uint & 0b00001000);
-	if(n_leds & 0b00010000) HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, uint & 0b00010000);
-	if(n_leds & 0b00100000) HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin, uint & 0b00100000);
-}
 
-void dribbler_SetSpeed(uint8_t speed){
-	if(speed > 7){
-		speed = 7;
-	}
-	__HAL_TIM_SET_COMPARE(&htim11, TIM_CHANNEL_1, (7 - speed) * (MAX_PWM / 7));
-}
-
-void dribbler_Init(){
-	HAL_TIM_PWM_Start(&htim11, TIM_CHANNEL_1);
-	dribbler_SetSpeed(0);
-}
-
-void dribbler_Deinit(){
-	HAL_TIM_PWM_Stop(&htim11, TIM_CHANNEL_1);
-}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart3.Instance){//input from the PC
