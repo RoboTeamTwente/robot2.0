@@ -1,3 +1,15 @@
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  (byte & 0x80 ? '1' : '0'), \
+  (byte & 0x40 ? '1' : '0'), \
+  (byte & 0x20 ? '1' : '0'), \
+  (byte & 0x10 ? '1' : '0'), \
+  (byte & 0x08 ? '1' : '0'), \
+  (byte & 0x04 ? '1' : '0'), \
+  (byte & 0x02 ? '1' : '0'), \
+  (byte & 0x01 ? '1' : '0')
+
+
 
 /**
   ******************************************************************************
@@ -173,6 +185,8 @@ int main(void)
 
   /* USER CODE END 2 */
 
+  uint16_t counter = 0;
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -186,7 +200,7 @@ int main(void)
 		//printBallPosition();
 		HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
-		if (halt && !calibration_needed) {
+		if (!calibration_needed) {
 			  halt = false; // robot is only allowed to move after packages are received and yaw calibration is not needed
 		}
 		LastPackageTime = HAL_GetTick();
@@ -199,7 +213,11 @@ int main(void)
 		velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
 		velocityRef[body_w] = angularVelRef;
 
-//		uprintf("[%i]",receivedRoboData.rho);
+//		uprintf("[%i] ",receivedRoboData.velocity_angular);
+//		if(counter++ == 10){
+//			uprintf("m: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN"\r\n", BYTE_TO_BINARY(receivedRoboData.velocity_angular>>8), BYTE_TO_BINARY(receivedRoboData.velocity_angular));
+//			counter = 0;
+//		}
 
 		//TODO: test vision angle and calibration etc.
 		vision_available = receivedRoboData.use_cam_info;
@@ -211,7 +229,7 @@ int main(void)
 		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
 
 		//kicker
-		if (receivedRoboData.do_kick && ((HAL_GetTick() - kick_timer) > 0)){
+		if (receivedRoboData.do_kick || receivedRoboData.do_chip/* && ((HAL_GetTick() - kick_timer) > 0)*/){
 			kick_timer = HAL_GetTick() + 1000U;
 			if(receivedRoboData.do_chip){
 				kick_Chip((receivedRoboData.kick_chip_power*100)/255);
@@ -445,7 +463,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		float wheelsPWM[4] = {0,0,0,0};
 		calibration_needed = DO_Control(velocityRef, vision_yaw, vision_available, wheelsPWM); // outputs to wheelsPWM
-
+		if (calibration_needed) {
+			halt = true;
+		}
 		 // send PWM to motors
 		if (halt) { // when communication is lost for too long, we send 0 to the motors
 			float wheel_powers[4] = {0,0,0,0};

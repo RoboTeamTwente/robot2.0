@@ -52,7 +52,7 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *I2cHandle)
 void I2CTx(uint8_t tosend[], uint8_t length) {
     while(HAL_OK != (error = HAL_I2C_Master_Transmit_IT(&hi2c1, ballsensor_i2caddr, tosend, length))){// in case of error; put the device in reset
   	  HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
-        uprintf("BALLSENSOR - i2c transmit failed with error [%d]!\n\rzForce stopped\n\r", error);
+//        uprintf("BALLSENSOR - i2c transmit failed with error [%d]!\n\rzForce stopped\n\r", error);
         zForceState = zForce_RST;
     }
 }
@@ -60,7 +60,7 @@ void I2CTx(uint8_t tosend[], uint8_t length) {
 void I2CRx() {
 	while(HAL_OK != (error = HAL_I2C_Master_Receive_IT(&hi2c1, ballsensor_i2caddr, data, next_message_length))){
 		HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 0);
-		uprintf("BALLSENSOR - i2c read failed with error [%d]!\n\rzForce stopped\n\r", error);
+//		uprintf("BALLSENSOR - i2c read failed with error [%d]!\n\rzForce stopped\n\r", error);
 
 		zForceState = zForce_RST;
 	}
@@ -108,11 +108,11 @@ void parseMessage() {
 
 
 	if(!memcmp( data, bootcomplete_response, sizeof(bootcomplete_response))) {
-	  uprintf("BootComplete response received, enabling device\n\r");
+//	  uprintf("BootComplete response received, enabling device\n\r");
 	  zForceState = zForce_EnableDevice;
 	}
 	else if(!memcmp(data, enable_response, sizeof(enable_response))) {
-		uprintf("Enable response received, going to waitfordr\n\r");
+//		uprintf("Enable response received, going to waitfordr\n\r");
 		zForceState = zForce_setFreq;
 	}
 	else if(!memcmp(data,measurement_rx, sizeof(measurement_rx))) { //ball detected
@@ -122,7 +122,7 @@ void parseMessage() {
 		zForceState = zForce_WaitForDR;
 	}
 	else if(!memcmp(data,set_freq_response, sizeof(set_freq_response))) {
-		uprintf("Set frequency:\r\n");
+//		uprintf("Set frequency:\r\n");
 		//printRawData(data);
 		ballsensorInitialized = 1;
 		zForceState = zForce_WaitForDR;
@@ -177,7 +177,7 @@ uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint
 			  	  I2CTx(enable_command, sizeof(enable_command));
 			  break;
 		  case zForce_setFreq:
-		          uprintf("Setting frequency\n\r");
+//		          uprintf("Setting frequency\n\r");
 		          I2CTx(set_freq_command, sizeof(set_freq_command));
 		      break;
 		  case zForce_WaitForDR:// when DR(Data Ready) is high, message length needs to be read

@@ -33,7 +33,7 @@ void Wireless_newPacketHandler() {
 
 		int8_t error_code = roboCallback(localRobotID);
 		if(error_code) {
-			uprintf("RoboCallback failed with error: %i\n", error_code);
+//			uprintf("RoboCallback failed with error: %i\n", error_code);
 		}
 		clearInterrupts(); //should not be needed
 	}

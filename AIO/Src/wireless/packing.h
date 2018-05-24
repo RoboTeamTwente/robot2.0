@@ -29,7 +29,7 @@ typedef struct roboData{
    int16_t theta:11;				//Velocity angle              [-1024, 1023]     0.00307rad    [-pi, pi>               11
    uint8_t driving_reference:1;		//Driving reference           [0, 1]            -             {true, false}            1
    uint8_t use_cam_info:1;			//Use camera information      [0, 1]            -             {true, false}            1
-   int16_t velocity_angular:9;		//Reference angular velocity  [-512, 511]       0.098rad/s    [-8*2pi, 8*2pi]          9
+   int16_t velocity_angular:10;		//Reference angular velocity  [-512, 511]       0.098rad/s    [-8*2pi, 8*2pi]         10
    uint8_t debug_info:1;			//Debug information           [0, 1]            -             {true, false}            1
    uint8_t do_kick:1;				//Kick                        [0, 1]            -             {true, false}            1
    uint8_t do_chip:1;				//Chip                        [0, 1]            -             {true, false}            1
