@@ -1,15 +1,3 @@
-#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
-#define BYTE_TO_BINARY(byte)  \
-  (byte & 0x80 ? '1' : '0'), \
-  (byte & 0x40 ? '1' : '0'), \
-  (byte & 0x20 ? '1' : '0'), \
-  (byte & 0x10 ? '1' : '0'), \
-  (byte & 0x08 ? '1' : '0'), \
-  (byte & 0x04 ? '1' : '0'), \
-  (byte & 0x02 ? '1' : '0'), \
-  (byte & 0x01 ? '1' : '0')
-
-
 
 /**
   ******************************************************************************
@@ -177,8 +165,6 @@ int main(void)
 
   /* USER CODE END 2 */
 
-  uint16_t counter = 0;
-
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -215,10 +201,10 @@ int main(void)
 		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
 
 		//kicker
-		if (receivedRoboData.do_kick || receivedRoboData.do_chip/* && ((HAL_GetTick() - kick_timer) > 0)*/){
-			kick_timer = HAL_GetTick() + 1000U;
-			kick_Shoot((receivedRoboData.kick_chip_power*100)/255,!receivedRoboData.do_chip);
-		}
+//		if (receivedRoboData.do_kick || receivedRoboData.do_chip/* && ((HAL_GetTick() - kick_timer) > 0)*/){
+//			kick_timer = HAL_GetTick() + 1000U;
+//			kick_Shoot((receivedRoboData.kick_chip_power*100)/255,!receivedRoboData.do_chip);
+//		}
 
 		//geneva
 		if (receivedRoboData.geneva_drive_state != 0){
@@ -261,10 +247,11 @@ int main(void)
 		ToggleLD(1);
 
 		if(*MT_GetStatusWord() & 0b00011000){
-			//uprintf("in NRU; ")
+			//uprintf("calibrating Xsens.\n\r");
 		}else if(started_icc == false){
 			started_icc = true;
-			MT_UseIcc();
+			if(MT_UseIcc() == MT_succes)
+				uprintf("Xsens calibration done.\n\r");
 		}
 		//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
