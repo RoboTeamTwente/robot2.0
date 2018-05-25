@@ -51,7 +51,7 @@
 /* Private define ------------------------------------------------------------*/
 #define MAX_PWM 2400
 #define ENCODER_FILTER 15
-#define APB1 96
+#define APB1 48
 
 #define FR_RB_Pin GPIO_PIN_4
 #define FR_RB_GPIO_Port GPIOE
@@ -132,7 +132,6 @@
 #define empty_battery_GPIO_Port GPIOD
 #define Geneva_cal_sens_Pin GPIO_PIN_5
 #define Geneva_cal_sens_GPIO_Port GPIOD
-#define Geneva_cal_sens_EXTI_IRQn EXTI9_5_IRQn
 #define Geneva_dir_A_Pin GPIO_PIN_6
 #define Geneva_dir_A_GPIO_Port GPIOD
 #define Geneva_dir_B_Pin GPIO_PIN_7

@@ -1,3 +1,15 @@
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  (byte & 0x80 ? '1' : '0'), \
+  (byte & 0x40 ? '1' : '0'), \
+  (byte & 0x20 ? '1' : '0'), \
+  (byte & 0x10 ? '1' : '0'), \
+  (byte & 0x08 ? '1' : '0'), \
+  (byte & 0x04 ? '1' : '0'), \
+  (byte & 0x02 ? '1' : '0'), \
+  (byte & 0x01 ? '1' : '0')
+
+
 
 /**
   ******************************************************************************
@@ -49,14 +61,17 @@
 #include <math.h>
 #include <stdlib.h>
 #include "PuttyInterface/PuttyInterface.h"
-#include "address/address.h"
+#include "userIO/userIO.h"
 #include "Geneva/geneva.h"
 #include "DO/DO.h"
 #include "Ballsensor/ballsensor.h"
-#include "myNRF24.h"
+//#include "myNRF24.h"
 #include "wheels/wheels.h"
 #include "kickchip/kickchip.h"
 #include "MTi/MTiControl.h"
+#include "wireless/wireless.h"
+#include "dribbler/dribbler.h"
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -65,17 +80,23 @@
 /* Private variables ---------------------------------------------------------*/
 #define STOP_AFTER 250 //ms
 PuttyInterfaceTypeDef puttystruct;
-int8_t address = -1;
-uint8_t freqChannel = 78;
 bool battery_empty = false;
 bool user_control = false;
 bool print_encoder = false;
-
+bool print_euler = false;
 bool wheels_testing = false;
-float wheels_testing_power = 30;
+float wheels_testing_power = 3000;
 bool keyboard_control = false;
+bool started_icc = false;
+bool halt = true;
+bool calibration_needed = true;
+bool vision_available = false;
 
-float velocity[3] = {0};
+
+//float wheelsPWM[4] = {0};
+float velocityRef[3] = {0};
+float vision_yaw = 0;
+uint kick_timer = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -84,14 +105,6 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void HandleCommand(char* input);
-/*
- * uint is the value to display
- * n_leds chooses bitwise which leds to show the uint on, 0 means no edit
- */
-void Uint2Leds(uint8_t uint, uint8_t n_leds);
-
-void dribbler_SetSpeed(uint8_t percentage);
-void dribbler_Init();
 
 /* USER CODE END PFP */
 
@@ -147,90 +160,122 @@ int main(void)
   MX_TIM13_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  address = ReadAddress();
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
-//  geneva_Init();
   DO_Init();
   dribbler_Init();
-  //ballsensorInit();
+  ballsensorInit();
   wheels_Init();
   MT_Init();
-  nssHigh(&hspi2);
-  initRobo(&hspi2, freqChannel, address);
+  geneva_Init();
   kick_Init();
-  dataPacket dataStruct;
-  uint LastPackageTime = 0;
+
   uint printtime = 0;
-  uint kick_timer = 0;
+  uint battery_count = 0;
+
+  Wireless_Init(ReadAddress());
+
   /* USER CODE END 2 */
+
+  uint16_t counter = 0;
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
-	 //ballsensorMeasurementLoop();
-	 if(irqRead(&hspi2)){
-		  LastPackageTime = HAL_GetTick();
-		  roboCallback(&hspi2, &dataStruct);
-		  if(dataStruct.robotID == address){
-			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-			  float wheels[4];
-			  int rotSign = 1;
-			  if(dataStruct.rotationDirection){
-				  rotSign = -1;
-			  }
-			  //uprintf("magn[%u]; angle[%u]\n\r", dataStruct.robotVelocity, dataStruct.angularVelocity);
-			  calcMotorSpeed ((float)dataStruct.robotVelocity/ 1000.0F, (float)dataStruct.movingDirection * (2*M_PI/512), rotSign, (float)(dataStruct.angularVelocity/180.0)*M_PI, wheels);
-			  //uprintf("[%f, %f, %f, %f]\n\r", wheels[wheels_RF], wheels[wheels_RB],  wheels[wheels_LB], wheels[wheels_LF]);
-			  wheels_SetOutput(wheels);
-			  //dribbler
-			  dribbler_SetSpeed(dataStruct.driblerSpeed);
+	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
-			  //kicker
-			  if (dataStruct.kickForce && ((HAL_GetTick() - kick_timer) > 0)){
-				  kick_timer = HAL_GetTick() + 1000U;
-				  if(dataStruct.chipper){
-					  kick_Chip((dataStruct.kickForce*100)/255);
-				  }else{
-					  kick_Kick((dataStruct.kickForce*100)/255);
-				  }
-			  }
-			  //geneva
+	if(Wireless_newData()) {
+		Wireless_newPacketHandler();
+		//printBallPosition();
+		//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
-		  }
+		if (!calibration_needed) {
+			  halt = false; // robot is only allowed to move after packages are received and yaw calibration is not needed
+		}
+		LastPackageTime = HAL_GetTick();
 
-	  }else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){;
-	  	  float wheel_powers[4] = {0, 0, 0, 0};
-		  wheels_SetOutput(wheel_powers);
-	  }
-	  if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
-		  uprintf("Battery empty!\n\r");
-		  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, 1);
-		  wheels_DeInit();
-		  kick_DeInit();
-// 		  BATTERY IS ALMOST EMPTY!!!!!
-//		  battery_empty = true;
-//		  dribbler_SetSpeed(0);
-	  }
-	  if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port, bs_EXTI_Pin)){
-		  // handle the message
-	  }
-	  geneva_Update();
-	  MT_Update();
-	  if((HAL_GetTick() - printtime > 1000)){
-		  printtime = HAL_GetTick();
-		  uprintf("encoder values[%i %i %i %i]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF))
-		  HAL_GPIO_TogglePin(LD1_GPIO_Port,LD1_Pin);
-		  uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
-		  //uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
-	  }
+		//TODO: test this data coming in
+		float velRefAmp = (float)receivedRoboData.rho * 0.004F;
+		float velRefDir = (float)receivedRoboData.theta / 1024.0F * M_PI;
+		float angularVelRef = (float)receivedRoboData.velocity_angular / 512.0F * 16.0F*M_PI;
+		velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
+		velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
+		if(receivedRoboData.use_angle){
+			velocityRef[body_w] = angularVelRef;
+		}
+
+		//TODO: test vision angle and calibration etc.
+		vision_available = receivedRoboData.use_cam_info;
+		if (vision_available) {
+			vision_yaw = ((float)receivedRoboData.cam_rotation/1024.0F)*M_PI;
+		}
+
+		//dribbler
+		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
+
+		//kicker
+		if (receivedRoboData.do_kick || receivedRoboData.do_chip/* && ((HAL_GetTick() - kick_timer) > 0)*/){
+			kick_timer = HAL_GetTick() + 1000U;
+			kick_Shoot((receivedRoboData.kick_chip_power*100)/255,!receivedRoboData.do_chip);
+		}
+
+		//geneva
+		if (receivedRoboData.geneva_drive_state != 0){
+			geneva_SetPosition(receivedRoboData.geneva_drive_state-1);
+		}
+
+	}else if(wheels_testing){
+		velocityRef[body_w] = wheels_testing_power;
+		halt = false;
+	}else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
+		halt = true;
+		vision_available = false;
+	}
+
+	if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
+		if(battery_count++ > 1000){
+			uprintf("Battery empty!\n\r");
+			ToggleLD(4);
+			wheels_DeInit();
+			kick_DeInit();
+			dribbler_Deinit();
+			geneva_Deinit();
+			preparedAckData.batteryState = 0;
+		}
+// 		BATTERY IS ALMOST EMPTY!!!!!
+//		battery_empty = true;
+//		dribbler_SetSpeed(0);
+	}
+	else {
+		preparedAckData.batteryState = 1;
+	}
+
+
+	preparedAckData.ballSensor = ballsensorMeasurementLoop(receivedRoboData.do_kick, receivedRoboData.do_chip, receivedRoboData.kick_chip_power);
+	  //uprintf("ball: %i\n",preparedAckData.ballSensor);
+
+	geneva_Update();
+	MT_Update();
+	if((HAL_GetTick() - printtime > 1000)){
+		printtime = HAL_GetTick();
+		ToggleLD(1);
+
+		if(*MT_GetStatusWord() & 0b00011000){
+			//uprintf("in NRU; ")
+		}else if(started_icc == false){
+			started_icc = true;
+			MT_UseIcc();
+		}
+		//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
+		//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
+		//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
+	}
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	  PuttyInterface_Update(&puttystruct);
-  }
+	PuttyInterface_Update(&puttystruct);
+  } // end while loop
   /* USER CODE END 3 */
 
 }
@@ -294,6 +339,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 #define TEST_WHEELS_COMMAND "test wheels"
+#define SET_FILTER_COMMAND "mt filter"
 void HandleCommand(char* input){
 	if(strcmp(input, "mt start") == 0){
 		uprintf("Starting device MTi\n\r");
@@ -309,9 +355,22 @@ void HandleCommand(char* input){
 		MT_GoToConfig();
 	}else if(!strcmp(input, "mt measure")){
 		MT_GoToMeasure();
+	}else if(!strcmp(input, "mt options")){
+		MT_ReqOptions();
+	}else if(!strcmp(input, "mt setoptions")){
+		MT_SetOptions();
+	}else if(!strcmp(input, "mt icc")){
+		MT_UseIcc();
+	}else if(!strcmp(input, "mt norotation")){
+		MT_NoRotation(10);
+	}else if(!memcmp(input, SET_FILTER_COMMAND , strlen(SET_FILTER_COMMAND))){
+		MT_SetFilterProfile(strtol(input + 1 + strlen(SET_FILTER_COMMAND), NULL, 10));
 	}else if(strcmp(input, "mt factoryreset") == 0){
 		uprintf("Resetting the configuration.\n\r");
 		MT_FactoryReset();
+	}else if(strcmp(input, "mt reqfilter") == 0){
+		uprintf("requesting current filter profile.\n\r");
+		MT_ReqFilterProfile();
 	}else if(memcmp(input, "mt setconfig", strlen("mt setconfig")) == 0){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
@@ -320,21 +379,23 @@ void HandleCommand(char* input){
 		uprintf("requesting output configuration mode\n\r");
 		MT_RequestConfig();
 	}else if(!strcmp(input, "address")){
-		uprintf("address = [%d]\n\r", address);
+		uprintf("address = [%d]\n\r", localRobotID);
 	}else if(!strcmp(input, "example2")){
 		uprintf("stop!\n\r");
-	}else if(!strcmp(input, "geneva")){
+	}else if(!strcmp(input, "geneva get")){
 		uprintf("position = [%u]\n\r", geneva_GetPosition());
 	}else if(!strcmp(input, "geneva stop")){
 		geneva_SetState(geneva_idle);
-	}else if(!memcmp(input, "geneva" , strlen("geneva"))){
-		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva"), NULL, 10));
+	}else if(!strcmp(input, "euler")){
+		print_euler = ! print_euler;
+	}else if(!memcmp(input, "geneva set" , strlen("geneva set"))){
+		geneva_SetPosition(2 + strtol(input + 1 + strlen("geneva set"), NULL, 10));
 	}else if(!memcmp(input, "control" , strlen("control"))){
 		geneva_SetPosition(2 + strtol(input + 1 + strlen("control"), NULL, 10));
 	}else if(!memcmp(input, "kick" , strlen("kick"))){
-		kick_Kick(strtol(input + 1 + strlen("kick"), NULL, 10));
+		kick_Shoot(strtol(input + 1 + strlen("kick"), NULL, 10),KICK);
 	}else if(!memcmp(input, "chip" , strlen("chip"))){
-		kick_Chip(strtol(input + 1 + strlen("chip"), NULL, 10));
+		kick_Shoot(strtol(input + 1 + strlen("chip"), NULL, 10),CHIP);
 	}else if(!memcmp(input, "block" , strlen("block"))){
 		kick_Stateprint();
 	}else if(!memcmp(input, TEST_WHEELS_COMMAND, strlen(TEST_WHEELS_COMMAND))){
@@ -356,27 +417,7 @@ void HandleCommand(char* input){
 	}
 }
 
-void Uint2Leds(uint8_t uint, uint8_t n_leds){
-	if(!n_leds) n_leds = 0xff;
-	if(n_leds & 0b00000001) HAL_GPIO_WritePin(LD1_GPIO_Port,LD1_Pin, uint & 0b00000001);
-	if(n_leds & 0b00000010) HAL_GPIO_WritePin(LD2_GPIO_Port,LD2_Pin, uint & 0b00000010);
-	if(n_leds & 0b00000100) HAL_GPIO_WritePin(LD3_GPIO_Port,LD3_Pin, uint & 0b00000100);
-	if(n_leds & 0b00001000) HAL_GPIO_WritePin(LD4_GPIO_Port,LD4_Pin, uint & 0b00001000);
-	if(n_leds & 0b00010000) HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, uint & 0b00010000);
-	if(n_leds & 0b00100000) HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin, uint & 0b00100000);
-}
 
-void dribbler_SetSpeed(uint8_t speed){
-	if(speed > 7){
-		speed = 7;
-	}
-	__HAL_TIM_SET_COMPARE(&htim11, TIM_CHANNEL_1, (7 - speed) * (MAX_PWM / 7));
-}
-
-void dribbler_Init(){
-	HAL_TIM_PWM_Start(&htim11, TIM_CHANNEL_1);
-	dribbler_SetSpeed(0);
-}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart3.Instance){//input from the PC
@@ -391,14 +432,31 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
-		float * accptr;
-		accptr = MT_GetAcceleration();
-		velocity[0] += *accptr++ / 100;
-		velocity[1] += *accptr++ / 100;
-		velocity[2] += *accptr   / 100;
-		if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
+//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
+		float wheelsPWM[4] = {0,0,0,0};
+		calibration_needed = DO_Control(velocityRef, vision_yaw, vision_available, wheelsPWM); // outputs to wheelsPWM
+		if (calibration_needed) {
+			halt = true;
+		}
+		 // send PWM to motors
+		if (halt) { // when communication is lost for too long, we send 0 to the motors
+			float wheel_powers[4] = {0,0,0,0};
+			wheels_SetOutput(wheel_powers);
+		} else {
+			// copy the controller output before sending it to SetOutput, to make sure it doesnt get altered at the wrong time
+			float wheel_powers[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
+//			float wheel_powers[4] = {20,20,20,20};
+			wheels_SetOutput(wheel_powers);
+		}
+//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 0);
+
+//		fillXSensData(xsensData);
+
+		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
-		DO_Control();
+//		float * euler;
+//		euler = MT_GetAngles();
+//		if(Xsens_state == Xsens_Measure && print_euler)	uprintf("euler angles[%f, %f, %f]\n\r", euler[0], euler[1], euler[2]);
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
@@ -408,12 +466,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == SPI1_IRQ_Pin){
-		//wireless message received
+		//Wireless_newPacketHandler();
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
+		//uprintf("geneva sensor\n\r");
 		geneva_SensorCallback();
 	}
 }
+
+
+
+
 /* USER CODE END 4 */
 
 /**
