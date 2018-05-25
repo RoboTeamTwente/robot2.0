@@ -5,6 +5,18 @@
  *      Author: gebruiker
  */
 
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  (byte & 0x80 ? '1' : '0'), \
+  (byte & 0x40 ? '1' : '0'), \
+  (byte & 0x20 ? '1' : '0'), \
+  (byte & 0x10 ? '1' : '0'), \
+  (byte & 0x08 ? '1' : '0'), \
+  (byte & 0x04 ? '1' : '0'), \
+  (byte & 0x02 ? '1' : '0'), \
+  (byte & 0x01 ? '1' : '0')
+
+
 #include "packing.h"
 #include <stdio.h>
 #include "../PuttyInterface/PuttyInterface.h" //should be removed after debugging
@@ -82,12 +94,12 @@ void robotDataToPacket(roboData *input, uint8_t output[ROBOPKTLEN]) {
 		input->theta >> 3                                // cccccccc 11 bits; bits 10-8 to 7-0
 	);
 
-	output[3] = (uint8_t) (  							// cccde00g
+	output[3] = (uint8_t) (  							// cccde0gg
 
 		(0b11100000 & (input->theta << 5)) |             // ccc00000 11 bits; bits  2-0 to 7-5
 		(0b00010000 & (input->driving_reference << 4)) | // 000d0000  1 bit ; bit     0 to   4
 		(0b00001000 & (input->use_cam_info) << 3) |      // 0000e000  1 bit ; bit     0 to   3
-		(0b00000001 & (input->velocity_angular >> 8))    // 0000000g  9 bits; bit     8 to   0
+		(0b00000011 & (input->velocity_angular >> 8))    // 000000gg 10 bits; bit     8 to   0
 	);
 
 	output[4] = (uint8_t) (  							// gggggggg
@@ -141,7 +153,7 @@ void packetToRoboData(uint8_t input[ROBOPKTLEN], roboData *output) {
 	output[0] aaaaabbb
 	output[1] bbbbbbbb
 	output[2] cccccccc
-	output[3] cccde00g
+	output[3] cccde0gg
 	output[4] gggggggg
 	output[5] 0000hijk
 	output[6] mmmmmmmm
@@ -152,6 +164,9 @@ void packetToRoboData(uint8_t input[ROBOPKTLEN], roboData *output) {
 	output[11] rrrrrsss
 	output[12] ssssssss
 	 */
+
+//	uprintf("ptrd: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN"\r\n", BYTE_TO_BINARY(input[3]), BYTE_TO_BINARY(input[4]));
+
 	output->id = input[0]>>3; //a
 	output->rho = (input[0]&0b111)<<8; //b
 	output->rho |= input[1]; //b
@@ -159,7 +174,7 @@ void packetToRoboData(uint8_t input[ROBOPKTLEN], roboData *output) {
 	output->theta |= (input[3]>>5)&0b111; //c
 	output->driving_reference = (input[3]>>4)&1; //d
 	output->use_cam_info = (input[3]>>3)&1; //e
-	output->velocity_angular = (input[3]&1) << 8; //g
+	output->velocity_angular = (input[3]&0b11) << 8; //g
 	output->velocity_angular |= input[4]; //g
 	output->debug_info = (input[5]>>3)&1; //h
 	output->do_kick = (input[5]>>2)&1; //i
@@ -184,7 +199,7 @@ void packetToRoboData(uint8_t input[ROBOPKTLEN], roboData *output) {
  *skipping some characters for better readability
 
 		Character   Description                 Values          Represented values    Units       Bits    Comment
-		a           Robot ID                    [0,15]          [0,31]                -              5    -
+		a           Robot ID                    [0,31]          [0,31]                -              5    -
 		b           Left front wheel state      [0,1]           {true,false}          -              1    Indicates whether the left front wheel functions
 		c           Right front wheel state     [0,1]           {true,false}          -              1    Indicates whether the right front wheel functions
 		d           Left back wheel state       [0,1]           {true,false}          -              1    Indicates whether the left back wheel functions

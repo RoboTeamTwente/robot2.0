@@ -55,8 +55,8 @@ void kick_Shoot(int percentage, bool kick)
 	{
 		kick_state = kick_Kicking;								// Block kick_Charging
 		set_pin(Charge_port, GPIO_PIN_RESET); 						// Disable kick_Charging
-		uprintf("kick_Kicking\n\r");
 		set_pin(kick ? Kick_port : Chip_port, GPIO_PIN_SET); 				// Kick/Chip on
+//		uprintf("kick_Kicking\n\r");
 
 		HAL_TIM_Base_Stop(&htim13);								// Stop timer
 		__HAL_TIM_CLEAR_IT(&htim13,TIM_IT_UPDATE);
@@ -111,5 +111,5 @@ void kick_Callback()
 
 void kick_Stateprint()
 {
-	uprintf("Block = [%d]\n\r", kick_state);
+//	uprintf("Block = [%d]\n\r", kick_state);
 }

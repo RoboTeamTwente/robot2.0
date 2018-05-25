@@ -16,11 +16,11 @@
 #define CALIBRATE_AFTER 6500 //time after which yaw calibration will start (ms)
 #define TIME_DIFF 0.01
 uint start_time;
+
 //TODO: some settings
 bool DO_enabled = false;
 bool use_yaw_control = true;
-bool ref_is_angle = false;
-bool use_vision = false;
+bool ref_is_angle = true;
 bool use_global_ref = true;
 bool no_vel_control = true;
 
@@ -96,6 +96,7 @@ float compute_limit_scale(float input[3], float limit){
 }
 
 void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], float output[3]){
+	//TODO: this could also be used if no velocity control is used
 
 	// Requires transformation to global coordinates and back
 	float globalInput[3];
@@ -227,10 +228,10 @@ float angleController(float angleRef, float yaw){
 	float lower_roundup = 10.0;
 
 	if (no_vel_control) {
-		output = angleError*100.0 + dError*3.0;
+		output = angleError*150.0 + dError*5.0;
 		upper_lim = 200;
 		lower_lim = 5;
-		lower_roundup = 20;
+		lower_roundup = 30;
 	}
 
 	if (fabs(output) > upper_lim) {
@@ -276,24 +277,10 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	static int no_rot_counter = 0;	// keeps track of the amount of time steps without rotation
 	int no_rot_duration = 20;		// time steps of no rotation required before calibrating
 	int avg_size = 10; 				// amount of samples to take the average of, for the yaws
-
-	// check whether recalibration of yaw is necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
-	if (vision_available) {
-		// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
-		static int check_counter = 0;
-		if (constrainAngle(vision_yaw - xsens_yaw) > 0.01) {
-			check_counter++;
-		} else {
-			check_counter = 0;
-		}
-		if (check_counter > 4) {
-			calibration_needed = true;
-			check_counter = 0;
-		}
-	}
+	static uint last_calibration_time = 0;
 
 	// if calibration is necessary
-	if (calibration_needed && HAL_GetTick() - start_time > CALIBRATE_AFTER) {
+	if ((calibration_needed || vision_available) && HAL_GetTick() - start_time > CALIBRATE_AFTER) {
 		static float yaw0 = 0; 	// starting yaw, which is used to detect a change in yaw within the duration
 		// check for calibration possibility (which is when the yaw has not changed much for sufficiently long)
 		if (fabs(yaw0 - xsens_yaw) < 0.01) {
@@ -307,12 +294,9 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 					yaw_offset = -avg_xsens_yaw;
 
 				}
-				calibration_needed = false;
-
-				// reset timer and averages
-				no_rot_counter = 0;
-				avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
-				avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
+				calibration_needed = false; // done with calibrating
+				last_calibration_time = HAL_GetTick();
+				no_rot_counter = 0;			// reset timer
 			} else if (no_rot_counter > no_rot_duration - avg_size) {
 				// averaging angles requires summing their unit vectors
 				avg_xsens_vec[0] += cosf(xsens_yaw);
@@ -336,17 +320,41 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 		avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
 	}
 
-		 ///////////////////////
-		// ACTUAL CONTROL PART //
-		 ///////////////////////
-
-	// call the controller with the (calibrated) xsens data. The output is wheelsPWM
+	// get and offset xsens data
 	float xsensData[3];
 	xsensData[body_x] = -accptr[0];
 	xsensData[body_y] = -accptr[1];
 	xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
 	rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also be calibrated to the offset yaw
 
+	// check whether recalibration of yaw is highly necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
+	if (vision_available && !calibration_needed) {
+		// assuming 7 steps of delay between vision and xsens (so 70 ms) (might be off)
+		static float xsens_yaw_buffer[7] = {0,0,0,0,0,0,0};
+		for (int i = 0; i < 6; i++) {
+			xsens_yaw_buffer[i] = xsens_yaw_buffer[i+1];
+		}
+		xsens_yaw_buffer[6] = xsensData[body_w];
+
+		// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
+		static int check_counter = 0;
+		if (HAL_GetTick() - last_calibration_time > 100 && fabs(constrainAngle(vision_yaw - xsens_yaw_buffer[0])) > 0.2) {
+			check_counter++;
+		} else {
+			check_counter = 0;
+		}
+		if (check_counter > 10) {
+			calibration_needed = true;
+			check_counter = 0;
+		}
+	}
+
+
+	  /////////////////////////
+	 // ACTUAL CONTROL PART //
+	/////////////////////////
+
+	// determine local velocity reference
 	float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
 	if (use_global_ref) {
 		rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
