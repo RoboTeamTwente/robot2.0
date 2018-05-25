@@ -229,7 +229,7 @@ float angleController(float angleRef, float yaw){
 
 	if (no_vel_control) {
 		output = angleError*150.0 + dError*5.0;
-		upper_lim = 200;
+		upper_lim = 600;
 		lower_lim = 5;
 		lower_roundup = 30;
 	}

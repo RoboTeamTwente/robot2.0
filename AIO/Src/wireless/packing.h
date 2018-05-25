@@ -29,6 +29,7 @@ typedef struct roboData{
    int16_t theta:11;				//Velocity angle              [-1024, 1023]     0.00307rad    [-pi, pi>               11
    uint8_t driving_reference:1;		//Driving reference           [0, 1]            -             {true, false}            1
    uint8_t use_cam_info:1;			//Use camera information      [0, 1]            -             {true, false}            1
+   uint8_t use_angle:1;				//Go to the newly set angle	  [0, 1]			-			  {true, false}			   1
    int16_t velocity_angular:10;		//Reference angular velocity  [-512, 511]       0.098rad/s    [-8*2pi, 8*2pi]         10
    uint8_t debug_info:1;			//Debug information           [0, 1]            -             {true, false}            1
    uint8_t do_kick:1;				//Kick                        [0, 1]            -             {true, false}            1
@@ -39,7 +40,7 @@ typedef struct roboData{
    uint8_t geneva_drive_state:3;	//Geneva drive state          [0, 7]            -             [-2, 2]                  3
    int16_t cam_position_x:13;		//x position robot (camera)   [-4096, 4095]     0.0025m       [-10.24, 10.23]         13
    int16_t cam_position_y:13;		//y position robot (camera)   [-4096, 4095]     0.0025m       [-10.24, 10.23]         13
-   int16_t cam_rotation:11;			//Orientation (camera)        [-1024, 1023]     0.00307rad    [-pi, pi>               11
+   int16_t cam_rotation:11;			//Orientation (camera)        [-1024, 1023]     0.00307rad    [-pi, pi]               11
 } roboData;
 
 //between 11 and 23 Bytes, ideally

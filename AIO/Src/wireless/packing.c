@@ -94,7 +94,7 @@ void robotDataToPacket(roboData *input, uint8_t output[ROBOPKTLEN]) {
 		input->theta >> 3                                // cccccccc 11 bits; bits 10-8 to 7-0
 	);
 
-	output[3] = (uint8_t) (  							// cccde0gg
+	output[3] = (uint8_t) (  							// cccdefgg
 
 		(0b11100000 & (input->theta << 5)) |             // ccc00000 11 bits; bits  2-0 to 7-5
 		(0b00010000 & (input->driving_reference << 4)) | // 000d0000  1 bit ; bit     0 to   4
@@ -153,7 +153,7 @@ void packetToRoboData(uint8_t input[ROBOPKTLEN], roboData *output) {
 	output[0] aaaaabbb
 	output[1] bbbbbbbb
 	output[2] cccccccc
-	output[3] cccde0gg
+	output[3] cccdefgg
 	output[4] gggggggg
 	output[5] 0000hijk
 	output[6] mmmmmmmm
@@ -174,6 +174,7 @@ void packetToRoboData(uint8_t input[ROBOPKTLEN], roboData *output) {
 	output->theta |= (input[3]>>5)&0b111; //c
 	output->driving_reference = (input[3]>>4)&1; //d
 	output->use_cam_info = (input[3]>>3)&1; //e
+	output->use_angle	= (input[3]>>2)&1; //f
 	output->velocity_angular = (input[3]&0b11) << 8; //g
 	output->velocity_angular |= input[4]; //g
 	output->debug_info = (input[5]>>3)&1; //h

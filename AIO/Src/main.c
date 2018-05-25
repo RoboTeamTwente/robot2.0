@@ -201,7 +201,9 @@ int main(void)
 		float angularVelRef = (float)receivedRoboData.velocity_angular / 512.0F * 16.0F*M_PI;
 		velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
 		velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
-		velocityRef[body_w] = angularVelRef;
+		if(receivedRoboData.use_angle){
+			velocityRef[body_w] = angularVelRef;
+		}
 
 		//TODO: test vision angle and calibration etc.
 		vision_available = receivedRoboData.use_cam_info;
