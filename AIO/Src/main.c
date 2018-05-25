@@ -232,7 +232,7 @@ int main(void)
 		halt = true;
 		vision_available = false;
 	}
-
+	// check if battery is empty
 	if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
 		if(battery_count++ > 1000){
 			uprintf("Battery empty!\n\r");
@@ -242,10 +242,9 @@ int main(void)
 			dribbler_Deinit();
 			geneva_Deinit();
 			preparedAckData.batteryState = 0;
+			Wireless_Deinit();
 		}
-// 		BATTERY IS ALMOST EMPTY!!!!!
 //		battery_empty = true;
-//		dribbler_SetSpeed(0);
 	}
 	else {
 		preparedAckData.batteryState = 1;

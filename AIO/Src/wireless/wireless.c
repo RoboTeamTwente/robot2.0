@@ -51,3 +51,9 @@ void Wireless_Init(uint8_t address) {
 
 	nrfPrintStatus();
 }
+
+
+void Wireless_Deinit(){
+	flushTX();
+	flushRX();
+}
