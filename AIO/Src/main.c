@@ -185,7 +185,7 @@ int main(void)
 
   /* USER CODE END 2 */
 
-  uint16_t counter = 0;
+//  uint16_t counter = 0;
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -235,6 +235,7 @@ int main(void)
 				kick_Chip((receivedRoboData.kick_chip_power*100)/255);
 			}else{
 				kick_Kick((receivedRoboData.kick_chip_power*100)/255);
+//				uprintf("[%u]\n\r", receivedRoboData.kick_chip_power);
 			}
 		}
 

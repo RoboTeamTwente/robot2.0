@@ -115,7 +115,7 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 	static float prevOut[3] = {0,0,0};
 	if (!isnan(prevOut[0])){ // lowpass filtering
 		globalOut[body_x] = 0.07*(accX*500 - globalInput[body_x]) + 0.93*prevOut[body_x];
-		globalOut[body_y] = 0.07*(accY*500 - globalInput[body_y]) + 0.93*prevOut[body_y];
+		globalOut[body_y] = 0.07*(accY*250 - globalInput[body_y]) + 0.93*prevOut[body_y];
 	}
 	prevOut[body_x] = globalOut[body_x];
 	prevOut[body_y] = globalOut[body_y];
@@ -376,14 +376,36 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 			prevAngleRef = angleRef;
 		}
 
-		if (no_vel_control) {
-			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1000, 0};
+		if (no_vel_control) { //TODO: Implement also DO here - working on it
+
+			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1500, 0};
 			forceRef[body_w] = angleController(angleRef, xsensData[body_w]);
+
+			float accData[2] = {xsensData[body_x],xsensData[body_y]};
+			static float do_out[3];
+			if (DO_enabled) {
+				static float do_out[3];
+				forceRef[body_x] = forceRef[body_x] - do_out[body_x];
+				forceRef[body_y] = forceRef[body_y] - do_out[body_y];
+
+				float localVel[3];
+				wheels2Body(w_wheels, localVel);
+				if (sqrt(localVel[body_x]*localVel[body_x] + localVel[body_y]*localVel[body_y])<0.05) {
+					accData[body_x] = 0;
+					accData[body_y] = 0;
+				}
+			}
+
 			float scale = compute_limit_scale(forceRef, 90);
 			forceRef[body_x] = scale*forceRef[body_x];
 			forceRef[body_y] = scale*forceRef[body_y];
 			forceRef[body_w] = 1*forceRef[body_w];
 			body2Wheels(forceRef, output);
+
+			if (DO_enabled) {
+				disturbanceObserver(xsensData[body_w], forceRef, accData, do_out);
+			}
+
 		} else {
 			float newVelocityRef[3] = {localVelocityRef[body_x], localVelocityRef[body_y], 0};
 			newVelocityRef[body_w] = angleController(angleRef, xsensData[body_w]);

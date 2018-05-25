@@ -30,7 +30,7 @@
 
 // function that works like normal printf()
 //#define uprintf(...) { sprintf(smallStrBuffer, __VA_ARGS__); \
-//	TextOut(smallStrBuffer);}
+	TextOut(smallStrBuffer);}
 #define uprintf(...) {}
 
 // function that will be called when HandlePcInput is done.
