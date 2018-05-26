@@ -177,7 +177,7 @@ int main(void)
 
   /* USER CODE END 2 */
 
-  uint16_t counter = 0;
+//  uint16_t counter = 0;
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -215,7 +215,7 @@ int main(void)
 		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
 
 		//kicker
-		if (receivedRoboData.do_kick || receivedRoboData.do_chip/* && ((HAL_GetTick() - kick_timer) > 0)*/){
+		if (receivedRoboData.kick_chip_forced/* && ((HAL_GetTick() - kick_timer) > 0)*/){
 			kick_timer = HAL_GetTick() + 1000U;
 			kick_Shoot((receivedRoboData.kick_chip_power*100)/255,!receivedRoboData.do_chip);
 		}

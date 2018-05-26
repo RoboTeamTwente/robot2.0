@@ -228,8 +228,8 @@ float angleController(float angleRef, float yaw){
 	float lower_roundup = 10.0;
 
 	if (no_vel_control) {
-		output = angleError*150.0 + dError*5.0;
-		upper_lim = 600;
+		output = angleError*100.0 + dError*3.0;
+		upper_lim = 500;
 		lower_lim = 5;
 		lower_roundup = 30;
 	}
@@ -380,12 +380,12 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 		}
 
 		if (no_vel_control) {
-			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1000, 0};
-			forceRef[body_w] = angleController(angleRef, xsensData[body_w]);
-			float scale = compute_limit_scale(forceRef, 90);
+			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1500, 0};
+			forceRef[body_w] = angleController(angleRef, xsensData[body_w])*1.5; //TODO: hacked 1.5 factor in to give rotation more space in case of high commands
+			float scale = compute_limit_scale(forceRef, 100);
 			forceRef[body_x] = scale*forceRef[body_x];
 			forceRef[body_y] = scale*forceRef[body_y];
-			forceRef[body_w] = 1*forceRef[body_w];
+			forceRef[body_w] = forceRef[body_w]/1.5;
 			body2Wheels(forceRef, output);
 		} else {
 			float newVelocityRef[3] = {localVelocityRef[body_x], localVelocityRef[body_y], 0};
@@ -395,7 +395,7 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 
 	} else { // no yaw control
 		if (no_vel_control) {
-			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1000, localVelocityRef[body_w]*10};
+			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1500, localVelocityRef[body_w]*10};
 			float scale = compute_limit_scale(forceRef, 90);
 			forceRef[body_x] = scale*forceRef[body_x];
 			forceRef[body_y] = scale*forceRef[body_y];
