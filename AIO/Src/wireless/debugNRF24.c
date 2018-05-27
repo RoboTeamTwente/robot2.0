@@ -73,8 +73,8 @@ void printNRFregisters() {
 	uprintf("FEATURE: 0x%02x\n", readReg(FEATURE));
 }
 
-void nrfPrintStatus() {
-	uint8_t status_reg = readReg(STATUS);
+uint8_t nrfPrintStatus(uint8_t status_reg) {
+	//uint8_t status_reg = readReg(STATUS);
 	uprintf("STATUS: 0x%02x ( ", status_reg);
 	if(status_reg & RX_DR) uprintf("RX_DR ");
 	if(status_reg & TX_DS) uprintf("TX_DS ");
@@ -85,4 +85,5 @@ void nrfPrintStatus() {
 	if(pipeNo == 0b111) uprintf("RX_FIFO:empty ");
 	if(status_reg & STATUS_TX_FULL) uprintf("TX_FULL ");
 	uprintf(")\n");
+	return status_reg;
 }

@@ -12,7 +12,7 @@
 #define WIRELESS_DEBUGNRF24_H_
 
 void printNRFregisters();
-void nrfPrintStatus();
+uint8_t nrfPrintStatus(uint8_t status_reg);
 
 
 #endif /* WIRELESS_DEBUGNRF24_H_ */
