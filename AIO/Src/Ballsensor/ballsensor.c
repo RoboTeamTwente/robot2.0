@@ -147,7 +147,7 @@ void ballsensorInit()
 	int currentTime = HAL_GetTick();
 	zForceState = zForce_WaitForDR;
 	while(  !HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)  &&  (HAL_GetTick()-currentTime < 100)  );
-	if (HAL_GetTick()-currentTime < 100){
+	if (!HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)){
 		uprintf("No ball sensor found\n\r");
 		zForceState = zForce_RST;
 	}else{
