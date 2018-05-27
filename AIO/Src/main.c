@@ -238,7 +238,9 @@ int main(void)
 
 
 	preparedAckData.ballSensor = ballsensorMeasurementLoop(receivedRoboData.do_kick, receivedRoboData.do_chip, receivedRoboData.kick_chip_power);
-	  //uprintf("ball: %i\n",preparedAckData.ballSensor);
+	//preparedAckData.ballSensor = ballsensorMeasurementLoop(1, receivedRoboData.do_chip, 30);
+
+	//uprintf("ball: %i\n",preparedAckData.ballSensor);
 
 	geneva_Update();
 	MT_Update();
