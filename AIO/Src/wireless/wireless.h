@@ -23,5 +23,6 @@ bool kickchip_command;
 bool Wireless_newData();
 void Wireless_newPacketHandler();
 void Wireless_Init(uint8_t address);
+void Wireless_Deinit();
 
 #endif /* WIRELESS_WIRELESS_H_ */

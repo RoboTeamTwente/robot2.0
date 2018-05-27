@@ -66,7 +66,7 @@ MT_StatusTypeDef MT_Init(){
 	}
 
 	if(MT_succes == MT_StartOperation(true)){
-		uprintf("started MTi Operation in config state\n\r");
+		uprintf("started MTi Operation\n\r");
 		//MT_SetOptions();
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
@@ -222,7 +222,7 @@ MT_StatusTypeDef MT_UseIcc(){
 	}while(WaitForAck(XMID_IccCommandAck) != MT_succes && cnt < 20 );
 	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
-		TextOut("IccCommandAck.\n\r");
+		if(MT_DEBUG)	TextOut("IccCommandAck.\n\r");
 		return MT_succes;
 	}else{
 		TextOut("No IccCommandAck received.\n\r");
@@ -239,9 +239,11 @@ MT_StatusTypeDef MT_SetFilterProfile(uint8_t filter){
 		SendXbusMessage(mess);
 		cnt++;
 	}while(WaitForAck(XMID_SetFilterProfileAck) != MT_succes && cnt < 20 );
-	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
+	if(cnt > 1){
+		if(MT_DEBUG) uprintf("cnt = %d\n\r",  cnt);
+	}
 	if(cnt < 20){
-		uprintf("SetFilterProfileAck.\n\r");
+		if(MT_DEBUG) uprintf("SetFilterProfileAck.\n\r");
 		return MT_succes;
 	}else{
 		TextOut("No SetFilterProfileAck received.\n\r");
@@ -306,7 +308,7 @@ MT_StatusTypeDef MT_NoRotation(uint16_t seconds){
 	}while(WaitForAck(XMID_SetNoRotationAck) != MT_succes && cnt < 20 );
 	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
-		uprintf("SetNoRotationAck.\n\r");
+		if(MT_DEBUG) uprintf("SetNoRotationAck.\n\r");
 		return MT_succes;
 	}else{
 		TextOut("No SetNoRotationAck received.\n\r");
@@ -347,7 +349,7 @@ MT_StatusTypeDef MT_GoToMeasure(){
 	}while(WaitForAck(XMID_GoToMeasurementAck) != MT_succes && cnt < 20 );
 	if(cnt > 1) uprintf("cnt = %d\n\r",  cnt);
 	if(cnt < 20){
-		TextOut("In measurement state.\n\r");
+		if(MT_DEBUG) TextOut("In measurement state.\n\r");
 		Xsens_state = Xsens_Measure;
 		return MT_succes;
 	}else{
@@ -423,88 +425,88 @@ static void SendWakeUpAck(){
 static void PrintOutputConfig(struct XbusMessage const* message){
 	if (!message)
 		return;
-	uprintf("MTiPrintOutputConfig:\n\r");
+	if(MT_DEBUG) uprintf("MTiPrintOutputConfig:\n\r");
 
 	uint8_t* rawptr = message->data;
 	uint16_t fptr[message->length];
-	uprintf( "len = [%u]", message->length);
+	if(MT_DEBUG) uprintf( "len = [%u]", message->length);
 
 	for(uint16_t * i = fptr; i < fptr + (message->length)/2; i++){
 		rawptr = XbusUtility_readU16(i, rawptr);
-		uprintf( "[%04x]", *i);
+		if(MT_DEBUG) uprintf( "[%04x]", *i);
 
 	}
-	uprintf( "\n\r");
+	if(MT_DEBUG) uprintf( "\n\r");
 
 
 	uint16_t freq;
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Temperature, message))){
-		uprintf("XDI_Temperature:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_Temperature:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_UtcTime, message))){
-		uprintf("XDI_UtcTime:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_UtcTime:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_PacketCounter, message))){
-		uprintf("XDI_PacketCounter:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_PacketCounter:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeFine, message))){
-		uprintf("XDI_SampleTimeFine:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_SampleTimeFine:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_SampleTimeCoarse, message))){
-		uprintf("XDI_SampleTimeCoarse:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_SampleTimeCoarse:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Quaternion, message))){
-		uprintf("XDI_Quaternion:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_Quaternion:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RotationMatrix, message))){
-		uprintf("XDI_RotationMatrix:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_RotationMatrix:%u\n\r", freq);
 
 	}
 
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaV, message))){
-		uprintf("XDI_DeltaV:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_DeltaV:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_Acceleration, message))){
-		uprintf("XDI_Acceleration:%x\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_Acceleration:%x\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_FreeAcceleration, message))){
-			uprintf("XDI_FreeAcceleration:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_FreeAcceleration:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_AccelerationHR, message))){
-		uprintf("XDI_AccelerationHR:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_AccelerationHR:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurn, message))){
-		uprintf("XDI_RateOfTurn:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_RateOfTurn:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_DeltaQ, message))){
-		uprintf("XDI_DeltaQ:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_DeltaQ:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_RateOfTurnHR, message))){
-		uprintf("XDI_RateOfTurnHR:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_RateOfTurnHR:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_MagneticField, message))){
-		uprintf("XDI_MagneticField:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_MagneticField:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusByte, message))){
-		uprintf("XDI_StatusByte:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_StatusByte:%u\n\r", freq);
 
 	}
 	if(0 != (freq = XbusMessage_getOutputFreq(XDI_StatusWord, message))){
-		uprintf("XDI_StatusWord:%u\n\r", freq);
+		if(MT_DEBUG) uprintf("XDI_StatusWord:%u\n\r", freq);
 
 	}
 }
