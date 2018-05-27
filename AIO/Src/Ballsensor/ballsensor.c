@@ -124,6 +124,7 @@ void parseMessage() {
 //		uprintf("Set frequency:\r\n");
 		//printRawData(data);
 		ballsensorInitialized = 1;
+		uprintf("BALLSENSOR - initialized successfully\n\r");
 		zForceState = zForce_WaitForDR;
 	}
 	else { //ignore any other data
@@ -147,14 +148,7 @@ void ballsensorInit()
 	int currentTime = HAL_GetTick();
 	zForceState = zForce_WaitForDR;
 	while(  !HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)  &&  (HAL_GetTick()-currentTime < 100)  );
-	if (!HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)){
-		uprintf("No ball sensor found\n\r");
-		zForceState = zForce_RST;
-	}else{
-
-		uprintf("Initialized ball sensor\r\n");
-		I2CRx();
-	}
+	I2CRx();
 }
 
 void ballsensorReset() {
@@ -183,11 +177,11 @@ uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint
 		ballsensorReset();
 		break;
 	case zForce_EnableDevice:
-		uprintf("zForce_EnableDevice\n\r");
+		//uprintf("zForce_EnableDevice\n\r");
 		I2CTx(enable_command, sizeof(enable_command));
 		break;
 	case zForce_setFreq:
-		uprintf("zForce_setFreq\n\r");
+		//uprintf("zForce_setFreq\n\r");
 		I2CTx(set_freq_command, sizeof(set_freq_command));
 		break;
 	case zForce_WaitForDR:// when DR(Data Ready) is high, message length needs to be read
