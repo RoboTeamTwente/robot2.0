@@ -39,7 +39,7 @@ void Wireless_newPacketHandler() {
 	}
 }
 
-void Wireless_Init(uint8_t address) {
+void Wireless_Init(uint8_t address, uint8_t RADIO_CHANNEL) {
 	for(uint8_t retries = 0; retries < 2; retries++) {
 		localRobotID = address;
 		preparedAckData.roboID = localRobotID;

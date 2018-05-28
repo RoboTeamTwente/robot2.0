@@ -160,8 +160,11 @@ int main(void)
 
   uint printtime = 0;
   uint battery_count = 0;
-
-  Wireless_Init(ReadAddress());
+  if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
+	  Wireless_Init(ReadAddress(), 78);
+  }else{
+	  Wireless_Init(ReadAddress(), 80);
+  }
 
   /* USER CODE END 2 */
 

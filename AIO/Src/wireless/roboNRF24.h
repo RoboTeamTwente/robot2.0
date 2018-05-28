@@ -23,7 +23,7 @@ roboAckData preparedAckData; //ready-to-wrap data to build a packet for sending 
 //The radio channel for the nRF24 wireless module as agreed on with the organizational team / initiatiors of the RoboCup.
 //A team in the RoboCup should select one channel and inform "the RoboCup" about the used frequencies (channels) to avoid
 //any distrubance with other teams (e.g. opponents).
-#define RADIO_CHANNEL 78
+//#define RADIO_CHANNEL 78
 
 void fillDummyAckData(uint8_t ackDataLength);
 void fillXSensData(float data[3]);
