@@ -9,6 +9,7 @@
 #include "pid/pid.h"
 #include "../PuttyInterface/PuttyInterface.h"
 
+#define USE_SENSOR 0
 #define GENEVA_CAL_EDGE_CNT 1950
 #define GENEVA_CAL_SENS_CNT 1400
 #define GENEVA_POSITION_DIF_CNT 780
@@ -61,7 +62,7 @@ void geneva_Update(){
 	case geneva_idle:
 		break;
 	case geneva_setup:// While in setup, slowly move towards the sensor
-		if(!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
+		if(!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin) && USE_SENSOR){
 		  if((HAL_GetTick() - geneva_cnt) < 100){
 			  geneva_state = geneva_too_close;
 		  }else{
@@ -72,7 +73,7 @@ void geneva_Update(){
 			if(geneva_Encodervalue() != enc){
 				enc = geneva_Encodervalue();
 				tick = HAL_GetTick();
-			}else if(tick + 100 < HAL_GetTick()){
+			}else if(tick + 50 < HAL_GetTick()){
 				geneva_EdgeCallback(GENEVA_CAL_EDGE_CNT);
 			}
 		}
@@ -83,7 +84,7 @@ void geneva_Update(){
 			if(geneva_Encodervalue() != enc){
 				enc = geneva_Encodervalue();
 				tick = HAL_GetTick();
-			}else if(tick + 100 < HAL_GetTick()){
+			}else if(tick + 70 < HAL_GetTick()){
 				geneva_EdgeCallback(-1*GENEVA_CAL_EDGE_CNT);
 			}
 		}else{
