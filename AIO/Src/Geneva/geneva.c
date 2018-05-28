@@ -7,7 +7,9 @@
 
 #include "geneva.h"
 #include "pid/pid.h"
+#include "../PuttyInterface/PuttyInterface.h"
 
+#define GENEVA_CAL_EDGE_CNT 1950
 #define GENEVA_CAL_SENS_CNT 1400
 #define GENEVA_POSITION_DIF_CNT 780
 #define GENEVA_MAX_ALLOWED_OFFSET 0.2*GENEVA_POSITION_DIF_CNT
@@ -15,9 +17,6 @@
 geneva_states geneva_state = geneva_idle;
 
 uint geneva_cnt;
-
-
-
 
 PID_controller_HandleTypeDef Geneva_pid = {
 		.pid = {0,0,0},
@@ -35,6 +34,13 @@ PID_controller_HandleTypeDef Geneva_pid = {
 		.dir_Port[1] = Geneva_dir_A_GPIO_Port,
 };
 
+static void geneva_EdgeCallback(int edge_cnt){
+	uprintf("ran into edge, geneva sensor broken!\n\r");
+	__HAL_TIM_SET_COUNTER(&htim2, edge_cnt);
+	Geneva_pid.ref = 0;
+	geneva_state = geneva_returning;
+}
+
 void geneva_Init(){
 	geneva_state = geneva_setup;
 	pid_Init(&Geneva_pid);
@@ -49,38 +55,51 @@ void geneva_Deinit(){
 }
 
 void geneva_Update(){
-	  switch(geneva_state){
-	  case geneva_idle:
-		  break;
-	  case geneva_setup:// While in setup, slowly move towards the sensor
-		  if(!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
-			  if((HAL_GetTick() - geneva_cnt) < 100){
-				  geneva_state = geneva_too_close;
-			  }else{
-				  geneva_SensorCallback();
-			  }
+	static uint tick = 0xFFFF;
+	static int enc;
+	switch(geneva_state){
+	case geneva_idle:
+		break;
+	case geneva_setup:// While in setup, slowly move towards the sensor
+		if(!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
+		  if((HAL_GetTick() - geneva_cnt) < 100){
+			  geneva_state = geneva_too_close;
 		  }else{
-			  Geneva_pid.ref = (HAL_GetTick() - geneva_cnt)*1;
+			  geneva_SensorCallback();
 		  }
-		  break;
-	  case geneva_too_close:
-		  if(geneva_GetPosition() != geneva_left/*!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)*/){
-			  //Geneva_pid.ref = -GENEVA_POSITION_DIF_CNT;
-			  geneva_SetPosition(geneva_left);
-		  }else{
-			  geneva_state = geneva_setup;
-		  }
-		  break;
-	  case geneva_returning:// while returning move to the middle position
-		  if(50 > (geneva_Encodervalue())){
-			  geneva_state = geneva_running;
-		  }else{
-			  Geneva_pid.ref = 0;
-		  }
-		  break;
-	  case geneva_running:
-		  break;
-	  }
+		}else{
+			Geneva_pid.ref = (HAL_GetTick() - geneva_cnt)*1;
+			if(geneva_Encodervalue() != enc){
+				enc = geneva_Encodervalue();
+				tick = HAL_GetTick();
+			}else if(tick + 100 < HAL_GetTick()){
+				geneva_EdgeCallback(GENEVA_CAL_EDGE_CNT);
+			}
+		}
+		break;
+	case geneva_too_close:
+		if(!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
+			Geneva_pid.ref = -GENEVA_POSITION_DIF_CNT * 5;
+			if(geneva_Encodervalue() != enc){
+				enc = geneva_Encodervalue();
+				tick = HAL_GetTick();
+			}else if(tick + 100 < HAL_GetTick()){
+				geneva_EdgeCallback(-1*GENEVA_CAL_EDGE_CNT);
+			}
+		}else{
+			geneva_state = geneva_setup;
+		}
+		break;
+	case geneva_returning:// while returning move to the middle position
+		if(50 > (geneva_Encodervalue())){
+			geneva_state = geneva_running;
+		}else{
+			Geneva_pid.ref = 0;
+		}
+		break;
+	case geneva_running:
+		break;
+	}
 }
 
 void geneva_Control(){
