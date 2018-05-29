@@ -38,7 +38,7 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *I2cHandle)
 {
 	if(zForceState == zForce_WaitForDR) {
 		 zForceState = zForce_DecodeMessage;
-		 uprintf("ballsensor decoding mesg\n");
+		 //uprintf("ballsensor decoding mesg\n");
 	}
 	else if(zForceState == zForce_ReadMessage) {
 		parseMessage();
@@ -104,10 +104,10 @@ void ballHandler(uint16_t x, uint16_t y) {
 }
 
 void parseMessage() {
-	uprintf("parsemessage\n\r");
+	//uprintf("parsemessage\n\r");
 
-	if(!memcmp( data, bootcomplete_response, sizeof(bootcomplete_response)-1)) {
-	  uprintf("BALLSENSOR - BootComplete response received, enabling device\n\r");
+	if(!memcmp( data, bootcomplete_response, 10) && !memcmp( data+11, bootcomplete_response+11, 3) && !memcmp( data+13, bootcomplete_response+13, 3)) {
+	  //uprintf("BALLSENSOR - BootComplete response received, enabling device\n\r");
 	  zForceState = zForce_EnableDevice;
 	}
 	else if(!memcmp(data, enable_response, sizeof(enable_response))) {
@@ -128,7 +128,7 @@ void parseMessage() {
 		zForceState = zForce_WaitForDR;
 	}
 	else { //ignore any other data
-	  printRawData(data);
+	  //printRawData(data);
 	  noBall();
 	  zForceState = zForce_WaitForDR;
 	  //uprintf("going to waitfordr\n\r");
@@ -195,13 +195,13 @@ uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint
 		}
 		break;
 	case zForce_DecodeMessage:// message is received and needs to be decoded
-		uprintf("zForce_DecodeMessage\n\r");
+		//uprintf("zForce_DecodeMessage\n\r");
 		next_message_length = data[1];
 		zForceState = zForce_ReadMessage;
 		//uprintf("going to readmess state\n\r");
 		break;
 	case zForce_ReadMessage:// when message length is known it should be received
-		uprintf("zForce_ReadMessage\n\r");
+		//uprintf("zForce_ReadMessage\n\r");
 		if(HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)){
 			I2CRx();
 		}
