@@ -106,8 +106,8 @@ void ballHandler(uint16_t x, uint16_t y) {
 void parseMessage() {
 	//uprintf("parsemessage\n\r");
 
-	if(!memcmp( data, bootcomplete_response, sizeof(bootcomplete_response))) {
-	  uprintf("BALLSENSOR - BootComplete response received, enabling device\n\r");
+	if(!memcmp( data, bootcomplete_response, 10) && !memcmp( data+11, bootcomplete_response+11, 3) && !memcmp( data+13, bootcomplete_response+13, 3)) {
+	  //uprintf("BALLSENSOR - BootComplete response received, enabling device\n\r");
 	  zForceState = zForce_EnableDevice;
 	}
 	else if(!memcmp(data, enable_response, sizeof(enable_response))) {
@@ -148,6 +148,7 @@ void ballsensorInit()
 	int currentTime = HAL_GetTick();
 	zForceState = zForce_WaitForDR;
 	while(  !HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)  &&  (HAL_GetTick()-currentTime < 100)  );
+	uprintf("BALLSENSOR - data ready!\n");
 	I2CRx();
 }
 
