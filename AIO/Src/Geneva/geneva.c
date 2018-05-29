@@ -73,7 +73,7 @@ void geneva_Update(){
 			if(geneva_Encodervalue() != enc){
 				enc = geneva_Encodervalue();
 				tick = HAL_GetTick();
-			}else if(tick + 50 < HAL_GetTick()){
+			}else if(tick + 100 < HAL_GetTick()){
 				geneva_EdgeCallback(GENEVA_CAL_EDGE_CNT);
 			}
 		}

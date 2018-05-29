@@ -23,5 +23,9 @@ void Uint2Leds(uint8_t uint, uint8_t n_leds);
  *
  */
 void ToggleLD(uint8_t LD_);
+/*	Sets a LD to value on
+ *
+ */
+void SetLD(uint8_t LD_, uint8_t on);
 
 #endif /* USERIO_USERIO_H_ */

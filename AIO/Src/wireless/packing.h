@@ -59,7 +59,7 @@ typedef struct roboAckData{
 	int16_t theta:11;
 	int16_t orientation:11;
 	int16_t angularVelocity:11;
-	uint8_t ballSensor:7;
+	int8_t ballSensor:7;
 
 	//extra fields (add 12 Bytes)
 	uint32_t xAcceleration;

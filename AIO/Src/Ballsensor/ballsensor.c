@@ -147,8 +147,7 @@ void ballsensorInit()
 	HAL_GPIO_WritePin(bs_nRST_GPIO_Port, bs_nRST_Pin, 1);
 	int currentTime = HAL_GetTick();
 	zForceState = zForce_WaitForDR;
-	while(  !HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)  &&  (HAL_GetTick()-currentTime < 100)  );
-	uprintf("BALLSENSOR - data ready!\n");
+	while(  !HAL_GPIO_ReadPin(bs_EXTI_GPIO_Port,bs_EXTI_Pin)  &&  (HAL_GetTick()-currentTime < 1000)  );
 	I2CRx();
 }
 
@@ -168,7 +167,7 @@ uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint
 
 	//uprintf("HAL_I2C_GetState = [%02x]\n\r", HAL_I2C_GetState(&hi2c1));
 	if(HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY) {
-		  	  return getBallPos();
+		return getBallPos();
 	}
 
 	//uprintf("zForceState = [%d]\n\r", zForceState);

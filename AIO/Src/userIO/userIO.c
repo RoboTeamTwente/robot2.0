@@ -47,3 +47,28 @@ inline void ToggleLD(uint8_t LD_){
 		break;
 	}
 }
+
+inline void SetLD(uint8_t LD_, uint8_t on){
+	switch(LD_){
+	case 1:
+		HAL_GPIO_WritePin(LD1_GPIO_Port,LD1_Pin, on);
+		break;
+	case 2:
+		HAL_GPIO_WritePin(LD2_GPIO_Port,LD2_Pin, on);
+		break;
+	case 3:
+		HAL_GPIO_WritePin(LD3_GPIO_Port,LD3_Pin, on);
+		break;
+	case 4:
+		HAL_GPIO_WritePin(LD4_GPIO_Port,LD4_Pin, on);
+		break;
+	case 5:
+		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, on);
+		break;
+	case 6:
+		HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin, on);
+		break;
+	default:
+		break;
+	}
+}
