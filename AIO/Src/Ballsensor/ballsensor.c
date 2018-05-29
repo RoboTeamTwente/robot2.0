@@ -16,6 +16,29 @@ enum zForceStates{
 	zForce_setFreq
 }zForceState = zForce_RST;
 
+typedef struct{
+	uint8_t enable;
+	uint8_t power;
+
+} KickChipData;
+
+typedef struct{
+	uint32_t x;
+	uint32_t y;
+	uint lastSeen;
+
+} Position;
+
+Position ballPosition;
+KickChipData kickWhenBall;
+KickChipData chipWhenBall;
+
+#define ballsensor_i2caddr (uint16_t)(0x50 << 1)
+#define MAX_DATA_SIZE 255
+uint8_t data[MAX_DATA_SIZE];
+uint8_t next_message_length;
+uint error;
+
 
 uint8_t enable_command[] = 	{0xEE,0x0B,	0xEE,0x09,0x40,0x02,0x02,0x00,0x65,0x03,0x81,0x01,0x00};
 uint8_t enable_response[] = {			0xEF,0x09,0x40,0x02,0x02,0x00,0x65,0x03,0x81,0x01,0x00};
@@ -159,7 +182,7 @@ void ballsensorReset() {
 	zForceState = zForce_WaitForDR;
 }
 
-uint8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint8_t power)
+int8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint8_t power)
 {
 	kickWhenBall.enable = kick_enable;
 	chipWhenBall.enable = chip_enable;
@@ -222,7 +245,7 @@ void noBall() {
 	ballPosition.x = ballPosition.y = NOBALL;
 }
 
-uint32_t getBallPos() {
+int32_t getBallPos() {
 	if(ballPosition.x != NOBALL) {
 		return ballPosition.x/10;
 	}
