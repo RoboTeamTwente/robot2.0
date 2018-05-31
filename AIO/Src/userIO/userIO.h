@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 /*	reads the address from the slider switch
- *
+ *		ret: address
  */
 int ReadAddress();
 /*
@@ -20,11 +20,15 @@ int ReadAddress();
  */
 void Uint2Leds(uint8_t uint, uint8_t n_leds);
 /*	Toggle a single led given by
- *
+ *	param:
+ *		uint: the binary digit to display
+ *		n_leds: binary assignement of the leds to use; 0b001100 would use led 3 and 4
  */
 void ToggleLD(uint8_t LD_);
 /*	Sets a LD to value on
- *
+ *	param:
+ *		LD_: which led
+ *		on: on or off
  */
 void SetLD(uint8_t LD_, uint8_t on);
 

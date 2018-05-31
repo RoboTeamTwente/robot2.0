@@ -9,16 +9,17 @@
 #include "pid/pid.h"
 #include "../PuttyInterface/PuttyInterface.h"
 
-#define USE_SENSOR 0
-#define GENEVA_CAL_EDGE_CNT 1950
-#define GENEVA_CAL_SENS_CNT 1400
-#define GENEVA_POSITION_DIF_CNT 780
-#define GENEVA_MAX_ALLOWED_OFFSET 0.2*GENEVA_POSITION_DIF_CNT
+#define USE_SENSOR 0			// use the geneva sensor or always move to the edge
+#define GENEVA_CAL_EDGE_CNT 1950	// the amount of counts from an edge to the center
+#define GENEVA_CAL_SENS_CNT 1400	// the amount of counts from the sensor to the center
+#define GENEVA_POSITION_DIF_CNT 780	// amount of counts between each of the five geneva positions
+#define GENEVA_MAX_ALLOWED_OFFSET 0.2*GENEVA_POSITION_DIF_CNT	// maximum range where the geneva drive is considered in positon
 
-geneva_states geneva_state = geneva_idle;
+geneva_states geneva_state = geneva_idle;	// current state of the geneva system
 
-uint geneva_cnt;
+uint geneva_cnt;							// last measured encoder count
 
+//declare de pid controller
 PID_controller_HandleTypeDef Geneva_pid = {
 		.pid = {0,0,0},
 		.K_terms = {20.0F, 2.0F, 0.7F},
@@ -35,77 +36,89 @@ PID_controller_HandleTypeDef Geneva_pid = {
 		.dir_Port[1] = Geneva_dir_A_GPIO_Port,
 };
 
+/*--------------static functions---------------*/
+/*	to be called when the edge is detected
+ * param:	the current distance to the middle positon
+ */
 static void geneva_EdgeCallback(int edge_cnt){
 	uprintf("ran into edge, geneva sensor broken!\n\r");
 	__HAL_TIM_SET_COUNTER(&htim2, edge_cnt);
 	Geneva_pid.ref = 0;
 	geneva_state = geneva_returning;
 }
-
+/*	is the geneva drive within range of the sensor?
+ * 	ret: [1,0] 1:yes 2:no
+ */
+static inline GPIO_PinState ReadSensor(){
+	return HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin);
+}
+/*	check if the geneva drive got stuck and responds appropriatly
+ *	param:
+ *		dir: direction to go if we got stuck
+ */
+static inline void CheckIfStuck(int8_t dir){
+	static uint tick = 0xFFFF;			//
+	static int enc;
+	if(geneva_Encodervalue() != enc){
+		enc = geneva_Encodervalue();
+		tick = HAL_GetTick();
+	}else if(tick + 70 < HAL_GetTick()){
+		geneva_EdgeCallback(dir*GENEVA_CAL_EDGE_CNT);
+	}
+}
+/*---------------public functions-------------------*/
 void geneva_Init(){
-	geneva_state = geneva_setup;
-	pid_Init(&Geneva_pid);
-	HAL_TIM_Base_Start(&htim2);
-	geneva_cnt  = HAL_GetTick();
+	geneva_state = geneva_setup;	// go to setup
+	pid_Init(&Geneva_pid);			// initialize the pid controller
+	HAL_TIM_Base_Start(&htim2);		// start the encoder
+	geneva_cnt  = HAL_GetTick();	// store the start time
 }
 
 void geneva_Deinit(){
-	HAL_TIM_Base_Start(&htim2);
-	pid_Deinit(&Geneva_pid);
-	geneva_state = geneva_idle;
+	HAL_TIM_Base_Start(&htim2);		// stop encoder
+	pid_Deinit(&Geneva_pid);		// stop the pid controller
+	geneva_state = geneva_idle;		// go to idle state
 }
 
 void geneva_Update(){
-	static uint tick = 0xFFFF;
-	static int enc;
 	switch(geneva_state){
 	case geneva_idle:
 		break;
-	case geneva_setup:// While in setup, slowly move towards the sensor
-		if(!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin) && USE_SENSOR){
-		  if((HAL_GetTick() - geneva_cnt) < 100){
-			  geneva_state = geneva_too_close;
+	case geneva_setup:								// While in setup, slowly move towards the sensor/edge
+		if(!ReadSensor() && USE_SENSOR){			// if we see the sensor and we use it call sensorCallback unless we just started
+		  if((HAL_GetTick() - geneva_cnt) < 100){	// did we start within range?
+			  geneva_state = geneva_too_close;		// if we did we were too close
 		  }else{
 			  geneva_SensorCallback();
 		  }
 		}else{
-			Geneva_pid.ref = (HAL_GetTick() - geneva_cnt)*1;
-			if(geneva_Encodervalue() != enc){
-				enc = geneva_Encodervalue();
-				tick = HAL_GetTick();
-			}else if(tick + 100 < HAL_GetTick()){
-				geneva_EdgeCallback(GENEVA_CAL_EDGE_CNT);
-			}
+			Geneva_pid.ref = (HAL_GetTick() - geneva_cnt)*1;	// if sensor is not seen yet, move to the right at 1 count per millisecond
+			CheckIfStuck(1);									// if we get stuck were at the edge and missed the sensor
 		}
 		break;
-	case geneva_too_close:
-		if(!HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin)){
-			Geneva_pid.ref = -GENEVA_POSITION_DIF_CNT * 5;
-			if(geneva_Encodervalue() != enc){
-				enc = geneva_Encodervalue();
-				tick = HAL_GetTick();
-			}else if(tick + 70 < HAL_GetTick()){
-				geneva_EdgeCallback(-1*GENEVA_CAL_EDGE_CNT);
-			}
+	case geneva_too_close:										// if we start within sensor range, we first have to move away
+		if(!ReadSensor()){
+			Geneva_pid.ref = -GENEVA_POSITION_DIF_CNT * 5;		// go to the other side
+			CheckIfStuck(-1);
 		}else{
 			geneva_state = geneva_setup;
 		}
 		break;
-	case geneva_returning:// while returning move to the middle position
-		if(50 > (geneva_Encodervalue())){
+	case geneva_returning:					// while returning move to the middle position
+		if(geneva_GetPosition() == geneva_middle){
 			geneva_state = geneva_running;
 		}else{
-			Geneva_pid.ref = 0;
+			geneva_SetPosition(geneva_middle);
 		}
 		break;
-	case geneva_running:
+	case geneva_running:					// wait for external sources to set a new ref
 		break;
 	}
 }
 
 void geneva_Control(){
 	if(geneva_idle != geneva_state){
-		pid_Control(geneva_Encodervalue(),&Geneva_pid);
+		pid_Control(geneva_Encodervalue(), &Geneva_pid);
 	}
 }
 
@@ -119,9 +132,8 @@ void geneva_SensorCallback(){
 	case geneva_idle:
 		break;
 	case geneva_setup:
-		__HAL_TIM_SET_COUNTER(&htim2, GENEVA_CAL_SENS_CNT);
-		Geneva_pid.ref = 0;
-		geneva_state = geneva_returning;
+		__HAL_TIM_SET_COUNTER(&htim2, GENEVA_CAL_SENS_CNT);	// set the count to the current positions
+		geneva_state = geneva_returning;					// go to the middle
 		break;
 	case geneva_too_close:
 		break;
