@@ -170,6 +170,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   uint printtime = 0;
   uint battery_count = 0;
+  preparedAckData.batteryState = 0;
   while (1)
   {
 	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
@@ -230,13 +231,9 @@ int main(void)
 			kick_DeInit();
 			dribbler_Deinit();
 			geneva_Deinit();
-			preparedAckData.batteryState = 0;
+			preparedAckData.batteryState = 1;
 			Wireless_Deinit();
 		}
-//		battery_empty = true;
-	}
-	else {
-		preparedAckData.batteryState = 1;
 	}
 
 
