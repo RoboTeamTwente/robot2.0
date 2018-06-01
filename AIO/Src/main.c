@@ -256,6 +256,14 @@ int main(void)
 		printtime = HAL_GetTick();
 		ToggleLD(1);
 
+		//CHECK NRF STATUS REGISTER EVERY SECOND...IF NRF IS CONSTIPATED, FLUSH SHIT OUT
+		if(readReg(STATUS) != 0x0e) {
+			nrfPrintStatus(readReg(STATUS));
+			uprintf("--> Flushing constipated NRF\n");
+			flushRX();
+			clearInterrupts();
+		}
+
 		if(*MT_GetStatusWord() & 0b00011000){
 			//uprintf("calibrating Xsens.\n\r");
 		}else if(started_icc == false){
