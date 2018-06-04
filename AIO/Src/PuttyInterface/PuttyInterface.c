@@ -21,6 +21,7 @@
 #include <stdio.h>
 
 char smallStrBuffer[1024];
+uint8_t TxBuf[1024];
 
 #ifdef PUTTY_USB
 bool usb_comm = false;
@@ -112,21 +113,15 @@ static void HandlePcInput(char * input, size_t n_chars, HandleLine func){
 }
 void TextOut(char *str){
 	uint8_t length = strlen(str);
-
-#ifdef PUTTY_USART
-	HAL_UART_Transmit(&huartx, (uint8_t*)str, length, 0xFFFF);
-#endif
-#ifdef PUTTY_USB
-	if(usb_comm){
-		CDC_Transmit_FS((uint8_t*)str, length);
-		HAL_Delay(1);
-	}
-#endif
+	HexOut((uint8_t*)str, length);
 }
 
 void HexOut(uint8_t data[], uint8_t length){
 #ifdef PUTTY_USART
-	HAL_UART_Transmit_IT(&huartx, data, length);
+//	while(HAL_UART_GetState(&huartx) != HAL_UART_STATE_READY && HAL_UART_GetState(&huartx) != HAL_UART_STATE_BUSY_TX );
+	while(huartx.gState != HAL_UART_STATE_READY);
+	memcpy(TxBuf, data, length);
+	HAL_UART_Transmit_IT(&huartx, TxBuf, length);
 #endif
 #ifdef PUTTY_USB
 	if(usb_comm){

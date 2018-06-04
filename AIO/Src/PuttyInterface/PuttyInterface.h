@@ -45,14 +45,18 @@ typedef struct {
 
 char smallStrBuffer[1024];
 
-// Print string str to the pc
-// str is the string to print
+/* 	Print string str to the pc
+ * 	param:
+ * 		str: string to print
+ */
 void TextOut(char *str);
 
-// Transmit raw data
-// data[] is the data,
-// length is the length of the data
-void HexOut(uint8_t*, uint8_t);
+/*	Transmit raw data
+ * 	param:
+ * 		data[]: the data
+ * 		length: the length of the data to send
+ */
+void HexOut(uint8_t data[], uint8_t length);
 
 void PuttyInterface_Init(PuttyInterfaceTypeDef* pitd);
 
