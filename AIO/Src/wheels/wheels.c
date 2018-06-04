@@ -13,7 +13,7 @@
 #include "../PuttyInterface/PuttyInterface.h"
 
 #define PWM_CUTOFF 3.0F		// arbitrary treshold below PWM_ROUNDUP
-#define PWM_ROUNDUP 6.0F 		// below this value the motor driver is unreliable
+#define PWM_ROUNDUP 3.1F 		// below this value the motor driver is unreliable
 #define ROBOT_RADIUS 0.0775F
 #define WHEEL_RADIUS 0.0275F
 #define HTIM5_FREQ 1000000.0F	//Hz
@@ -160,9 +160,9 @@ void wheels_SetOutput(float power[N_WHEELS]){
 			}
 			// TODO: FEW TWEAKS MADE THAT NEED TESTING
 			if(power[i] < PWM_CUTOFF){
-				power[i] = 0;
-//			}else if(power[i] < PWM_ROUNDUP){
-//				power[i] = PWM_ROUNDUP;
+				power[i] = 0.0F;
+			}else if(power[i] < PWM_ROUNDUP){
+				power[i] = PWM_ROUNDUP;
 			}else if(power[i] > 100){
 				power[i] = 100;
 			}
