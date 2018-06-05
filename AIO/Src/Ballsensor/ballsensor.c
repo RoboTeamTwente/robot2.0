@@ -184,6 +184,7 @@ void ballsensorReset() {
 
 int8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint8_t power)
 {
+
 	kickWhenBall.enable = kick_enable;
 	chipWhenBall.enable = chip_enable;
 	kickWhenBall.power = chipWhenBall.power = power;

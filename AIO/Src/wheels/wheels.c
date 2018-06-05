@@ -12,8 +12,8 @@
 #include "tim.h"
 #include "../PuttyInterface/PuttyInterface.h"
 
-#define PWM_CUTOFF 2.00F		// arbitrary treshold below PWM_ROUNDUP
-#define PWM_ROUNDUP 5.00F 		// below this value the motor driver is unreliable
+#define PWM_CUTOFF 3.0F		// arbitrary treshold below PWM_ROUNDUP
+#define PWM_ROUNDUP 3.1F 		// below this value the motor driver is unreliable
 #define ROBOT_RADIUS 0.0775F
 #define WHEEL_RADIUS 0.0275F
 #define HTIM5_FREQ 1000000.0F	//Hz
@@ -152,20 +152,21 @@ void wheels_SetOutput(float power[N_WHEELS]){
 	case wheels_ready:
 		memcpy(prev_reverse, reverse, N_WHEELS);
 		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-			if(power[i] < -1.0F ){
+			if(power[i] <= -PWM_CUTOFF){
 				power[i] = -power[i];
 				reverse[i] = 1;
-			}else if(power[i] > 1.0F ){
+			}else if(power[i] >= PWM_CUTOFF){
 				reverse[i] = 0;
 			}
-			if(power[i] > PWM_CUTOFF){
-				power[i] = PWM_ROUNDUP + power[i] * (0.01F*(100.0F-PWM_ROUNDUP));
-			}else{
-				power[i] = 0;
-			}
-			if(power[i] > 100){
+			// TODO: FEW TWEAKS MADE THAT NEED TESTING
+			if(power[i] < PWM_CUTOFF){
+				power[i] = 0.0F;
+			}else if(power[i] < PWM_ROUNDUP){
+				power[i] = PWM_ROUNDUP;
+			}else if(power[i] > 100){
 				power[i] = 100;
 			}
+
 		}
 
 		memcpy(global_power, power, 4 * sizeof(float));
@@ -189,7 +190,7 @@ void wheels_SetOutput(float power[N_WHEELS]){
 			HAL_TIM_Base_Stop(&htim14);											// Stop timer
 			__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 1000);
+			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
 			HAL_TIM_Base_Start_IT(&htim14);
 		}
 		return;
@@ -241,12 +242,12 @@ void wheels_Callback(){
 			break;
 		case first_brake_period:
 			brake_state[wheel] = second_brake_period;
-			//__HAL_TIM_SET_AUTORELOAD(&htim14, 8000/2);
+			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
 			break;
 		case second_brake_period:
 			SetDir(wheel,reverse[wheel]);
 			brake_state[wheel] = third_brake_period;
-			//__HAL_TIM_SET_AUTORELOAD(&htim14, 1000);
+			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
 			break;
 		case third_brake_period:
 			cnt++;

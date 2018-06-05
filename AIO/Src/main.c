@@ -85,6 +85,7 @@ bool vision_available = false;
 float velocityRef[3] = {0};
 float vision_yaw = 0;
 uint kick_timer = 0;
+uint8_t corrected_kick_power = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -155,7 +156,7 @@ int main(void)
   ballsensorInit();
   wheels_Init();
   MT_Init();
-  geneva_Init();
+  //geneva_Init();
   kick_Init();
 
   if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
@@ -205,9 +206,23 @@ int main(void)
 		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
 
 		//kicker
+		float kick_power = (float)receivedRoboData.kick_chip_power/255.0F*8.0F; // represented kick power
+		if (kick_power > 4.5F) {
+			corrected_kick_power = 99.0; // above a certain command, we cannot shoot any faster, so we choose maximum power for certainty
+		} else {
+			corrected_kick_power = (kick_power*0.5F+1.0F)/8.0F*100.0F; // scale (0 to 8) range to (1 to 5) range such that in software the command matches the start velocity of the ball
+		}
+//		uprintf("[%f, %f, %i]\n\r", kick_power, (float)(corrected_kick_power)/100*8,corrected_kick_power);
 		if (receivedRoboData.kick_chip_forced/* && ((HAL_GetTick() - kick_timer) > 0)*/){
 			kick_timer = HAL_GetTick() + 1000U;
-			kick_Shoot((receivedRoboData.kick_chip_power*100)/255,!receivedRoboData.do_chip);
+			float kick_power = (float)receivedRoboData.kick_chip_power/255.0F*8.0F; // represented kick power
+			float corrected_kick_power;
+			if (kick_power > 4.5F) {
+				corrected_kick_power = 99; // above a certain command, we cannot shoot any faster, so we choose maximum power for certainty
+			} else {
+				corrected_kick_power = (kick_power*0.5F+1.0F)/8.0F*100.0F; // scale (0 to 8) range to (1 to 5) range such that in software the command matches the start velocity of the ball
+			}
+			kick_Shoot(corrected_kick_power,!receivedRoboData.do_chip);
 		}
 
 		//geneva
@@ -237,7 +252,7 @@ int main(void)
 	}
 
 
-	preparedAckData.ballSensor = ballsensorMeasurementLoop(receivedRoboData.do_kick, receivedRoboData.do_chip, receivedRoboData.kick_chip_power);
+	preparedAckData.ballSensor = ballsensorMeasurementLoop(receivedRoboData.do_kick, receivedRoboData.do_chip, corrected_kick_power);
 	if(preparedAckData.ballSensor == NOBALL){
 		SetLD(2, 0);
 	}else{

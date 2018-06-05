@@ -13,11 +13,18 @@
 #include "../PuttyInterface/PuttyInterface.h"
 #include "../MTi/MTiControl.h"
 
-#define CALIBRATE_AFTER 6500 //time after which yaw calibration will start (ms)
-#define TIME_DIFF 0.01
+#define CALIBRATE_AFTER 6500 // time after which yaw calibration will start (ms)
+#define TIME_DIFF 0.01F // time difference due to 100Hz
+#define R 0.0775F 	// robot radius (m) (from center to wheel contact point)
+#define r 0.0275F 	// wheel radius (m)
+#define c 0.5F		// cosine of 60 degrees (wheel angle is at 60 degrees)
+#define s 0.866F	// sine of 60 degrees
+#define PWM_CUTOFF 3.0F // below this value the motor PWM is set to 0 (see wheels.c)
+
 uint start_time;
 
-//TODO: some settings
+// controller settings
+//TODO: some of these should be adaptable through wireless communication
 bool DO_enabled = false;
 bool use_yaw_control = true;
 bool ref_is_angle = true;
@@ -37,30 +44,27 @@ float constrainAngle(float x){
     return x - M_PI;
 }
 
-//multiplies a 4*3 matrix by a vector of 3 elements.
-void body2Wheels(float v[3], float output[4]){
+//multiplies a 4*3 matrix (M_inv) by a vector of 3 elements, to go from body force to wheel torque. (minus sign in front is due to wheels spinning in opposite direction to motors)
+void body2Wheels(float F[3], float output[4]){
+	float T_cutoff = (PWM_CUTOFF + 0.1F)*4*R/r;	// if the rotational force gets below this value, the motors wont deliver any torque
+	if (fabs(F[body_w]) < T_cutoff && fabs(F[body_w]) > T_cutoff/2 - 0.1F) {
+		// SPECIAL CASE: when 4 wheels deliver too much torque, we will use only 2 wheels for rotation
+		output[wheels_RF] = -(1/s*F[body_x] + 1/c*F[body_y] + 1/R*F[body_w]*2)*r/4;
+		output[wheels_RB] = -(1/s*F[body_x] - 1/c*F[body_y])*r/4;
+		output[wheels_LB] = -(-1/s*F[body_x] - 1/c*F[body_y] + 1/R*F[body_w]*2)*r/4;
+		output[wheels_LF] = -(-1/s*F[body_x] + 1/c*F[body_y])*r/4;
+	} else { // REGULAR CASE
+		output[wheels_RF] = -(1/s*F[body_x] + 1/c*F[body_y] + 1/R*F[body_w])*r/4;
+		output[wheels_RB] = -(1/s*F[body_x] - 1/c*F[body_y] + 1/R*F[body_w])*r/4;
+		output[wheels_LB] = -(-1/s*F[body_x] - 1/c*F[body_y] + 1/R*F[body_w])*r/4;
+		output[wheels_LF] = -(-1/s*F[body_x] + 1/c*F[body_y] + 1/R*F[body_w])*r/4;
+	}
 
-	float c = 0.5;
-	float s = 0.866;
-	float R = 0.0775;
-	float r = 0.0275;
-
-	//Applying M_inv matrix. (minus sign in front is due to wheels spinning in opposite direction to motors)
-	output[wheels_RF] = -(1/s*v[body_x] + 1/c*v[body_y] + 1/R*v[body_w])*r/4;
-	output[wheels_RB] = -(1/s*v[body_x] - 1/c*v[body_y] + 1/R*v[body_w])*r/4;
-	output[wheels_LB] = -(-1/s*v[body_x] - 1/c*v[body_y] + 1/R*v[body_w])*r/4;
-	output[wheels_LF] = -(-1/s*v[body_x] + 1/c*v[body_y] + 1/R*v[body_w])*r/4;
 }
 
 //multiplies a 3*4 matrix by a vector of 4 elements.
 void wheels2Body(float w[4], float output[3]){
-
-	float c = 0.5;
-	float s = 0.866;
-	float R = 0.0775;
-	float r = 0.0275;
-
-	//Applying transpose(M_inv) matrix
+	//Applying transpose(M_inv) matrix to go from wheel angular velocity to body velocity (assuming no slip)
 	output[body_x] = (1/s*w[wheels_RF] + 1/s*w[wheels_RB] - 1/s*w[wheels_LB] - 1/s*w[wheels_LF])*r/4;
 	output[body_y] = (1/c*w[wheels_RF] - 1/c*w[wheels_RB] - 1/c*w[wheels_LB] + 1/c*w[wheels_LF])*r/4;
 	output[body_w] = -(-1/R*w[wheels_RF] - 1/R*w[wheels_RB] - 1/R*w[wheels_LB] - 1/R*w[wheels_LF])*r/4;
@@ -97,6 +101,7 @@ float compute_limit_scale(float input[3], float limit){
 
 void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], float output[3]){
 	//TODO: this could also be used if no velocity control is used
+	//TODO: add rotational term as well?
 
 	// Requires transformation to global coordinates and back
 	float globalInput[3];
@@ -104,12 +109,6 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 	// accelerations are already global (free acceleration)
 	float accX = globalAcc[body_x];
 	float accY = globalAcc[body_y];
-//	if (fabs(accX)<0.3) {
-//		accX = 0;
-//	}
-//	if (fabs(accY)<0.3) {
-//		accY=0;
-//	}
 
 	float globalOut[3] = {0,0,0};
 	static float prevOut[3] = {0,0,0};
@@ -120,16 +119,12 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 	prevOut[body_x] = globalOut[body_x];
 	prevOut[body_y] = globalOut[body_y];
 
-	// safety: reduce effect, while testing
-//	globalOut[body_x] = globalOut[body_x]*0.25;//0.25;
-//	globalOut[body_y] = globalOut[body_y]*0.25;//0.25;
-
 	// rotate back to local and fill in the output
 	//TODO: differentiate for strafing direction?
 	float out[3];
 	rotate(yaw, globalOut, out);
-	output[body_x] = out[body_x]*0.5;//0.25;
-	output[body_y] = out[body_y]*0.5;//0.25;
+	output[body_x] = out[body_x]*0.5; // reduce effect of DO for now for safety
+	output[body_y] = out[body_y]*0.5;
 	output[body_w] = 0;
 }
 
@@ -215,32 +210,51 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 }
 
 float angleController(float angleRef, float yaw){
-	// PD Control
+	// TODO: FEW TWEAKS MADE THAT NEED TESTING
+	// PD Control of the yaw
+//		uprintf("[%f, %f, %f]\n\r", angleRef, yaw, yaw/M_PI*180);
 	float angleError = constrainAngle(angleRef - yaw);
-//	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, yaw/M_PI*180);
 	static float prevError = 0;
 	float dError = constrainAngle(angleError-prevError)/TIME_DIFF;
 	prevError = angleError;
 
-	float output = angleError*15.0 + dError*0.2;
-	float upper_lim = 20;
-	float lower_lim = 1;
-	float lower_roundup = 10.0;
+	float output;
+	static int threshold_switch; // prevents rapid switching of motor due to yaw sensor noise
+	threshold_switch = -1;
 
 	if (no_vel_control) {
-		output = angleError*100.0 + dError*3.0;
-		upper_lim = 500;
-		lower_lim = 5;
-		lower_roundup = 30;
+		// no velocity control will be applied on the output calculated here. It should therefore be interpreted as a torque on the robot
+		output = angleError*300.0F + dError*13.0F;
+		float mag = fabs(output);
+		float upper_lim = 300.0F;
+		float deadzone = 0.03;	// (rad) if the robot gets this close, the motors should stop delivering torque
+		float T_cutoff = (PWM_CUTOFF + 0.1F)*4*R/r;	// if the output gets below this value, the motors wont deliver any torque
+		if (mag > upper_lim) {
+			output = output / mag * upper_lim;
+		} else if (fabs(angleError) < deadzone + threshold_switch*0.003F) {
+			output = 0;
+			threshold_switch = 1;
+		} else if (mag < T_cutoff/2 && mag > 0.001F) {
+			output = output / mag * T_cutoff/2;
+		}
+//		uprintf("[%f, %f, %f]\n\r", T_cutoff, output, angleError);
+	} else {
+		// the output should be interpreted as an angular velocity reference
+		output = angleError*15.0F + dError*0.2F;
+		float mag = fabs(output);
+		float upper_lim = 20.0;
+		float lower_lim = 1.0;
+		float lower_roundup = 10.0;
+		if (mag > upper_lim) {
+			output = output / mag * upper_lim;
+		} else if (mag < lower_lim + threshold_switch*0.1F) {
+			output = 0;
+			threshold_switch = 1;
+		} else if (mag < lower_roundup) {
+			output = output / mag * lower_roundup;
+		}
 	}
 
-	if (fabs(output) > upper_lim) {
-		output = output / fabs(output) * upper_lim;
-	} else if (fabs(output) < lower_lim) {
-		output = 0;
-	} else if (fabs(output) < lower_roundup) {
-		output = output / fabs(output) * lower_roundup;
-	}
 	return output;
 }
 
@@ -380,12 +394,12 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 		}
 
 		if (no_vel_control) {
-			float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1500, 0};
-			forceRef[body_w] = angleController(angleRef, xsensData[body_w])*1.5; //TODO: hacked 1.5 factor in to give rotation more space in case of high commands
+			float forceRef[3] = {localVelocityRef[body_x]*1500, localVelocityRef[body_y]*2000, 0};
+			forceRef[body_w] = angleController(angleRef, xsensData[body_w])*2.0F;
 			float scale = compute_limit_scale(forceRef, 100);
 			forceRef[body_x] = scale*forceRef[body_x];
 			forceRef[body_y] = scale*forceRef[body_y];
-			forceRef[body_w] = forceRef[body_w]/1.5;
+			forceRef[body_w] = forceRef[body_w]/2.0F;
 			body2Wheels(forceRef, output);
 		} else {
 			float newVelocityRef[3] = {localVelocityRef[body_x], localVelocityRef[body_y], 0};
