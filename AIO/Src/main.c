@@ -156,7 +156,7 @@ int main(void)
   ballsensorInit();
   wheels_Init();
   MT_Init();
-  //geneva_Init();
+  geneva_Init();
   kick_Init();
 
   if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
