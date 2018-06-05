@@ -44,17 +44,16 @@ float constrainAngle(float x){
     return x - M_PI;
 }
 
-//multiplies a 4*3 matrix by a vector of 3 elements.
+//multiplies a 4*3 matrix (M_inv) by a vector of 3 elements, to go from body force to wheel torque. (minus sign in front is due to wheels spinning in opposite direction to motors)
 void body2Wheels(float F[3], float output[4]){
-	float T_cutoff = (PWM_CUTOFF + 0.1F)*4*R/r;	// if the output gets below this value, the motors wont deliver any torque
+	float T_cutoff = (PWM_CUTOFF + 0.1F)*4*R/r;	// if the rotational force gets below this value, the motors wont deliver any torque
 	if (fabs(F[body_w]) < T_cutoff && fabs(F[body_w]) > T_cutoff/2 - 0.1F) {
-		//Applying M_inv matrix while only using 2 wheels for rotation
+		// SPECIAL CASE: when 4 wheels deliver too much torque, we will use only 2 wheels for rotation
 		output[wheels_RF] = -(1/s*F[body_x] + 1/c*F[body_y] + 1/R*F[body_w]*2)*r/4;
 		output[wheels_RB] = -(1/s*F[body_x] - 1/c*F[body_y])*r/4;
 		output[wheels_LB] = -(-1/s*F[body_x] - 1/c*F[body_y] + 1/R*F[body_w]*2)*r/4;
 		output[wheels_LF] = -(-1/s*F[body_x] + 1/c*F[body_y])*r/4;
-	} else { // regular situation:
-		//Applying M_inv matrix to go from body force to wheel torque. (minus sign in front is due to wheels spinning in opposite direction to motors)
+	} else { // REGULAR CASE
 		output[wheels_RF] = -(1/s*F[body_x] + 1/c*F[body_y] + 1/R*F[body_w])*r/4;
 		output[wheels_RB] = -(1/s*F[body_x] - 1/c*F[body_y] + 1/R*F[body_w])*r/4;
 		output[wheels_LB] = -(-1/s*F[body_x] - 1/c*F[body_y] + 1/R*F[body_w])*r/4;
@@ -213,7 +212,7 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 float angleController(float angleRef, float yaw){
 	// TODO: FEW TWEAKS MADE THAT NEED TESTING
 	// PD Control of the yaw
-	//	uprintf("[%f, %f, %f]\n\r", angleRef, yaw, yaw/M_PI*180);
+//		uprintf("[%f, %f, %f]\n\r", angleRef, yaw, yaw/M_PI*180);
 	float angleError = constrainAngle(angleRef - yaw);
 	static float prevError = 0;
 	float dError = constrainAngle(angleError-prevError)/TIME_DIFF;
@@ -396,11 +395,11 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 
 		if (no_vel_control) {
 			float forceRef[3] = {localVelocityRef[body_x]*1500, localVelocityRef[body_y]*2000, 0};
-			forceRef[body_w] = angleController(angleRef, xsensData[body_w])*1.6F;
+			forceRef[body_w] = angleController(angleRef, xsensData[body_w])*2.0F;
 			float scale = compute_limit_scale(forceRef, 100);
 			forceRef[body_x] = scale*forceRef[body_x];
 			forceRef[body_y] = scale*forceRef[body_y];
-			forceRef[body_w] = forceRef[body_w]/1.6F;
+			forceRef[body_w] = forceRef[body_w]/2.0F;
 			body2Wheels(forceRef, output);
 		} else {
 			float newVelocityRef[3] = {localVelocityRef[body_x], localVelocityRef[body_y], 0};

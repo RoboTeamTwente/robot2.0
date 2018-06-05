@@ -190,7 +190,7 @@ void wheels_SetOutput(float power[N_WHEELS]){
 			HAL_TIM_Base_Stop(&htim14);											// Stop timer
 			__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
 			__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 2000);
+			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
 			HAL_TIM_Base_Start_IT(&htim14);
 		}
 		return;
@@ -242,12 +242,12 @@ void wheels_Callback(){
 			break;
 		case first_brake_period:
 			brake_state[wheel] = second_brake_period;
-			//__HAL_TIM_SET_AUTORELOAD(&htim14, 8000/2);
+			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
 			break;
 		case second_brake_period:
 			SetDir(wheel,reverse[wheel]);
 			brake_state[wheel] = third_brake_period;
-			//__HAL_TIM_SET_AUTORELOAD(&htim14, 1000);
+			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
 			break;
 		case third_brake_period:
 			cnt++;

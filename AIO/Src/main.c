@@ -156,7 +156,7 @@ int main(void)
   ballsensorInit();
   wheels_Init();
   MT_Init();
-  geneva_Init();
+  //geneva_Init();
   kick_Init();
 
   if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
@@ -212,6 +212,7 @@ int main(void)
 		} else {
 			corrected_kick_power = (kick_power*0.5F+1.0F)/8.0F*100.0F; // scale (0 to 8) range to (1 to 5) range such that in software the command matches the start velocity of the ball
 		}
+//		uprintf("[%f, %f, %i]\n\r", kick_power, (float)(corrected_kick_power)/100*8,corrected_kick_power);
 		if (receivedRoboData.kick_chip_forced/* && ((HAL_GetTick() - kick_timer) > 0)*/){
 			kick_timer = HAL_GetTick() + 1000U;
 			float kick_power = (float)receivedRoboData.kick_chip_power/255.0F*8.0F; // represented kick power
