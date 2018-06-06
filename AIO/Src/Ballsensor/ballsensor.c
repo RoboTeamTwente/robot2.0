@@ -6,6 +6,11 @@
  */
 #include "ballsensor.h"
 
+#define BALLSENSOR_THRESH_LEFT 550
+#define BALLSENSOR_THRESH_RIGHT 90
+
+//0 - 700
+//20 - 600
 
 enum zForceStates{
 	zForce_RST,
@@ -98,7 +103,8 @@ void printRawData(uint8_t data[]) {
 }
 
 void printBallPosition() {
-	uprintf("BALLSENSOR - x:\t %lu \t y:\t %lu \n\r", ballPosition.x, ballPosition.y);
+	//uprintf("BALLSENSOR - x:\t %lu \t y:\t %lu \n\r", ballPosition.x, ballPosition.y);
+	uprintf("BALLSENSOR - x: %lu\n\r", ballPosition.x);
 }
 
 void updatePosition(uint8_t data[]) {
@@ -109,19 +115,53 @@ void updatePosition(uint8_t data[]) {
   y = data[14] << 8;
   y |= data[15];
   //uprintf("BALLSENSOR - x:\t %d \t y:\t %d \n\r", x,y);
+
 	ballPosition.x = x;
 	ballPosition.y = y;
+	//printBallPosition();
 }
 
+uint8_t isBallCentered() {
+
+	int8_t shift = 0;
+	switch(geneva_GetPosition()){
+		case geneva_rightright:
+			shift = -80;
+			break;
+		case geneva_right:
+			shift = -40;
+			break;
+		case geneva_middle:
+			shift = 0;
+			break;
+		case geneva_left:
+			shift = 50;
+			break;
+		case geneva_leftleft:
+			shift = 100;
+			break;
+		}
+
+	if(ballPosition.x < BALLSENSOR_THRESH_LEFT+shift && ballPosition.x > BALLSENSOR_THRESH_RIGHT+shift) {
+		return 1;
+	}
+	return 0;
+}
 
 void ballHandler(uint16_t x, uint16_t y) {
 	//uprintf("ballHandler\n\r");
-	if(kickWhenBall.enable) {
-		kick_Shoot(kickWhenBall.power,KICK);
-		noBall();
+	if(isBallCentered()) {
+		if(kickWhenBall.enable) {
+		//if(true) {
+			kick_Shoot(kickWhenBall.power,KICK);
+			noBall();
+		}
+		else if(chipWhenBall.enable) {
+			kick_Shoot(chipWhenBall.power,CHIP);
+			noBall();
+		}
 	}
-	else if(chipWhenBall.enable) {
-		kick_Shoot(chipWhenBall.power,CHIP);
+	else {
 		noBall();
 	}
 }

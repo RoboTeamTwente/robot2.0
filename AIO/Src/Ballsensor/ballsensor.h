@@ -12,6 +12,7 @@
 #include "gpio.h"
 #include "../PuttyInterface/PuttyInterface.h"
 #include "../kickchip/kickchip.h"
+#include "../Geneva/geneva.h"
 
 #define NOBALL -1
 #define NOBALL_TIMEOUT 100 //TODO: find appropriate value for this?
@@ -22,6 +23,7 @@ void I2CRx();
 
 void printRawData(uint8_t data[]);
 void printPosition(uint8_t data[]);
+uint8_t isBallCentered();
 void ballHandler(uint16_t x, uint16_t y);
 void parseMessage();
 void ballsensorInit();
