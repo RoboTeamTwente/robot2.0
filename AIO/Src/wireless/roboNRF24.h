@@ -15,6 +15,7 @@
 #include "packing.h"
 #include "myNRF24.h"
 
+uint8_t enable_acks;
 
 //structs to be used in combination with TX and RX packets
 roboData receivedRoboData; //unwrapped packet from the basestation

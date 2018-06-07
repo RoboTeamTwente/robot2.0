@@ -47,10 +47,17 @@ int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t roboI
 	setRXaddress(addressLong, 1);
 
 	//enable dynamic packet length, ack payload, dynamic acks
-	writeReg(FEATURE, EN_DPL | EN_ACK_PAY | EN_DYN_ACK);
+	if(enable_acks) {
+		writeReg(FEATURE, EN_DPL | EN_ACK_PAY | EN_DYN_ACK);
+	}
+	else {
+		writeReg(FEATURE, EN_DPL);
+	}
 
-	//enable Auto Acknowledgment for Pipe 1
-	writeReg(EN_AA, ENAA_P1);
+	if(enable_acks) {
+		//enable Auto Acknowledgment for Pipe 1
+		writeReg(EN_AA, ENAA_P1);
+	}
 
 
 	//enable dynamic packet length for data pipe(s)
@@ -61,16 +68,18 @@ int8_t initRobo(SPI_HandleTypeDef* spiHandle, uint8_t freqChannel, uint8_t roboI
 	//go to RX mode and start listening
 	powerUpRX();
 
-	//preparing a dummy-payload which will be sent
-	//when the very first packet was received
-	uint8_t dummyvalues[32];
-	//cold food means: we just booted up
-	dummyvalues[0] = 0xc0;
-	dummyvalues[1] = 0x1d;
-	dummyvalues[2] = 0xf0;
-	dummyvalues[3] = 0x0d;
+	if(enable_acks) {
+		//preparing a dummy-payload which will be sent
+		//when the very first packet was received
+		uint8_t dummyvalues[32];
+		//cold food means: we just booted up
+		dummyvalues[0] = 0xc0;
+		dummyvalues[1] = 0x1d;
+		dummyvalues[2] = 0xf0;
+		dummyvalues[3] = 0x0d;
 
-	writeACKpayload(dummyvalues, 4, 1);
+		writeACKpayload(dummyvalues, 4, 1);
+	}
 
 
 	//go to RX mode and start listening
@@ -192,26 +201,27 @@ int8_t roboCallback(uint8_t localRobotID){
 
 	flushRX();
 
+	if(enable_acks) {
 
+		//building a packet from the current roboAckData struct
+		uint8_t txPacket[32];
 
-	//building a packet from the current roboAckData struct
-	uint8_t txPacket[32];
+		uint8_t ackDataLength;
+		if(receivedRoboData.debug_info)
+			ackDataLength = FULLACKPKTLEN; //adding xsense data
+		else
+			ackDataLength = SHORTACKPKTLEN;
 
-	uint8_t ackDataLength;
-	if(receivedRoboData.debug_info)
-		ackDataLength = FULLACKPKTLEN; //adding xsense data
-	else
-		ackDataLength = SHORTACKPKTLEN;
+		//fillAckData(ackDataLength);
+		roboAckDataToPacket(&preparedAckData, txPacket);
+		//printRoboAckData(&preparedAckData,txPacket,ackDataLength);
 
-	//fillAckData(ackDataLength);
-	roboAckDataToPacket(&preparedAckData, txPacket);
-	//printRoboAckData(&preparedAckData,txPacket,ackDataLength);
+		//robotDataToPacket(&receivedRoboData, txPacket); //sending back the packet we just received
 
-	//robotDataToPacket(&receivedRoboData, txPacket); //sending back the packet we just received
-
-	if(writeACKpayload(txPacket, ackDataLength, 1) != 0) { //just for testing sending a robot packet to the basestation.
-		//if(verbose) uprintf("Error writing ACK payload. TX FIFO full?\n");
-		return -2; //error while writing ACK payload to buffer
+		if(writeACKpayload(txPacket, ackDataLength, 1) != 0) { //just for testing sending a robot packet to the basestation.
+			//if(verbose) uprintf("Error writing ACK payload. TX FIFO full?\n");
+			return -2; //error while writing ACK payload to buffer
+		}
 	}
 
 	return 0; //success

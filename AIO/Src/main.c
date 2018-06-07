@@ -172,6 +172,7 @@ int main(void)
   uint printtime = 0;
   uint battery_count = 0;
   preparedAckData.batteryState = 0;
+  enable_acks = 1;
   while (1)
   {
 	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
