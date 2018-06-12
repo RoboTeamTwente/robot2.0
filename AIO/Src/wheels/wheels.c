@@ -152,10 +152,10 @@ void wheels_SetOutput(float power[N_WHEELS]){
 	case wheels_ready:
 		memcpy(prev_reverse, reverse, N_WHEELS);
 		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-			if(power[i] <= -PWM_CUTOFF){
+			if(power[i] <= -1.0F){
 				power[i] = -power[i];
 				reverse[i] = 1;
-			}else if(power[i] >= PWM_CUTOFF){
+			}else if(power[i] >= 1.0F){
 				reverse[i] = 0;
 			}
 			// TODO: FEW TWEAKS MADE THAT NEED TESTING
