@@ -10,9 +10,9 @@
 #include "../PuttyInterface/PuttyInterface.h"
 
 #define USE_SENSOR 0			// use the geneva sensor or always move to the edge
-#define GENEVA_CAL_EDGE_CNT 1950	// the amount of counts from an edge to the center
+#define GENEVA_CAL_EDGE_CNT 1980	// the amount of counts from an edge to the center
 #define GENEVA_CAL_SENS_CNT 1400	// the amount of counts from the sensor to the center
-#define GENEVA_POSITION_DIF_CNT 780	// amount of counts between each of the five geneva positions
+#define GENEVA_POSITION_DIF_CNT 810	// amount of counts between each of the five geneva positions
 #define GENEVA_MAX_ALLOWED_OFFSET 0.2*GENEVA_POSITION_DIF_CNT	// maximum range where the geneva drive is considered in positon
 
 geneva_states geneva_state = geneva_idle;	// current state of the geneva system
@@ -22,7 +22,7 @@ uint geneva_cnt;							// last measured encoder count
 //declare de pid controller
 PID_controller_HandleTypeDef Geneva_pid = {
 		.pid = {0,0,0},
-		.K_terms = {20.0F, 2.0F, 0.7F},
+		.K_terms = {50.0F, 4.0F, 0.7F},
 		.ref = 0.0F,
 		.timestep = 0.0F,
 		.actuator = &htim10,

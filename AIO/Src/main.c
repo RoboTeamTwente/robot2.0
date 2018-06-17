@@ -160,7 +160,7 @@ int main(void)
   kick_Init();
 
   if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
-	  Wireless_Init(ReadAddress(), 78);
+	  Wireless_Init(ReadAddress(), 103);
   }else{
 	  Wireless_Init(ReadAddress(), 80);
   }
