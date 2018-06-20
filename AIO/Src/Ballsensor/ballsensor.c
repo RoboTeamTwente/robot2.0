@@ -62,6 +62,8 @@ uint8_t next_message_length = 2;
 
 uint8_t ballsensorInitialized = 0;
 
+uint have_ball_to_kick_time;
+
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *I2cHandle)
 {
 	if(zForceState == zForce_WaitForDR) {
@@ -140,6 +142,8 @@ uint8_t isBallCentered() {
 		case geneva_leftleft:
 			shift = 100;
 			break;
+		default:
+			break;
 		}
 
 	if(ballPosition.x < BALLSENSOR_THRESH_LEFT+shift && ballPosition.x > BALLSENSOR_THRESH_RIGHT+shift) {
@@ -147,25 +151,24 @@ uint8_t isBallCentered() {
 	}
 	return 0;
 }
-
 void ballHandler(uint16_t x, uint16_t y) {
 	//uprintf("ballHandler\n\r");
 	if(isBallCentered()) {
 		if(kickWhenBall.enable) {
-		//if(true) {
-			kick_Shoot(kickWhenBall.power,KICK);
-			noBall();
+			if(y < 330) {
+				kick_Shoot(kickWhenBall.power,KICK);
+				noBall();
+			}
+		}else if(chipWhenBall.enable) {
+			if(y < 330) {
+				kick_Shoot(chipWhenBall.power,CHIP);
+				noBall();
+			}
 		}
-		else if(chipWhenBall.enable) {
-			kick_Shoot(chipWhenBall.power,CHIP);
-			noBall();
-		}
-	}
-	else {
+	} else {
 		noBall();
 	}
 }
-
 void parseMessage() {
 	//uprintf("parsemessage\n\r");
 
@@ -273,6 +276,11 @@ int8_t ballsensorMeasurementLoop(uint8_t kick_enable, uint8_t chip_enable, uint8
 	// if the ball hasn't been detected in a while, clear position data
 	if(HAL_GetTick() - ballPosition.lastSeen > NOBALL_TIMEOUT) {
 		noBall();
+	}
+	if(ballPosition.x == NOBALL){
+		have_ball_to_kick_time = HAL_GetTick();
+	}else if(have_ball_to_kick_time + 100 < HAL_GetTick()){
+		ballHandler(ballPosition.x, 0);// force the kick or chip after the timout
 	}
 
 		//PuttyInterface_Update(&puttystruct);
