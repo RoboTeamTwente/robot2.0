@@ -40,23 +40,25 @@ void Wireless_newPacketHandler() {
 }
 
 void Wireless_Init(uint8_t address, uint8_t RADIO_CHANNEL) {
-	for(uint8_t retries = 0; retries < 2; retries++) {
-		localRobotID = address;
-		preparedAckData.roboID = localRobotID;
-		while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
-			uprintf("Error while initializing nRF wireless module. Check connections.\n");
-		}
-		if(nrfPrintStatus(readReg(STATUS)) == 0x0e) {
-			uprintf("nRF module initialized with ID: %i\n", preparedAckData.roboID);
-			isNrfInitialized = 1;
-			return;
-		}
-		else {
+	localRobotID = address;
+	preparedAckData.roboID = localRobotID;
+	while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
+		uprintf("Error while initializing nRF wireless module. Check connections.\n");
+	}
+	if(nrfPrintStatus(readReg(STATUS)) == 0x0e) {
+		uprintf("nRF module initialized with ID: %i\n", preparedAckData.roboID);
+		isNrfInitialized = 1;
+		return;
+	}
+	else {
+		while(nrfPrintStatus(readReg(STATUS)) != 0x0e) {
+			uprintf("nRF is fucking around, blame Ulf....trying to reinitialize\r\n");
 			Wireless_Deinit();
+			while(initRobo(&hspi2, RADIO_CHANNEL, localRobotID) != 0) {
+				uprintf("Error while initializing nRF wireless module. Check connections.\n");
+			}
 		}
 	}
-	uprintf("nRF is fucking around, blame Ulf\r\n");
-
 }
 
 
