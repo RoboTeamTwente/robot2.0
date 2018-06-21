@@ -183,6 +183,8 @@ int main(void)
 		//printBallPosition();
 		//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
+		set_vision_to_new();
+
 		if (!calibration_needed) {
 			  halt = false; // robot is only allowed to move after packages are received and yaw calibration is not needed
 		}

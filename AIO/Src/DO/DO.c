@@ -31,6 +31,9 @@ bool ref_is_angle = true;
 bool use_global_ref = true;
 bool no_vel_control = true;
 
+// keeping track of communication
+bool vision_is_new = false;
+
 DO_States DO_Init(){
 	HAL_TIM_Base_Start_IT(&htim7);
 	start_time = HAL_GetTick();
@@ -42,6 +45,10 @@ float constrainAngle(float x){
     if (x < 0)
         x += 2*M_PI;
     return x - M_PI;
+}
+
+void set_vision_to_new() {
+	vision_is_new = true;
 }
 
 //multiplies a 4*3 matrix (M_inv) by a vector of 3 elements, to go from body force to wheel torque. (minus sign in front is due to wheels spinning in opposite direction to motors)
@@ -350,17 +357,21 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 		}
 		xsens_yaw_buffer[6] = xsensData[body_w];
 
-		// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
+		// if vision yaw and xsens yaw (from N steps back) deviate too much for several time steps, set calibration needed to true
 		static int check_counter = 0;
+//		uprintf("[%i, %f, %i]\n\r", check_counter, fabs(constrainAngle(vision_yaw - xsens_yaw_buffer[0])), vision_is_new);
 		if (HAL_GetTick() - last_calibration_time > 100 && fabs(constrainAngle(vision_yaw - xsens_yaw_buffer[0])) > 0.2) {
-			check_counter++;
+			if (vision_is_new) {
+				check_counter++;
+			}
 		} else {
 			check_counter = 0;
 		}
-		if (check_counter > 10) {
+		if (check_counter > 5) {
 			calibration_needed = true;
 			check_counter = 0;
 		}
+		vision_is_new = false;
 	}
 
 
