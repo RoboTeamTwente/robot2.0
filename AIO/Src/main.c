@@ -158,7 +158,7 @@ int main(void)
   MT_Init();
   geneva_Init();
   kick_Init();
-
+  enable_acks = 1;
   if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
 	  Wireless_Init(ReadAddress(), 103);
   }else{
@@ -172,13 +172,14 @@ int main(void)
   uint printtime = 0;
   uint battery_count = 0;
   preparedAckData.batteryState = 0;
-  enable_acks = 0;
+  uint NRF_cnt = 0;
   while (1)
   {
 	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
 	if(Wireless_newData()) {
 		Wireless_newPacketHandler();
+		NRF_cnt++;
 		//printBallPosition();
 		//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
@@ -284,6 +285,8 @@ int main(void)
 			if(MT_UseIcc() == MT_succes)
 				uprintf("Xsens calibration done.\n\r");
 		}
+		uprintf("nrf_msgs last second = [%u]\n\r", NRF_cnt);
+		NRF_cnt = 0;
 		//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
 		//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
