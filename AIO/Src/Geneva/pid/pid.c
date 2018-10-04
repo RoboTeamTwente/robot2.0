@@ -13,13 +13,7 @@ static int32_t ClipInt(int32_t input, int32_t min, int32_t max){
 static int32_t ClipFloat(float input, float min, float max){
 	return (input > max) ? max : (input < min) ? min : input;
 }
-static float AverageErr( float * errors, int n_floats){
-	float total = 0;
-	for(int i = 0; i < n_floats; i++){
-		total += *errors++;
-	}
-	return (total / n_floats);
-}
+
 void pid_SetOutput(int pwm, PID_controller_HandleTypeDef* pc){
 	if(pwm < -SWITCH_OFF_TRESHOLD){
 		HAL_GPIO_WritePin(pc->dir_Port[0], pc->dir[0], 1);
@@ -64,10 +58,9 @@ void pid_Deinit(PID_controller_HandleTypeDef* PID_controller){
 	HAL_TIM_Base_Stop(PID_controller->CallbackTimer);
 }
 
-#define FILTER_SIZE 1 // DO NOT USE (BESIDES 1)
+
 void pid_Control(float sensor_output, PID_controller_HandleTypeDef* pc){
-	static float prev_e[FILTER_SIZE] = {0};
-	static uint e_cnt;
+	static float prev_e = 0;
 	float err = pc->ref - sensor_output;
 	//uprintf("error:	\f\r\n	", err);
 	pc->pid.P = pc->K_terms.Kp*err;
@@ -76,9 +69,8 @@ void pid_Control(float sensor_output, PID_controller_HandleTypeDef* pc){
 		// 5 is just an acceptable range of precision, where it does not result in breakage
 		pc->pid.I += pc->K_terms.Ki*err*pc->timestep;
 	}
-	pc->pid.D = (pc->K_terms.Kd*(err-AverageErr(prev_e, FILTER_SIZE)))/pc->timestep;
-	prev_e[e_cnt++] = err;
-	e_cnt %= FILTER_SIZE;
+	pc->pid.D = (pc->K_terms.Kd*(err-prev_e))/pc->timestep;
+	prev_e = err;
 
 	pc->pid.P = ClipFloat(pc->pid.P, -2 * pc->max_pwm, 2 * pc->max_pwm);
 	pc->pid.I = ClipFloat(pc->pid.I, -2 * pc->max_pwm, 2 * pc->max_pwm);
