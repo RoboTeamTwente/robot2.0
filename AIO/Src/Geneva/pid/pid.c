@@ -1,6 +1,7 @@
 #include "pid.h"
 #include "tim.h"
 #include "stm32f4xx_hal.h"
+#include "../../PuttyInterface/PuttyInterface.h"
 
 #define SWITCH_OFF_TRESHOLD 200
 #define MAX_DUTY_CYCLE_INVERSE_FRACTION 4
@@ -68,9 +69,13 @@ void pid_Control(float sensor_output, PID_controller_HandleTypeDef* pc){
 	static float prev_e[FILTER_SIZE] = {0};
 	static uint e_cnt;
 	float err = pc->ref - sensor_output;
+	//uprintf("error:	\f\r\n	", err);
 	pc->pid.P = pc->K_terms.Kp*err;
-	pc->pid.I += pc->K_terms.Ki*err*pc->timestep;
-
+	if(err>5){
+		//prevents the integrate control from oscillating around zero, and heating the driver
+		// 5 is just an acceptable range of precision, where it does not result in breakage
+		pc->pid.I += pc->K_terms.Ki*err*pc->timestep;
+	}
 	pc->pid.D = (pc->K_terms.Kd*(err-AverageErr(prev_e, FILTER_SIZE)))/pc->timestep;
 	prev_e[e_cnt++] = err;
 	e_cnt %= FILTER_SIZE;
