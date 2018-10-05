@@ -47,12 +47,6 @@ static void geneva_EdgeCallback(int edge_cnt){
 	geneva_state = geneva_returning;
 }
 
-/*	is the geneva drive within range of the sensor?
- * 	ret: [1,0] 1:yes 2:no
- */
-static inline GPIO_PinState ReadSensor(){
-	return HAL_GPIO_ReadPin(Geneva_cal_sens_GPIO_Port, Geneva_cal_sens_Pin);
-}
 /*	check if the geneva drive got stuck and responds appropriatly
  *	param:
  *		dir: direction to go if we got stuck
