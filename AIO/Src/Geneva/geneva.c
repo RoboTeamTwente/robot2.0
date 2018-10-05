@@ -113,7 +113,6 @@ geneva_states geneva_GetState(){
 	return geneva_state;
 }
 
-
 geneva_positions geneva_SetPosition(geneva_positions position){
 	switch(position){
 	case geneva_rightright:

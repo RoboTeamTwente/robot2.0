@@ -28,10 +28,12 @@ typedef enum{
 void geneva_Init();
 
 void geneva_Deinit();
+
  /*	should be called in the while loop to
   * 	update state and such
   */
 void geneva_Update();
+
 /*	this function calls its pid controller and should be called with a specific time
  *
  */
@@ -41,20 +43,25 @@ void geneva_Control();
  *
  */
 void geneva_SetState(geneva_states state);
+
 /*	returns the state from geneva_states
  *
  */
 geneva_states geneva_GetState();
+
 /*	Set the position to one of the values of geneva_positions
  *
  */
 geneva_positions geneva_SetPosition(geneva_positions position);
+
 /*	returns the current positions
  * 	from -2 to 2
  */
 geneva_positions geneva_GetPosition();
+
 /*	returns the raw encoder value
  *
  */
 int geneva_Encodervalue();
+
 #endif /* GENEVA_GENEVA_H_ */
