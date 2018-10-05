@@ -33,9 +33,6 @@ int16_t pid_GetCurrentOutput(PID_controller_HandleTypeDef* pc){
 	return pc->current_pwm;
 }
 
-PID pid_GetCurrentPIDValues(PID_controller_HandleTypeDef* pc){
-	return pc->pid;
-}
 void pid_Init(PID_controller_HandleTypeDef* PID_controller){
 	static uint8_t n_motors = 0;
 	n_motors++;
@@ -60,7 +57,7 @@ void pid_Control(float sensor_output, PID_controller_HandleTypeDef* pc){
 	float err = pc->ref - sensor_output;
 	uprintf("error:	%f\n\r", err);
 	pc->pid.P = pc->K_terms.Kp*err;
-	if(abs(err)>5){
+	if(abs(err)>75){
 		//prevents the integrate control from oscillating around zero, and heating the driver
 		// 5 is just an acceptable range of precision, where it does not result in breakage
 		pc->pid.I += pc->K_terms.Ki*err*pc->timestep;

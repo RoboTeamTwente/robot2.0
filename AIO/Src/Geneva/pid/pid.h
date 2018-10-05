@@ -59,10 +59,6 @@ typedef struct{
 void pid_SetOutput(int pwm, PID_controller_HandleTypeDef* pc);
 // return all pid controller parameters
 PID_controller_HandleTypeDef pid_GetControllerValue();
-/* return current P, I and D values
- *
- */
-PID pid_GetCurrentPIDValues(PID_controller_HandleTypeDef* pc);
 // Returns the current output to the actuator
 int16_t pid_GetCurrentOutput(PID_controller_HandleTypeDef* pc);
 // calculate the current speed according to the encoder values
