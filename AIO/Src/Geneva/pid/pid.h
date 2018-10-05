@@ -57,13 +57,25 @@ typedef struct{
 
 // directly set the current output, if the pid control loop is running, this will not have much effect
 void pid_SetOutput(int pwm, PID_controller_HandleTypeDef* pc);
+
 // return all pid controller parameters
 PID_controller_HandleTypeDef pid_GetControllerValue();
+
+// return current P, I and D values
+PID pid_GetCurrentPIDValues(PID_controller_HandleTypeDef* pc);
+
 // Returns the current output to the actuator
 int16_t pid_GetCurrentOutput(PID_controller_HandleTypeDef* pc);
+
+// Set the reference value
+void pid_SetReference(float ref, PID_controller_HandleTypeDef* pc);
+
 // calculate the current speed according to the encoder values
 void pid_Init(PID_controller_HandleTypeDef* PID_controller);
+
 void pid_Deinit(PID_controller_HandleTypeDef* PID_controller);
+
 // controls the output, to be called on a regular schedule
 void pid_Control(float current_speed, PID_controller_HandleTypeDef* pc);
+
 #endif /* PID_H_ */

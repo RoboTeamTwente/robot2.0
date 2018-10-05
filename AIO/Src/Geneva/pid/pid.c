@@ -29,8 +29,17 @@ void pid_SetOutput(int pwm, PID_controller_HandleTypeDef* pc){
 	pc->current_pwm = ClipInt(pwm, 0, pc->actuator->Init.Period/MAX_DUTY_CYCLE_INVERSE_FRACTION);// Power limited by having maximum duty cycle
 	__HAL_TIM_SET_COMPARE(pc->actuator, pc->actuator_channel, pc->current_pwm);
 }
+
 int16_t pid_GetCurrentOutput(PID_controller_HandleTypeDef* pc){
 	return pc->current_pwm;
+}
+
+void pid_SetReference(float ref, PID_controller_HandleTypeDef* pc){
+	pc->ref = ref;
+}
+
+PID pid_GetCurrentPIDValues(PID_controller_HandleTypeDef* pc){
+	return pc->pid;
 }
 
 void pid_Init(PID_controller_HandleTypeDef* PID_controller){
@@ -57,7 +66,7 @@ void pid_Control(float sensor_output, PID_controller_HandleTypeDef* pc){
 	float err = pc->ref - sensor_output;
 	uprintf("error:	%f\n\r", err);
 	pc->pid.P = pc->K_terms.Kp*err;
-	if(abs(err)>75){
+	if(abs(err)>5){
 		//prevents the integrate control from oscillating around zero, and heating the driver
 		// 5 is just an acceptable range of precision, where it does not result in breakage
 		pc->pid.I += pc->K_terms.Ki*err*pc->timestep;
