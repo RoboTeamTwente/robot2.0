@@ -32,9 +32,6 @@ void pid_SetOutput(int pwm, PID_controller_HandleTypeDef* pc){
 int16_t pid_GetCurrentOutput(PID_controller_HandleTypeDef* pc){
 	return pc->current_pwm;
 }
-void pid_SetReference(float ref, PID_controller_HandleTypeDef* pc){
-	pc->ref = ref;
-}
 
 PID pid_GetCurrentPIDValues(PID_controller_HandleTypeDef* pc){
 	return pc->pid;

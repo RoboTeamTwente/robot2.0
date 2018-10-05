@@ -65,8 +65,6 @@ PID_controller_HandleTypeDef pid_GetControllerValue();
 PID pid_GetCurrentPIDValues(PID_controller_HandleTypeDef* pc);
 // Returns the current output to the actuator
 int16_t pid_GetCurrentOutput(PID_controller_HandleTypeDef* pc);
-// Set the reference value
-void pid_SetReference(float ref, PID_controller_HandleTypeDef* pc);
 // calculate the current speed according to the encoder values
 void pid_Init(PID_controller_HandleTypeDef* PID_controller);
 void pid_Deinit(PID_controller_HandleTypeDef* PID_controller);
