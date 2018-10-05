@@ -58,13 +58,12 @@ void pid_Deinit(PID_controller_HandleTypeDef* PID_controller){
 	HAL_TIM_Base_Stop(PID_controller->CallbackTimer);
 }
 
-
 void pid_Control(float sensor_output, PID_controller_HandleTypeDef* pc){
 	static float prev_e = 0;
 	float err = pc->ref - sensor_output;
-	//uprintf("error:	\f\r\n	", err);
+	uprintf("error:	%f\n\r", err);
 	pc->pid.P = pc->K_terms.Kp*err;
-	if(err>5){
+	if(abs(err)>5){
 		//prevents the integrate control from oscillating around zero, and heating the driver
 		// 5 is just an acceptable range of precision, where it does not result in breakage
 		pc->pid.I += pc->K_terms.Ki*err*pc->timestep;
