@@ -64,7 +64,7 @@ void pid_Deinit(PID_controller_HandleTypeDef* PID_controller){
 void pid_Control(float sensor_output, PID_controller_HandleTypeDef* pc){
 	static float prev_e = 0;
 	float err = pc->ref - sensor_output;
-	uprintf("error:	%f\n\r", err);
+	//uprintf("error:	%f\n\r", err);
 	pc->pid.P = pc->K_terms.Kp*err;
 	if(abs(err)>5){
 		//prevents the integrate control from oscillating around zero, and heating the driver

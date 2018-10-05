@@ -41,11 +41,12 @@ PID_controller_HandleTypeDef Geneva_pid = {
  * param:	the current distance to the middle positon
  */
 static void geneva_EdgeCallback(int edge_cnt){
-	uprintf("ran into edge, geneva sensor broken!\n\r");
+	uprintf("ran into edge.\n\r");
 	__HAL_TIM_SET_COUNTER(&htim2, edge_cnt);
 	Geneva_pid.ref = 0;
 	geneva_state = geneva_returning;
 }
+
 /*	is the geneva drive within range of the sensor?
  * 	ret: [1,0] 1:yes 2:no
  */
@@ -86,15 +87,7 @@ void geneva_Update(){
 		break;
 	case geneva_setup:								// While in setup, slowly move towards the sensor/edge
 		Geneva_pid.ref = (HAL_GetTick() - geneva_cnt)*1;	// if sensor is not seen yet, move to the right at 1 count per millisecond
-		CheckIfStuck(1);									// if we get stuck were at the edge and missed the sensor
-		break;
-	case geneva_too_close:										// if we start within sensor range, we first have to move away
-		if(!ReadSensor()){
-			Geneva_pid.ref = -GENEVA_POSITION_DIF_CNT * 5;		// go to the other side
-			CheckIfStuck(-1);
-		}else{
-			geneva_state = geneva_setup;
-		}
+		CheckIfStuck(1);
 		break;
 	case geneva_returning:					// while returning move to the middle position
 		if(geneva_GetPosition() == geneva_middle){

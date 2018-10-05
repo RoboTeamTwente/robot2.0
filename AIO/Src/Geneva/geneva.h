@@ -12,7 +12,6 @@
 typedef enum{
 	geneva_idle,		// in idle it will do nothing
 	geneva_setup,		// at startup it will try to find the edge sensor
-	geneva_too_close,	// The Geneva drive started too close to the sensor and needs to move away
 	geneva_returning,	// when moving back to the initial/zero position
 	geneva_running		// when being operational
 }geneva_states;
