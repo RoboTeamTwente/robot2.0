@@ -37,10 +37,7 @@ void geneva_Update();
  *
  */
 void geneva_Control();
-/*	when the sensor sees the geneva drive this function should be called
- *	either through polling or an interrupt
- */
-void geneva_SensorCallback();
+
 /*	for debugging, sets the current geneva state
  *
  */

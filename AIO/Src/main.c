@@ -483,19 +483,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	if(GPIO_Pin == SPI1_IRQ_Pin){
-		//Wireless_newPacketHandler();
-	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
-		// calibration  of the geneva drive finished
-		//uprintf("geneva sensor\n\r");
-		geneva_SensorCallback();
-	}
-}
-
-
-
-
 /* USER CODE END 4 */
 
 /**

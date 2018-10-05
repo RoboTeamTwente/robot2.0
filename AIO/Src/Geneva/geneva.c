@@ -85,16 +85,8 @@ void geneva_Update(){
 	case geneva_idle:
 		break;
 	case geneva_setup:								// While in setup, slowly move towards the sensor/edge
-		if(!ReadSensor() && USE_SENSOR){			// if we see the sensor and we use it call sensorCallback unless we just started
-		  if((HAL_GetTick() - geneva_cnt) < 100){	// did we start within range?
-			  geneva_state = geneva_too_close;		// if we did we were too close
-		  }else{
-			  geneva_SensorCallback();
-		  }
-		}else{
-			Geneva_pid.ref = (HAL_GetTick() - geneva_cnt)*1;	// if sensor is not seen yet, move to the right at 1 count per millisecond
-			CheckIfStuck(1);									// if we get stuck were at the edge and missed the sensor
-		}
+		Geneva_pid.ref = (HAL_GetTick() - geneva_cnt)*1;	// if sensor is not seen yet, move to the right at 1 count per millisecond
+		CheckIfStuck(1);									// if we get stuck were at the edge and missed the sensor
 		break;
 	case geneva_too_close:										// if we start within sensor range, we first have to move away
 		if(!ReadSensor()){
@@ -124,24 +116,6 @@ void geneva_Control(){
 
 int geneva_Encodervalue(){
 	return (int32_t)__HAL_TIM_GetCounter(&htim2);
-}
-
-
-void geneva_SensorCallback(){
-	switch(geneva_state){
-	case geneva_idle:
-		break;
-	case geneva_setup:
-		__HAL_TIM_SET_COUNTER(&htim2, GENEVA_CAL_SENS_CNT);	// set the count to the current positions
-		geneva_state = geneva_returning;					// go to the middle
-		break;
-	case geneva_too_close:
-		break;
-	case geneva_returning:
-		break;
-	case geneva_running:
-		break;
-	}
 }
 
 void geneva_SetState(geneva_states state){
