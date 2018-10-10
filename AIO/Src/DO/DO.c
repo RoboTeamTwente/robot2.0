@@ -37,6 +37,7 @@ DO_States DO_Init(){
 	return DO_succes;
 }
 
+//Scales the angle to the range Pi to -Pi in radians
 float constrainAngle(float x){
     x = fmodf(x + M_PI, 2*M_PI);
     if (x < 0)
@@ -62,7 +63,7 @@ void body2Wheels(float F[3], float output[4]){
 
 }
 
-//multiplies a 3*4 matrix by a vector of 4 elements.
+//multiplies a 3*4 matrix by a vector of 4 elements, to go from wheel torque to body force
 void wheels2Body(float w[4], float output[3]){
 	//Applying transpose(M_inv) matrix to go from wheel angular velocity to body velocity (assuming no slip)
 	output[body_x] = (1/s*w[wheels_RF] + 1/s*w[wheels_RB] - 1/s*w[wheels_LB] - 1/s*w[wheels_LF])*r/4;
