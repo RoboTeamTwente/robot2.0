@@ -359,43 +359,8 @@ void getXsensData(float xsensData[3], float yaw_offset[1], float xsens_yaw){
 	return;
 }
 
-bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
-	static bool calibration_needed = true; //Has to be static, if reset every time this function is run the wheels hamper
-
-	// get xsens yaw
-	float xsens_yaw = MT_GetAngles()[2]/180*M_PI;
-
-	// get and filter wheel speeds
-	float w_wheels[4] = {0,0,0,0};
-	wheelFilter(w_wheels);//edits the above array
-
-	// CALIBRATION OF YAW OFFSET
-
-	static float yaw_offset[1] = {0};
-	yawcalibration(calibration_needed, vision_available, xsens_yaw, vision_yaw, yaw_offset);
-
-	static uint last_calibration_time = 0;
-	if (!calibration_needed){
-		last_calibration_time = HAL_GetTick();
-	}
-
-	// get and offset xsens data
-	float xsensData[3];
-	getXsensData(xsensData, yaw_offset, xsens_yaw);
-
-
-	// check whether recalibration of yaw is highly necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
-	if (vision_available && !calibration_needed) {
-		checkYawcalibration(calibration_needed, vision_available, vision_yaw, xsensData[body_w], last_calibration_time);
-	}
-
-
-	  /////////////////////////
-	 // ACTUAL CONTROL PART //
-	/////////////////////////
-
-	if (!calibration_needed){
-		// determine local velocity reference
+void actualControl(float velocityRef[3], float xsensData[3], float w_wheels[4], float output[4]){
+	// determine local velocity reference
 		float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
 		if (use_global_ref) {
 			rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
@@ -442,6 +407,44 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 				controller(localVelocityRef, w_wheels, xsensData, output);
 			}
 		}
+	return;
+}
+
+
+bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
+	static bool calibration_needed = true; //Has to be static, if reset every time this function is run the wheels hamper
+
+	// get xsens yaw
+	float xsens_yaw = MT_GetAngles()[2]/180*M_PI;
+
+	// get and filter wheel speeds
+	float w_wheels[4] = {0,0,0,0};
+	wheelFilter(w_wheels);//edits the above array
+
+	// calibration of yaw offset
+
+	static float yaw_offset[1] = {0};
+	yawcalibration(calibration_needed, vision_available, xsens_yaw, vision_yaw, yaw_offset);
+
+	static uint last_calibration_time = 0;
+	if (!calibration_needed){
+		last_calibration_time = HAL_GetTick();
+	}
+
+	// get and offset xsens data
+	float xsensData[3];
+	getXsensData(xsensData, yaw_offset, xsens_yaw);
+
+
+	// check whether recalibration of yaw is highly necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
+	if (vision_available && !calibration_needed) {
+		checkYawcalibration(calibration_needed, vision_available, vision_yaw, xsensData[body_w], last_calibration_time);
+	}
+
+	// control part
+
+	if (!calibration_needed){
+		actualControl(velocityRef, xsensData, w_wheels, output);
 	}
 
 	return calibration_needed;
