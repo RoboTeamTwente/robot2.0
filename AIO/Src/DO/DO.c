@@ -274,7 +274,7 @@ void wheelFilter(float w_wheels[4]){
 	return;
 }
 
-bool Yawcalibration(bool calibration_needed, bool vision_available, float xsens_yaw, float vision_yaw, float yaw_offset[1]){
+bool yawcalibration(bool calibration_needed, bool vision_available, float xsens_yaw, float vision_yaw, float yaw_offset[1]){
 
 	static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
 	static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
@@ -324,6 +324,30 @@ bool Yawcalibration(bool calibration_needed, bool vision_available, float xsens_
 	return calibration_needed;
 }
 
+bool checkYawcalibration(bool calibration_needed, bool vision_available, float vision_yaw, float bodyw, int last_calibration_time){
+
+	// assuming 7 steps of delay between vision and xsens (so 70 ms) (might be off)
+	static float xsens_yaw_buffer[7] = {0,0,0,0,0,0,0};
+	for (int i = 0; i < 6; i++) {
+		xsens_yaw_buffer[i] = xsens_yaw_buffer[i+1];
+	}
+	xsens_yaw_buffer[6] = bodyw;
+
+	// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
+	static int check_counter = 0;
+	if (HAL_GetTick() - last_calibration_time > 100 && fabs(constrainAngle(vision_yaw - xsens_yaw_buffer[0])) > 0.2) {
+		check_counter++;
+	} else {
+		check_counter = 0;
+	}
+	if (check_counter > 10) {
+		calibration_needed = true;
+		check_counter = 0;
+	}
+
+	return calibration_needed;
+}
+
 void getXsensData(float xsensData[3], float yaw_offset[1], float xsens_yaw){
 
 	float accptr[2] = {MT_GetAcceleration()[0],MT_GetAcceleration()[1]};
@@ -346,39 +370,23 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	wheelFilter(w_wheels);//edits the above array
 
 	// CALIBRATION OF YAW OFFSET
-	static uint last_calibration_time = 0;
-	static float yaw_offset[1] = {0};
-	Yawcalibration(calibration_needed, vision_available, xsens_yaw, vision_yaw, yaw_offset);
 
+	static float yaw_offset[1] = {0};
+	yawcalibration(calibration_needed, vision_available, xsens_yaw, vision_yaw, yaw_offset);
+
+	static uint last_calibration_time = 0;
 	if (!calibration_needed){
 		last_calibration_time = HAL_GetTick();
 	}
-
 
 	// get and offset xsens data
 	float xsensData[3];
 	getXsensData(xsensData, yaw_offset, xsens_yaw);
 
+
 	// check whether recalibration of yaw is highly necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
 	if (vision_available && !calibration_needed) {
-		// assuming 7 steps of delay between vision and xsens (so 70 ms) (might be off)
-		static float xsens_yaw_buffer[7] = {0,0,0,0,0,0,0};
-		for (int i = 0; i < 6; i++) {
-			xsens_yaw_buffer[i] = xsens_yaw_buffer[i+1];
-		}
-		xsens_yaw_buffer[6] = xsensData[body_w];
-
-		// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
-		static int check_counter = 0;
-		if (HAL_GetTick() - last_calibration_time > 100 && fabs(constrainAngle(vision_yaw - xsens_yaw_buffer[0])) > 0.2) {
-			check_counter++;
-		} else {
-			check_counter = 0;
-		}
-		if (check_counter > 10) {
-			calibration_needed = true;
-			check_counter = 0;
-		}
+		checkYawcalibration(calibration_needed, vision_available, vision_yaw, xsensData[body_w], last_calibration_time);
 	}
 
 
