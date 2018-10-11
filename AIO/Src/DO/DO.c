@@ -274,7 +274,7 @@ void wheelFilter(float w_wheels[4]){
 	return;
 }
 
-bool yawcalibration(bool calibration_needed, bool vision_available, float xsens_yaw, float vision_yaw, float yaw_offset[1]){
+bool yawcalibration(bool calibration_needed, bool vision_available, float xsens_yaw, float vision_yaw, float yaw_offset[1], uint last_calibration_time[1]){
 
 	static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
 	static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
@@ -297,6 +297,7 @@ bool yawcalibration(bool calibration_needed, bool vision_available, float xsens_
 					yaw_offset[0] = -avg_xsens_yaw;
 				}
 				calibration_needed = false; // done with calibrating
+				last_calibration_time[0] = HAL_GetTick();
 				no_rot_counter = 0;			// reset timer
 			} else if (no_rot_counter > no_rot_duration - avg_size) {
 				// averaging angles requires summing their unit vectors
@@ -424,12 +425,12 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	// calibration of yaw offset
 
 	static float yaw_offset[1] = {0};
-	yawcalibration(calibration_needed, vision_available, xsens_yaw, vision_yaw, yaw_offset);
+	static uint last_calibration_time[1] = {0};
 
-	static uint last_calibration_time = 0;
-	if (!calibration_needed){
-		last_calibration_time = HAL_GetTick();
-	}
+	yawcalibration(calibration_needed, vision_available, xsens_yaw, vision_yaw, yaw_offset, last_calibration_time);
+
+
+
 
 	// get and offset xsens data
 	float xsensData[3];
@@ -438,7 +439,7 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 
 	// check whether recalibration of yaw is highly necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
 	if (vision_available && !calibration_needed) {
-		checkYawcalibration(calibration_needed, vision_available, vision_yaw, xsensData[body_w], last_calibration_time);
+		checkYawcalibration(calibration_needed, vision_available, vision_yaw, xsensData[body_w], last_calibration_time[0]);
 	}
 
 	// control part
