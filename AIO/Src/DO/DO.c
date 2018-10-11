@@ -279,20 +279,28 @@ float angleController(float angleRef, float yaw){
 	return output;
 }
 
+void rotVelCompensation(float yaw, float localVelocityRef[3]){
+
+	// Compensation for moving direction when rotating
+	float assumed_delay = 0.06; //s
+	static float prevYaw = 0;
+	float yawVel = constrainAngle(yaw - prevYaw)/TIME_DIFF;
+	prevYaw = yaw;
+	float compensation_dir = yawVel*assumed_delay;
+	rotate(compensation_dir, localVelocityRef, localVelocityRef);
+}
+
+
 void actualControl(float velocityRef[3], float xsensData[3], float w_wheels[4], float output[4]){
 	// determine local velocity reference
 		float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
 		if (use_global_ref) {
 			rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
 		}
-			// Compensation for moving direction when rotating
-		float assumed_delay = 0.06; //s
-		static float prevYaw = 0;
-		float yawVel = constrainAngle(xsensData[body_w] - prevYaw)/TIME_DIFF;
-		prevYaw = xsensData[body_w];
-		float compensation_dir = yawVel*assumed_delay;
-		rotate(compensation_dir, localVelocityRef, localVelocityRef);
-			// yaw  and velocity controllers
+
+		rotVelCompensation(xsensData[body_w], localVelocityRef);
+
+		// yaw  and velocity controllers
 		if (use_yaw_control) {
 			float angleRef;
 			if (ref_is_angle) { //TODO the joystick/software could be used here to directly set the angle reference
@@ -331,7 +339,7 @@ void actualControl(float velocityRef[3], float xsensData[3], float w_wheels[4], 
 }
 
 bool yawcalibration(bool calibration_needed, bool vision_available, float xsens_yaw, float vision_yaw, float yaw_offset[1], uint last_calibration_time[1]){
-	//TODO combine Xsens and vision
+
 	static float avg_xsens_vec[2] = {0,0}; 	// vector describing the average yaw measured by xsens over a number of time steps
 	static float avg_vision_vec[2] = {0,0}; 	// vector describing the average yaw measured by vision over a number of time steps
 	static int no_rot_counter = 0;	// keeps track of the amount of time steps without rotation
@@ -416,6 +424,8 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	wheelFilter(w_wheels);//edits the above array
 
 	// calibration of yaw offset
+	// we use the xsens data for the control, but that has drift
+	//so we compare it to the vision data, and based on that we decide if we need to calibrate.
 
 	static float yaw_offset[1] = {0};
 	static uint last_calibration_time[1] = {0};
