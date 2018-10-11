@@ -427,10 +427,7 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	static float yaw_offset[1] = {0};
 	static uint last_calibration_time[1] = {0};
 
-	yawcalibration(calibration_needed, vision_available, xsens_yaw, vision_yaw, yaw_offset, last_calibration_time);
-
-
-
+	calibration_needed = yawcalibration(calibration_needed, vision_available, xsens_yaw, vision_yaw, yaw_offset, last_calibration_time);
 
 	// get and offset xsens data
 	float xsensData[3];
@@ -439,13 +436,13 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 
 	// check whether recalibration of yaw is highly necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
 	if (vision_available && !calibration_needed) {
-		checkYawcalibration(calibration_needed, vision_available, vision_yaw, xsensData[body_w], last_calibration_time[0]);
+		calibration_needed = checkYawcalibration(calibration_needed, vision_available, vision_yaw, xsensData[body_w], last_calibration_time[0]);
 	}
 
 	// control part
 
 	if (!calibration_needed){
-		actualControl(velocityRef, xsensData, w_wheels, output);
+	actualControl(velocityRef, xsensData, w_wheels, output);
 	}
 
 	return calibration_needed;
