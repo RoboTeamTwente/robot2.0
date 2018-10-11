@@ -454,9 +454,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		float wheelsPWM[4] = {0,0,0,0};
 		calibration_needed = DO_Control(velocityRef, vision_yaw, vision_available, wheelsPWM); // outputs to wheelsPWM
-		 // send PWM to motors
-		if (calibration_needed) { // when communication is lost for too long, we send 0 to the motors
+		if (calibration_needed) {
 			halt = true;
+		}
+		 // send PWM to motors
+		if (halt) { // when communication is lost for too long, we send 0 to the motors, also used when 0 is sent as velocity
 			float wheel_powers[4] = {0,0,0,0};
 			wheels_SetOutput(wheel_powers);
 		} else {
