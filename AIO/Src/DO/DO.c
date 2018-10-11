@@ -261,11 +261,10 @@ float angleController(float angleRef, float yaw){
 
 
 bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
-	static bool calibration_needed = true;
+	static bool calibration_needed = true; //Has to be static, if reset every time this function is run the wheels hamper
 
 	// get xsens data
-	float * accptr;
-	accptr = MT_GetAcceleration();
+	float accptr[2] = {MT_GetAcceleration()[0],MT_GetAcceleration()[1]};
 	float xsens_yaw = MT_GetAngles()[2]/180*M_PI;
 
 	// get and filter wheel speeds
