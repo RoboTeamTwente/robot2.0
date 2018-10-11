@@ -259,6 +259,20 @@ float angleController(float angleRef, float yaw){
 	return output;
 }
 
+void wheelFilter(float w_wheels[4]){
+	// get and filter wheel speeds
+	static float w_prev[4] = {0,0,0,0};
+		 // filtering wheel speeds
+		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
+			if (!isnan(w_prev[i])){
+				w_wheels[i] = 0.4*(-wheels_GetSpeed(i)) + 0.6*w_prev[i];
+			} else {
+				w_wheels[i] = -wheels_GetSpeed(i);
+			}
+			w_prev[i] = w_wheels[i];
+		}
+	return;
+}
 
 bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
 	static bool calibration_needed = true; //Has to be static, if reset every time this function is run the wheels hamper
@@ -268,17 +282,8 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	float xsens_yaw = MT_GetAngles()[2]/180*M_PI;
 
 	// get and filter wheel speeds
-	static float w_prev[4] = {0,0,0,0};
-	float w_wheels[4];
-	 // filtering wheel speeds
-	for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-		if (!isnan(w_prev[i])){
-			w_wheels[i] = 0.4*(-wheels_GetSpeed(i)) + 0.6*w_prev[i];
-		} else {
-			w_wheels[i] = -wheels_GetSpeed(i);
-		}
-		w_prev[i] = w_wheels[i];
-	}
+	float w_wheels[4] = {0,0,0,0};
+	wheelFilter(w_wheels);
 
 		 /////////////////////////////
 		// CALIBRATION OF YAW OFFSET //
