@@ -34,5 +34,11 @@ void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], flo
 void pController(float input[3], float kp[3], float output[3]);
 void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], float output[4]);
 float angleController(float angleRef, float yaw);
+void wheelFilter(float w_wheels[4]);
+void getXsensData(float xsensData[3], float yaw_offset[1], float xsens_yaw);
+void actualControl(float velocityRef[3], float xsensData[3], float w_wheels[4], float output[4]);
+bool yawcalibration(bool calibration_needed, bool vision_available, float xsens_yaw, float vision_yaw, float yaw_offset[1], uint last_calibration_time[1]);
+bool checkYawcalibration(bool calibration_needed, bool vision_available, float vision_yaw, float bodyw, int last_calibration_time);
+bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]);
 
 #endif /* DO_DO_H_ */

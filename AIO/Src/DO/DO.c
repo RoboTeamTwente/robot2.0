@@ -83,6 +83,31 @@ void rotate(float yaw, float input[3], float output[3]){
 
 }
 
+void wheelFilter(float w_wheels[4]){
+	// get and filter wheel speeds
+	static float w_prev[4] = {0,0,0,0};
+		 // filtering wheel speeds
+		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
+			if (!isnan(w_prev[i])){
+				//TODO Test ratio
+				w_wheels[i] = 0.4*(-wheels_GetSpeed(i)) + 0.6*w_prev[i];
+			} else {
+				w_wheels[i] = -wheels_GetSpeed(i);
+			}
+			w_prev[i] = w_wheels[i];
+		}
+}
+
+void getXsensData(float xsensData[3], float yaw_offset[1], float xsens_yaw){
+
+	float accptr[2] = {MT_GetAcceleration()[0],MT_GetAcceleration()[1]};
+	xsensData[body_x] = -accptr[0];
+	xsensData[body_y] = -accptr[1];
+	xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset[0]);
+	rotate(-yaw_offset[0], xsensData, xsensData); // the free accelerations should also be calibrated to the offset yaw
+
+}
+
 float compute_limit_scale(float input[3], float limit){
 
 	float scale;
@@ -150,7 +175,6 @@ void pController(float input[3], float kp[3], float output[3]){
 	output[body_x] = pre_out[body_x] * scale;
 	output[body_y] = pre_out[body_y] * scale;
 	output[body_w] = pre_out[body_w];
-
 }
 
 //observer output should just be pre-declared as 0 before any looping starts
@@ -204,10 +228,6 @@ void controller(float localVelocityRef[3], float w_wheels[4], float xsensData[3]
 		disturbanceObserver(xsensData[body_w], scaledInput, accData, do_output);
 	}
 
-//	uprintf("[%f, %f]\n\r", w_wheels[wheels_RF], output[wheels_RF]);
-//	uprintf("[%f, %f, %f, %f]\n\r", output[wheels_RF],  output[wheels_RB], output[wheels_LB], output[wheels_LF]);
-//	uprintf("[%f, %f, %f, %f, %f, %f]\n\r", localVel[body_x], scaledInput[body_x], localVel[body_y], scaledInput[body_y], localVel[body_w], scaledInput[body_w]);
-//	uprintf("[%f, %f, %f, %f, %f, %f]\n\r", localVel[body_x], error[body_x], localVel[body_y], error[body_y], localVel[body_w], error[body_w]);
 }
 
 float angleController(float angleRef, float yaw){
@@ -259,25 +279,61 @@ float angleController(float angleRef, float yaw){
 	return output;
 }
 
-void wheelFilter(float w_wheels[4]){
-	// get and filter wheel speeds
-	static float w_prev[4] = {0,0,0,0};
-		 // filtering wheel speeds
-		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-			if (!isnan(w_prev[i])){
-				w_wheels[i] = 0.4*(-wheels_GetSpeed(i)) + 0.6*w_prev[i];
-			} else {
-				w_wheels[i] = -wheels_GetSpeed(i);
+void actualControl(float velocityRef[3], float xsensData[3], float w_wheels[4], float output[4]){
+	// determine local velocity reference
+		float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
+		if (use_global_ref) {
+			rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
+		}
+			// Compensation for moving direction when rotating
+		float assumed_delay = 0.06; //s
+		static float prevYaw = 0;
+		float yawVel = constrainAngle(xsensData[body_w] - prevYaw)/TIME_DIFF;
+		prevYaw = xsensData[body_w];
+		float compensation_dir = yawVel*assumed_delay;
+		rotate(compensation_dir, localVelocityRef, localVelocityRef);
+			// yaw  and velocity controllers
+		if (use_yaw_control) {
+			float angleRef;
+			if (ref_is_angle) { //TODO the joystick/software could be used here to directly set the angle reference
+				angleRef = localVelocityRef[body_w] / 16;
+			} else { // for the keyboard the angle reference is ramped up by integrating the signal
+				static float prevAngleRef = 0;
+				angleRef = prevAngleRef + TIME_DIFF * localVelocityRef[body_w];
+				prevAngleRef = angleRef;
 			}
-			w_prev[i] = w_wheels[i];
+				if (no_vel_control) {
+				float forceRef[3] = {localVelocityRef[body_x]*1500, localVelocityRef[body_y]*2000, 0};
+				forceRef[body_w] = angleController(angleRef, xsensData[body_w])*2.0F;
+				float scale = compute_limit_scale(forceRef, 100);
+				forceRef[body_x] = scale*forceRef[body_x];
+				forceRef[body_y] = scale*forceRef[body_y];
+				forceRef[body_w] = forceRef[body_w]/2.0F;
+				body2Wheels(forceRef, output);
+			} else {
+				float newVelocityRef[3] = {localVelocityRef[body_x], localVelocityRef[body_y], 0};
+				newVelocityRef[body_w] = angleController(angleRef, xsensData[body_w]);
+				controller(newVelocityRef, w_wheels, xsensData, output);
+			}
+			} else { // no yaw control
+			if (no_vel_control) {
+				float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1500, localVelocityRef[body_w]*10};
+				float scale = compute_limit_scale(forceRef, 90);
+				forceRef[body_x] = scale*forceRef[body_x];
+				forceRef[body_y] = scale*forceRef[body_y];
+				forceRef[body_w] = 1*forceRef[body_w];
+				body2Wheels(forceRef,output);
+			} else {
+				controller(localVelocityRef, w_wheels, xsensData, output);
+			}
 		}
 	return;
 }
 
 bool yawcalibration(bool calibration_needed, bool vision_available, float xsens_yaw, float vision_yaw, float yaw_offset[1], uint last_calibration_time[1]){
-
-	static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
-	static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
+	//TODO combine Xsens and vision
+	static float avg_xsens_vec[2] = {0,0}; 	// vector describing the average yaw measured by xsens over a number of time steps
+	static float avg_vision_vec[2] = {0,0}; 	// vector describing the average yaw measured by vision over a number of time steps
 	static int no_rot_counter = 0;	// keeps track of the amount of time steps without rotation
 	int no_rot_duration = 20;		// time steps of no rotation required before calibrating
 	int avg_size = 10; 				// amount of samples to take the average of, for the yaws
@@ -348,69 +404,6 @@ bool checkYawcalibration(bool calibration_needed, bool vision_available, float v
 
 	return calibration_needed;
 }
-
-void getXsensData(float xsensData[3], float yaw_offset[1], float xsens_yaw){
-
-	float accptr[2] = {MT_GetAcceleration()[0],MT_GetAcceleration()[1]};
-	xsensData[body_x] = -accptr[0];
-	xsensData[body_y] = -accptr[1];
-	xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset[0]);
-	rotate(-yaw_offset[0], xsensData, xsensData); // the free accelerations should also be calibrated to the offset yaw
-
-	return;
-}
-
-void actualControl(float velocityRef[3], float xsensData[3], float w_wheels[4], float output[4]){
-	// determine local velocity reference
-		float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
-		if (use_global_ref) {
-			rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
-		}
-			// Compensation for moving direction when rotating
-		float assumed_delay = 0.06; //s
-		static float prevYaw = 0;
-		float yawVel = constrainAngle(xsensData[body_w] - prevYaw)/TIME_DIFF;
-		prevYaw = xsensData[body_w];
-		float compensation_dir = yawVel*assumed_delay;
-		rotate(compensation_dir, localVelocityRef, localVelocityRef);
-			// yaw  and velocity controllers
-		if (use_yaw_control) {
-			float angleRef;
-			if (ref_is_angle) { // the joystick/software could be used here to directly set the angle reference
-				angleRef = localVelocityRef[body_w] / 16;
-			} else { // for the keyboard the angle reference is ramped up by integrating the signal
-				static float prevAngleRef = 0;
-				angleRef = prevAngleRef + TIME_DIFF * localVelocityRef[body_w];
-				prevAngleRef = angleRef;
-			}
-				if (no_vel_control) {
-				float forceRef[3] = {localVelocityRef[body_x]*1500, localVelocityRef[body_y]*2000, 0};
-				forceRef[body_w] = angleController(angleRef, xsensData[body_w])*2.0F;
-				float scale = compute_limit_scale(forceRef, 100);
-				forceRef[body_x] = scale*forceRef[body_x];
-				forceRef[body_y] = scale*forceRef[body_y];
-				forceRef[body_w] = forceRef[body_w]/2.0F;
-				body2Wheels(forceRef, output);
-			} else {
-				float newVelocityRef[3] = {localVelocityRef[body_x], localVelocityRef[body_y], 0};
-				newVelocityRef[body_w] = angleController(angleRef, xsensData[body_w]);
-				controller(newVelocityRef, w_wheels, xsensData, output);
-			}
-			} else { // no yaw control
-			if (no_vel_control) {
-				float forceRef[3] = {localVelocityRef[body_x]*1000, localVelocityRef[body_y]*1500, localVelocityRef[body_w]*10};
-				float scale = compute_limit_scale(forceRef, 90);
-				forceRef[body_x] = scale*forceRef[body_x];
-				forceRef[body_y] = scale*forceRef[body_y];
-				forceRef[body_w] = 1*forceRef[body_w];
-				body2Wheels(forceRef,output);
-			} else {
-				controller(localVelocityRef, w_wheels, xsensData, output);
-			}
-		}
-	return;
-}
-
 
 bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
 	static bool calibration_needed = true; //Has to be static, if reset every time this function is run the wheels hamper
