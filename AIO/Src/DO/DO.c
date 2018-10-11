@@ -274,28 +274,13 @@ void wheelFilter(float w_wheels[4]){
 	return;
 }
 
-bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
-	static bool calibration_needed = true; //Has to be static, if reset every time this function is run the wheels hamper
+bool Yawcalibration(bool calibration_needed, bool vision_available, float xsens_yaw, float vision_yaw, float yaw_offset[1]){
 
-	// get xsens data
-	float accptr[2] = {MT_GetAcceleration()[0],MT_GetAcceleration()[1]};
-	float xsens_yaw = MT_GetAngles()[2]/180*M_PI;
-
-	// get and filter wheel speeds
-	float w_wheels[4] = {0,0,0,0};
-	wheelFilter(w_wheels);
-
-		 /////////////////////////////
-		// CALIBRATION OF YAW OFFSET //
-		 /////////////////////////////
-
-	static float yaw_offset = 0;
 	static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
 	static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
 	static int no_rot_counter = 0;	// keeps track of the amount of time steps without rotation
 	int no_rot_duration = 20;		// time steps of no rotation required before calibrating
 	int avg_size = 10; 				// amount of samples to take the average of, for the yaws
-	static uint last_calibration_time = 0;
 
 	// if calibration is necessary
 	if ((calibration_needed || vision_available) && HAL_GetTick() - start_time > CALIBRATE_AFTER) {
@@ -307,13 +292,11 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 				float avg_xsens_yaw = atan2f(avg_xsens_vec[1], avg_xsens_vec[0]);
 				if (vision_available) { // if vision would not be availabe, the yaw would simply be reset to 0;
 					float avg_vision_yaw = atan2f(avg_vision_vec[1], avg_vision_vec[0]);
-					yaw_offset = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
+					yaw_offset[0] = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
 				} else {
-					yaw_offset = -avg_xsens_yaw;
-
+					yaw_offset[0] = -avg_xsens_yaw;
 				}
 				calibration_needed = false; // done with calibrating
-				last_calibration_time = HAL_GetTick();
 				no_rot_counter = 0;			// reset timer
 			} else if (no_rot_counter > no_rot_duration - avg_size) {
 				// averaging angles requires summing their unit vectors
@@ -338,12 +321,43 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 		avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
 	}
 
-	// get and offset xsens data
-	float xsensData[3];
+	return calibration_needed;
+}
+
+void getXsensData(float xsensData[3], float yaw_offset[1], float xsens_yaw){
+
+	float accptr[2] = {MT_GetAcceleration()[0],MT_GetAcceleration()[1]};
 	xsensData[body_x] = -accptr[0];
 	xsensData[body_y] = -accptr[1];
-	xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
-	rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also be calibrated to the offset yaw
+	xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset[0]);
+	rotate(-yaw_offset[0], xsensData, xsensData); // the free accelerations should also be calibrated to the offset yaw
+
+	return;
+}
+
+bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
+	static bool calibration_needed = true; //Has to be static, if reset every time this function is run the wheels hamper
+
+	// get xsens yaw
+	float xsens_yaw = MT_GetAngles()[2]/180*M_PI;
+
+	// get and filter wheel speeds
+	float w_wheels[4] = {0,0,0,0};
+	wheelFilter(w_wheels);//edits the above array
+
+	// CALIBRATION OF YAW OFFSET
+	static uint last_calibration_time = 0;
+	static float yaw_offset[1] = {0};
+	Yawcalibration(calibration_needed, vision_available, xsens_yaw, vision_yaw, yaw_offset);
+
+	if (!calibration_needed){
+		last_calibration_time = HAL_GetTick();
+	}
+
+
+	// get and offset xsens data
+	float xsensData[3];
+	getXsensData(xsensData, yaw_offset, xsens_yaw);
 
 	// check whether recalibration of yaw is highly necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
 	if (vision_available && !calibration_needed) {
