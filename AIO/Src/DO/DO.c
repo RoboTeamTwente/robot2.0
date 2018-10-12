@@ -154,21 +154,6 @@ float angleController(float angleRef, float yaw){
 			output = output / mag * T_cutoff/2;
 		}
 //		uprintf("[%f, %f, %f]\n\r", T_cutoff, output, angleError);
-	} else {
-		// the output should be interpreted as an angular velocity reference
-		output = angleError*15.0F + dError*0.2F;
-		float mag = fabs(output);
-		float upper_lim = 20.0;
-		float lower_lim = 1.0;
-		float lower_roundup = 10.0;
-		if (mag > upper_lim) {
-			output = output / mag * upper_lim;
-		} else if (mag < lower_lim + threshold_switch*0.1F) {
-			output = 0;
-			threshold_switch = 1;
-		} else if (mag < lower_roundup) {
-			output = output / mag * lower_roundup;
-		}
 	}
 
 	return output;
