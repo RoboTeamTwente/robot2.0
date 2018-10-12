@@ -152,8 +152,6 @@ float angleController(float angleRef, float yaw){
 	} else if (mag < T_cutoff/2 && mag > 0.001F) {
 		output = output / mag * T_cutoff/2;
 	}
-
-
 	return output;
 }
 
