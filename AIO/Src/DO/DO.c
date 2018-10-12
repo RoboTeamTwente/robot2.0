@@ -174,7 +174,7 @@ float angleController(float angleRef, float yaw){
 	return output;
 }
 
-void rotVelCompensation(float yaw, float localVelocityRef[3]){
+float rotVelCompensation(float yaw, float localVelocityRef[3]){
 
 	// Compensation for moving direction when rotating
 	float assumed_delay = 0.06; //s
@@ -183,6 +183,7 @@ void rotVelCompensation(float yaw, float localVelocityRef[3]){
 	prevYaw = yaw;
 	float compensation_dir = yawVel*assumed_delay;
 	rotate(compensation_dir, localVelocityRef, localVelocityRef);
+	return yawVel;
 }
 
 void notControl(float velocityRef[3], float xsensData[3], float w_wheels[4], float output[4]){
@@ -191,8 +192,8 @@ void notControl(float velocityRef[3], float xsensData[3], float w_wheels[4], flo
 		if (use_global_ref) {
 			rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
 		}
-
-		rotVelCompensation(xsensData[body_w], localVelocityRef);
+		float yaw_vel;
+		yaw_vel = rotVelCompensation(xsensData[body_w], localVelocityRef);
 
 		// yaw  and velocity controllers
 		float angleRef;
