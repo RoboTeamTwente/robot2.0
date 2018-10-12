@@ -138,23 +138,21 @@ float angleController(float angleRef, float yaw){
 	static int threshold_switch; // prevents rapid switching of motor due to yaw sensor noise
 	threshold_switch = -1;
 
-	if (no_vel_control) {
-		// no velocity control will be applied on the output calculated here. It should therefore be interpreted as a torque on the robot
-		output = angleError*300.0F + dError*13.0F;
-		float mag = fabs(output);
-		float upper_lim = 300.0F;
-		float deadzone = 0.03;	// (rad) if the robot gets this close, the motors should stop delivering torque
-		float T_cutoff = (PWM_CUTOFF + 0.1F)*4*R/r;	// if the output gets below this value, the motors wont deliver any torque
-		if (mag > upper_lim) {
-			output = output / mag * upper_lim;
-		} else if (fabs(angleError) < deadzone + threshold_switch*0.003F) {
-			output = 0;
-			threshold_switch = 1;
-		} else if (mag < T_cutoff/2 && mag > 0.001F) {
-			output = output / mag * T_cutoff/2;
-		}
-//		uprintf("[%f, %f, %f]\n\r", T_cutoff, output, angleError);
+	// no velocity control will be applied on the output calculated here. It should therefore be interpreted as a torque on the robot
+	output = angleError*300.0F + dError*13.0F;
+	float mag = fabs(output);
+	float upper_lim = 300.0F;
+	float deadzone = 0.03;	// (rad) if the robot gets this close, the motors should stop delivering torque
+	float T_cutoff = (PWM_CUTOFF + 0.1F)*4*R/r;	// if the output gets below this value, the motors wont deliver any torque
+	if (mag > upper_lim) {
+		output = output / mag * upper_lim;
+	} else if (fabs(angleError) < deadzone + threshold_switch*0.003F) {
+		output = 0;
+		threshold_switch = 1;
+	} else if (mag < T_cutoff/2 && mag > 0.001F) {
+		output = output / mag * T_cutoff/2;
 	}
+
 
 	return output;
 }
