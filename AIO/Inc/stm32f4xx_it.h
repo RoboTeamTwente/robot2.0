@@ -58,6 +58,7 @@ void PendSV_Handler(void);
 void SysTick_Handler(void);
 void EXTI4_IRQHandler(void);
 void I2C1_EV_IRQHandler(void);
+void SPI2_IRQHandler(void);
 void USART2_IRQHandler(void);
 void USART3_IRQHandler(void);
 void EXTI15_10_IRQHandler(void);

@@ -79,6 +79,7 @@ bool started_icc = false;
 bool halt = true;
 bool calibration_needed = true;
 bool vision_available = false;
+unsigned int LastPackageTime;
 
 
 //float wheelsPWM[4] = {0};
@@ -149,6 +150,11 @@ int main(void)
   MX_TIM13_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
+  //
+  //Note: If the ESP is booting at a moment when the SPI Master has the Select line HIGH (deselected)
+  //the ESP8266 WILL FAIL to boot!
+  HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_RESET);
+
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
   DO_Init();
@@ -159,11 +165,12 @@ int main(void)
   geneva_Init();
   kick_Init();
 
-  if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
-	  Wireless_Init(ReadAddress(), 103);
-  }else{
-	  Wireless_Init(ReadAddress(), 80);
-  }
+  // wait a bit for the ESP to start
+  HAL_Delay(5000);
+  Wireless_Init("ZiggoC1A1B85", "Fietspomp1", "192.168.178.199", ReadAddress());
+  // wait a bit more for wifi to connect
+  // TODO let the ESP indicate its status
+  HAL_Delay(10000);
 
   /* USER CODE END 2 */
 
@@ -171,12 +178,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   uint printtime = 0;
   uint battery_count = 0;
+  roboAckData preparedAckData;
   preparedAckData.batteryState = 0;
-  enable_acks = 0;
+  //enable_acks = 0;
   while (1)
   {
 	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
+  // TODO this does not work anymore because newPacketHandler is async
 	if(Wireless_newData()) {
 		Wireless_newPacketHandler();
 		//printBallPosition();
@@ -248,7 +257,7 @@ int main(void)
 			dribbler_Deinit();
 			geneva_Deinit();
 			preparedAckData.batteryState = 1;
-			Wireless_Deinit();
+			//Wireless_Deinit();
 		}
 	}
 
@@ -262,20 +271,12 @@ int main(void)
 //	preparedAckData.ballSensor = ballsensorMeasurementLoop(1, receivedRoboData.do_chip, 30);
 
 	//uprintf("ball: %i\n",preparedAckData.ballSensor);
-
+    Wireless_Send(&preparedAckData);
 	geneva_Update();
 	MT_Update();
 	if((HAL_GetTick() - printtime > 1000)){
 		printtime = HAL_GetTick();
 		ToggleLD(1);
-
-		//CHECK NRF STATUS REGISTER EVERY SECOND...IF NRF IS CONSTIPATED, FLUSH SHIT OUT
-		if(readReg(STATUS) != 0x0e) {
-			nrfPrintStatus(readReg(STATUS));
-			uprintf("--> Flushing constipated NRF\n");
-			flushRX();
-			clearInterrupts();
-		}
 
 		if(*MT_GetStatusWord() & 0b00011000){
 			//uprintf("calibrating Xsens.\n\r");
@@ -398,7 +399,7 @@ void HandleCommand(char* input){
 		uprintf("requesting output configuration mode\n\r");
 		MT_RequestConfig();
 	}else if(!strcmp(input, "address")){
-		uprintf("address = [%d]\n\r", localRobotID);
+		uprintf("address = [%d]\n\r", ReadAddress());
 	}else if(!strcmp(input, "example2")){
 		uprintf("stop!\n\r");
 	}else if(!strcmp(input, "geneva get")){
@@ -485,7 +486,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == SPI1_IRQ_Pin){
-		//Wireless_newPacketHandler();
+		Wireless_newPacketHandler();
 	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
 		// calibration  of the geneva drive finished
 		//uprintf("geneva sensor\n\r");
