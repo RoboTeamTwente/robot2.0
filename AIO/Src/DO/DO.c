@@ -23,14 +23,6 @@
 
 uint start_time;
 
-// controller settings
-//TODO: some of these should be adaptable through wireless communication
-bool DO_enabled = false;
-bool use_yaw_control = true;
-bool ref_is_angle = true;
-bool use_global_ref = true;
-bool no_vel_control = true;
-
 DO_States DO_Init(){
 	HAL_TIM_Base_Start_IT(&htim7);
 	start_time = HAL_GetTick();
@@ -155,7 +147,7 @@ float angleController(float angleRef, float yaw){
 	return output;
 }
 
-float rotVelCompensation(float yaw, float localVelocityRef[3]){
+void rotVelCompensation(float yaw, float localVelocityRef[3]){
 
 	// Compensation for moving direction when rotating
 	float assumed_delay = 0.06; //s
@@ -164,17 +156,13 @@ float rotVelCompensation(float yaw, float localVelocityRef[3]){
 	prevYaw = yaw;
 	float compensation_dir = yawVel*assumed_delay;
 	rotate(compensation_dir, localVelocityRef, localVelocityRef);
-	return yawVel;
 }
 
 void notControl(float velocityRef[3], float xsensData[3], float w_wheels[4], float output[4]){
 	// determine local velocity reference
 		float localVelocityRef[3] = {velocityRef[body_x],velocityRef[body_y],velocityRef[body_w]};
-		if (use_global_ref) {
-			rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
-		}
-		float yaw_vel;
-		yaw_vel = rotVelCompensation(xsensData[body_w], localVelocityRef);
+		rotate(xsensData[body_w], velocityRef, localVelocityRef); // apply coordinate transform from global to local for the velocity reference
+		rotVelCompensation(xsensData[body_w], localVelocityRef);
 
 		// yaw  and velocity controllers
 		float angleRef;

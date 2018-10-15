@@ -32,7 +32,7 @@ void rotate(float yaw, float input[3], float output[3]);
 float compute_limit_scale(float input[3], float limit);
 float angleController(float angleRef, float yaw);
 void wheelFilter(float w_wheels[4]);
-float rotVelCompensation(float yaw, float localVelocityRef[3]);
+void rotVelCompensation(float yaw, float localVelocityRef[3]);
 void getXsensData(float xsensData[3], float yaw_offset[1], float xsens_yaw);
 void notControl(float velocityRef[3], float xsensData[3], float w_wheels[4], float output[4]);
 bool yawcalibration(bool calibration_needed, bool vision_available, float xsens_yaw, float vision_yaw, float yaw_offset[1], uint last_calibration_time[1]);
