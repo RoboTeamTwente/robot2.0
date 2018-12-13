@@ -115,8 +115,6 @@ MT_StatusTypeDef MT_Update(){
 				PrintMessageData(ReceivedMessageStorage);
 				break;
 			case XMID_ReqOutputConfigurationAck:
-				PrintOutputConfig(ReceivedMessageStorage);
-				break;
 			default:
 				break;
 			}

@@ -81,6 +81,7 @@ bool calibration_needed = true;
 bool vision_available = false;
 unsigned int LastPackageTime;
 
+roboAckData roboAckData_dummy;
 
 //float wheelsPWM[4] = {0};
 float velocityRef[3] = {0};
@@ -153,6 +154,7 @@ int main(void)
   //
   //Note: If the ESP is booting at a moment when the SPI Master has the Select line HIGH (deselected)
   //the ESP8266 WILL FAIL to boot!
+  // Wireless is initialized in a callback form the interupt
   HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_RESET);
 
   puttystruct.handle = HandleCommand;
@@ -165,12 +167,7 @@ int main(void)
   geneva_Init();
   kick_Init();
 
-  // wait a bit for the ESP to start
-  HAL_Delay(5000);
-  Wireless_Init("ZiggoC1A1B85", "Fietspomp1", "192.168.178.199", ReadAddress());
-  // wait a bit more for wifi to connect
-  // TODO let the ESP indicate its status
-  HAL_Delay(10000);
+  uprintf("ID: %d\r\n", ReadAddress());
 
   /* USER CODE END 2 */
 
@@ -184,10 +181,15 @@ int main(void)
   while (1)
   {
 	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
-
-  // TODO this does not work anymore because newPacketHandler is async
-	if(Wireless_newData()) {
-		Wireless_newPacketHandler();
+	// update wireless
+	roboAckData_dummy.roboID = ReadAddress();
+	Wireless_Update(&roboAckData_dummy);
+	if(data_ready) {
+		data_ready = false;
+		uprintf("new_data\n\r");
+		if (receivedRoboData.id == 0){
+			uprintf("received id:0\n\r");
+		}
 		//printBallPosition();
 		//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
@@ -239,7 +241,6 @@ int main(void)
 		if (receivedRoboData.geneva_drive_state != 0){
 			geneva_SetPosition(receivedRoboData.geneva_drive_state-1);
 		}
-
 	}else if(wheels_testing){
 		velocityRef[body_w] = wheels_testing_power;
 		halt = false;
@@ -271,9 +272,9 @@ int main(void)
 //	preparedAckData.ballSensor = ballsensorMeasurementLoop(1, receivedRoboData.do_chip, 30);
 
 	//uprintf("ball: %i\n",preparedAckData.ballSensor);
-    Wireless_Send(&preparedAckData);
-	geneva_Update();
-	MT_Update();
+
+	//geneva_Update();
+	//MT_Update();
 	if((HAL_GetTick() - printtime > 1000)){
 		printtime = HAL_GetTick();
 		ToggleLD(1);
@@ -485,12 +486,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	if(GPIO_Pin == SPI1_IRQ_Pin){
-		Wireless_newPacketHandler();
-	}else if(GPIO_Pin == Geneva_cal_sens_Pin){
-		// calibration  of the geneva drive finished
-		//uprintf("geneva sensor\n\r");
+	switch(GPIO_Pin){
+	case SPI1_IRQ_Pin:
+		//Wireless_INT_Handler();
+		break;
+	case Geneva_cal_sens_Pin:
 		geneva_SensorCallback();
+		break;
 	}
 }
 

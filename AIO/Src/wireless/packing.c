@@ -34,32 +34,31 @@ float uint32tofloat(uint32_t raw) {
 }
 
 void printRoboData(roboData *input, uint8_t dataArray[ROBOPKTLEN]) {
-	uprintf("----->FROM BASESTATION----->\n");
-	for(int i=0; i<ROBOPKTLEN; i++) {
-		uprintf("%02x ", dataArray[i]);
-	}
-	uprintf("\n");
+	uprintf("----->FROM BASESTATION----->\n\r");
+//	for(int i=0; i<ROBOPKTLEN; i++) {
+//		uprintf("%02x ", dataArray[i]);
+//	}
 
-	uprintf("\tRoboID: %i \n", input->id);
-	uprintf("\tDebug info: %i \n", input->debug_info);
-	uprintf("\tRho: %i \n\tTheta: %i \n", input->rho, input->theta);
-	uprintf("\tKICKCHIP\n");
-	uprintf("\tKick %i \n\t Chip: %i \n\t Forced: %i \n\t Power: %i \n", input->do_kick, input->do_chip ,input->kick_chip_forced, input->kick_chip_power);
-	uprintf("\tDribbler velocity: %i \n", input->velocity_dribbler);
-	uprintf("\tGeneva drive: %i \n", input->geneva_drive_state);
-	uprintf("\tDriving reference: %i \n", input->driving_reference);
-	uprintf("\tAngular velocity: %i \n", input->velocity_angular);
-	uprintf("\tCAMERA \n\t use cam info: %i \n\t position x: %i \n\t position y: %i \n\t rotation: %i \n\n", input->use_cam_info, input->cam_position_x, input->cam_position_y, input->cam_rotation);
+	uprintf("\tRoboID: %i \n\r", input->id);
+	uprintf("\tDebug info: %i \n\r", input->debug_info);
+	uprintf("\tRho: %i \n\r\tTheta: %i \n\r", input->rho, input->theta);
+	uprintf("KICKCHIP\n\r");
+	uprintf("\tKick %i \n\r\t Chip: %i \n\r\t Forced: %i \n\r\t Power: %i \n\t\r", input->do_kick, input->do_chip ,input->kick_chip_forced, input->kick_chip_power);
+	uprintf("\tDribbler velocity: %i \n\r", input->velocity_dribbler);
+	uprintf("\tGeneva drive: %i \n\r", input->geneva_drive_state);
+	uprintf("\tDriving reference: %i \n\r", input->driving_reference);
+	uprintf("\tAngular velocity: %i \n\r", input->velocity_angular);
+	uprintf("CAMERA \n\r\t use cam info: %i \n\r\t position x: %i \n\r\t position y: %i \n\r\t rotation: %i \n\n\r", input->use_cam_info, input->cam_position_x, input->cam_position_y, input->cam_rotation);
 }
 
 void printRoboAckData(roboAckData *input, uint8_t dataArray[32], uint8_t ackDataLength) {
-	uprintf("<-----TO BASESTATION<-----\n");
+	uprintf("<-----TO BASESTATION<-----\n\r");
 
 	//print ack packet in hex
 	for(int i=0; i<ackDataLength; i++) {
 		uprintf("%02x ", dataArray[i]);
 	}
-	uprintf("\n");
+	uprintf("\n\r");
 
 	uprintf("\tRoboID: %i \n", input->roboID);
 	uprintf("\tWHEELS \n\t leftFront: %i \n\t rightFront: %i \n\t leftBack: %i \n\t rightBack: %i \n", input->wheelLeftFront, input->wheelRightFront, input->wheelLeftBack, input->wheelRightBack);
