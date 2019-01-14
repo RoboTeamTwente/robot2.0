@@ -24,6 +24,7 @@ struct XbusMessage* ReceivedMessageStorage;
 uint MT_Data_succerr[2] = {0};
 float angles[3];
 float acc[3];
+float gyr[3];
 uint8_t raw[128];
 uint32_t statusword;
 
@@ -69,8 +70,9 @@ MT_StatusTypeDef MT_Init(){
 		uprintf("started MTi Operation\n\r");
 		//MT_SetOptions();
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
-		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
+		//MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_StatusWord, 10, false);
+		MT_BuildConfig(XDI_RateOfTurn, 100, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
 		MT_SetFilterProfile(0);
 		ret = MT_GoToMeasure();
@@ -387,6 +389,9 @@ float* MT_GetAcceleration(){
 float* MT_GetAngles(){
 	return angles;
 }
+float* MT_GetGyro() {
+	return gyr;
+}
 void MT_FactoryReset(){
 	struct XbusMessage mess = { .mid = XMID_RestoreFactoryDef,
 										.length = 0,
@@ -558,7 +563,7 @@ static void PrintMessageData(struct XbusMessage const* message){
 		if(MT_DEBUG) uprintf( " FreeAcceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
 		bytes -= 1 + 3 * 4 + 2;
 	}
-	float gyr[3];
+
 	if (XbusMessage_getDataItem(gyr, XDI_RateOfTurn, message)){
 		if(MT_DEBUG) uprintf( " Rate Of Turn: (%.3f, %.3f, %.3f)", gyr[0], gyr[1], gyr[2]);
 		bytes -= 1 + 3 * 4 + 2;
