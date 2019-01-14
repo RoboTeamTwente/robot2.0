@@ -50,7 +50,7 @@ typedef enum{
 Wireless_state Wstate;
 
 extern SPI_HandleTypeDef *spiHandle;
-extern volatile roboData receivedRoboData;
+extern roboData receivedRoboData;
 extern bool data_ready;
 
 void Wireless_INT_Handler();

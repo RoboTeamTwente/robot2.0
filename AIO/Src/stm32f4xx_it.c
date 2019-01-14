@@ -127,14 +127,15 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
+	// request debug breakpoint
+	__ASM volatile("BKPT #01");
 	__asm(	"TST 	lr, #4				\n"
 			"ITE 	EQ					\n"
 			"MRSEQ 	r0, MSP				\n"
 			"MRSNE 	r0, PSP				\n"
 			"B 		Hard_Fault_Handler	\n"
 	);
-	// request debug breakpoint
-	__ASM volatile("BKPT #01");
+
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {

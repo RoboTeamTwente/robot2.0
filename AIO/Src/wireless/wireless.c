@@ -9,9 +9,13 @@
 #include "../userIO/userIO.h"
 
 SPI_HandleTypeDef *spiHandle = &hspi2;
-volatile roboData receivedRoboData;
+roboData receivedRoboData;
 bool data_ready = false;
 Wireless_state  Wstate = Wconfig;
+
+// force allign the buffer to make it start on a 32 bits address (otherwise mem fault)
+uint8_t sndbuffer[32]  __attribute__((aligned(4))) = {0x00};
+uint8_t  rcvbuffer[32] __attribute__((aligned(4))) = {0x00};
 
 
 uint32_t Wireless_readStatus() {
@@ -47,7 +51,7 @@ void readData(uint8_t * data) {
 void writeData(uint8_t * data, size_t len) {
 	uint8_t cmd[] = {WRITE_DATA, 0x00};
 	// data always has to be 32 bytes
-	uint8_t data_buf[32] = {0};
+	uint8_t data_buf[32] __attribute__((aligned(4))) = {0};
 	memcpy(data_buf,data,len);
 
 	HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_RESET);
@@ -58,7 +62,8 @@ void writeData(uint8_t * data, size_t len) {
 
 void Wireless_Init(int robot_id) {
 	Wireless_writeStatus(SET_ROB_ID);
-	Wireless_writeStatus(robot_id);
+	int rob_id = ReadAddress();
+	writeData((uint8_t*)&rob_id,4);
 	HAL_Delay(1);
 	Wireless_writeStatus(SET_SSID);
 	writeData((uint8_t*)SSID, strlen(SSID));
@@ -70,31 +75,35 @@ void Wireless_Init(int robot_id) {
 	writeData((uint8_t*)HOST_IP, strlen(HOST_IP));
 }
 
-volatile uint8_t sndbuffer[2+32] = {0x02, 0x00};
 void Wireless_Send(roboAckData* data) {
-	roboAckDataToPacket(data, sndbuffer+2);
+	roboAckDataToPacket(data, sndbuffer);
 	HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_RESET);
-	HAL_SPI_Transmit_IT(spiHandle, sndbuffer, 2+32);
-	Wstate = Wtransmitting;
+	uint8_t cmd[2] = {WRITE_DATA, 0x00};
+	Wireless_writeStatus(SET_FB_DATA);
+	HAL_SPI_Transmit(spiHandle, cmd, 2,100);
+	HAL_SPI_Transmit(spiHandle, sndbuffer,32,100);
+	//Wstate = Wtransmitting;
+	HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_SET);
+	Wstate = Wready;
 }
 
 bool Wireless_newData() {
 	return HAL_GPIO_ReadPin(SPI1_IRQ_GPIO_Port, SPI1_IRQ_Pin) == GPIO_PIN_RESET;
 }
 
-volatile uint8_t cmdbuffer[2+32] = {0x03, 0x00};
-volatile uint8_t rcvbuffer[2+32];
 void Wireless_newPacketHandler() {
 	Wstate = Wreceiving;
 	while(HAL_SPI_GetState(spiHandle) != HAL_SPI_STATE_READY){}
 	HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive_IT(spiHandle, cmdbuffer, rcvbuffer, 2+32);
+	uint8_t cmd[2] = {READ_DATA, 0x00};
+	HAL_SPI_Transmit(spiHandle,cmd,2,100);
+	HAL_SPI_Receive_IT(spiHandle, rcvbuffer, 32);
 }
 
 
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
 	HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_SET);
-	packetToRoboData(rcvbuffer+2, &receivedRoboData);
+	packetToRoboData(rcvbuffer, &receivedRoboData);
 	Wstate = Wreceived;
 	data_ready = true;
 }
@@ -113,7 +122,9 @@ void Wireless_INT_Handler(){
 		break;
 	case SET_ROB_ID:
 		Wireless_writeStatus(SET_ROB_ID);
-		Wireless_writeStatus(ReadAddress());
+		int rob_id = ReadAddress();
+		writeData((uint8_t*)&rob_id,4);
+		//Wireless_writeStatus(ReadAddress());
 		break;
 	case SET_SSID:
 		Wireless_writeStatus(SET_SSID);
@@ -152,7 +163,7 @@ void Wireless_Update(roboAckData* ack){
 	case Wconnected:
 	case Wdisconnected:
 	case Wready:
-		if(Wireless_newData()&&!data_ready)	Wireless_INT_Handler();
+		//if(Wireless_newData()&&!data_ready)	Wireless_INT_Handler();
 		break;
 	case Wreceived:
 		Wireless_Send(ack);
