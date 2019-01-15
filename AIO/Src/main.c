@@ -80,6 +80,8 @@ bool halt = true;
 bool calibration_needed = true;
 bool vision_available = false;
 
+float yawOffset = 0;
+
 //float wheelsPWM[4] = {0};
 float velocityRef[3] = {0};
 float vision_yaw = 0;
@@ -199,7 +201,7 @@ int main(void)
 		//TODO: test vision angle and calibration etc.
 		vision_available = receivedRoboData.use_cam_info;
 		if (vision_available) {
-			vision_yaw = ((float)receivedRoboData.cam_rotation/1024.0F)*180;
+			vision_yaw = ((float)receivedRoboData.cam_rotation/1024.0F)*M_PI;
 		}
 
 		//dribbler
@@ -265,28 +267,9 @@ int main(void)
 	geneva_Update();
 	MT_Update();
 
-	if (vision_available) {
-		SetLD(5, 1);
-		SetLD(4, 1);
-		SetLD(3, 1);
-		SetLD(2, 1);
-		SetLD(1, 1);
-		uint tempTimer = HAL_GetTick();
-		while ((HAL_GetTick() - tempTimer < 1000)) {
-
-		}
-	} else {
-		SetLD(5, 0);
-		SetLD(4, 0);
-		SetLD(3, 0);
-		SetLD(2, 0);
-		SetLD(1, 0);
-	}
-	//SetLD(3, 0);
-
 	if((HAL_GetTick() - printtime > 1000)){
 		printtime = HAL_GetTick();
-		//ToggleLD(1);
+		ToggleLD(1);
 
 		//CHECK NRF STATUS REGISTER EVERY SECOND...IF NRF IS CONSTIPATED, FLUSH SHIT OUT
 		if(readReg(STATUS) != 0x0e) {
@@ -305,9 +288,10 @@ int main(void)
 		}
 		uprintf("Vision available? ");
 		uprintf(vision_available ? "yes\n\r" : "no\n\r");
-		uprintf("Vision yaw: %f\n\r", vision_yaw);
-		uprintf("XSens yaw: %f\n\r", MT_GetAngles()[2]);
+		uprintf("Vision yaw: %f\n\r", vision_yaw/M_PI*180);
+		uprintf("XSens yaw: %f\n\r", MT_GetAngles()[2]+yawOffset/M_PI*180);
 		uprintf("XSens rate of turn: %f\n\r", MT_GetGyro()[2]);
+		uprintf("Yaw offset: %f\n\r", yawOffset);
 		uprintf("\n\r");
 		//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
 		//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
@@ -478,7 +462,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim7.Instance){
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		float wheelsPWM[4] = {0,0,0,0};
-		calibration_needed = DO_Control(velocityRef, vision_yaw, vision_available, wheelsPWM); // outputs to wheelsPWM
+		calibration_needed = true;
+		yawOffset = DO_Control(velocityRef, vision_yaw, vision_available, wheelsPWM); // outputs to wheelsPWM
 		if (calibration_needed) {
 			halt = true;
 		}

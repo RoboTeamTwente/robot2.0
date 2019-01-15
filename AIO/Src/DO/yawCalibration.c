@@ -10,9 +10,12 @@
 #include <math.h>
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
-bool isCalibrationNeeded(float visionYaw, float xsensYaw);
-bool isRotatingSlow(float xsensYaw);
+void isCalibrationNeeded(float visionYaw, float xsensYaw);
+void isRotatingSlow(float xsensYaw);
 float constrainAngle(float x);
+
+static bool calibration_needed = false;
+static bool rotating_slow = false;
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
@@ -21,7 +24,15 @@ float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
 	static float avgXsensVec[2] = {0}, avgVisionVec[2] = {0};
 	int restDuration = 20; // number of time steps to do for averaging TODO: test this
 
-	if (isCalibrationNeeded(visionYaw, xsensYaw) && isRotatingSlow(xsensYaw) && visionAvailable) {
+	///-------- DEBUG ----------------
+//	SetLD(5, isCalibrationNeeded(visionYaw, xsensYaw));
+//	SetLD(6, isRotatingSlow(xsensYaw));
+	///------------------------------
+
+	isCalibrationNeeded(visionYaw, xsensYaw);
+	isRotatingSlow(xsensYaw);
+
+	if (calibration_needed && rotating_slow && visionAvailable) {
 		if (restCounter > restDuration) {
 			// calculate offset
 			float avgVisionYaw = atan2f(avgVisionVec[1], avgVisionVec[0]);
@@ -46,22 +57,22 @@ float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
 }
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
-bool isCalibrationNeeded(float visionYaw, float xsensYaw) {
+void isCalibrationNeeded(float visionYaw, float xsensYaw) {
 	// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
 	static int checkCounter = 0;
 	if (fabs(constrainAngle(visionYaw - xsensYaw)) > 0.2) {
 		checkCounter++;
 	} else {
 		checkCounter = 0;
+		calibration_needed = false;
 	}
 	if (checkCounter > 10) {
 		checkCounter = 0;
-		return true;
+		calibration_needed = true;
 	}
-	return false;
 }
 
-bool isRotatingSlow(float xsensYaw) {
+void isRotatingSlow(float xsensYaw) {
 	// Check if robot has been rotating sufficiently slow for several time steps
 	static int rotateCounter = 0;
 	static float startXsensYaw = 0;
@@ -70,13 +81,13 @@ bool isRotatingSlow(float xsensYaw) {
 	} else {
 		rotateCounter = 0;
 		startXsensYaw = xsensYaw;
+		rotating_slow = false;
 	}
 	if (rotateCounter > 10) {
 		rotateCounter = 0;
 		startXsensYaw = xsensYaw;
-		return true;
+		rotating_slow = true;
 	}
-	return false;
 }
 
 //Scales the angle to the range Pi to -Pi in radians

@@ -260,9 +260,9 @@ float angleController(float angleRef, float yaw){
 }
 
 
-bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
+float DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
 	//TODO
-	static bool calibration_needed = true;
+	//static bool calibration_needed = true;
 
 	// get xsens data
 	float * accptr;
@@ -286,6 +286,7 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 		// CALIBRATION OF YAW OFFSET //
 		 /////////////////////////////
 
+	float xsens_before = xsens_yaw;
 	xsens_yaw = calibrateYaw(xsens_yaw, vision_yaw, vision_available);
 	float xsensData[3];
 	xsensData[body_x] = -accptr[0];
@@ -428,5 +429,5 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 
 	}
 
-	return calibration_needed;
+	return xsens_yaw - xsens_before;
 }

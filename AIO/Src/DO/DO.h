@@ -23,7 +23,7 @@ typedef enum {
 
 DO_States DO_Init();
 
-bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]);
+float DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]);
 
 float constrainAngle(float x);
 void body2Wheels(float F[3], float output[4]);
