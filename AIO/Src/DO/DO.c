@@ -12,6 +12,7 @@
 #include "../wheels/wheels.h"
 #include "../PuttyInterface/PuttyInterface.h"
 #include "../MTi/MTiControl.h"
+#include "yawCalibration.h"
 
 #define CALIBRATE_AFTER 6500 // time after which yaw calibration will start (ms)
 #define TIME_DIFF 0.01F // time difference due to 100Hz
@@ -285,83 +286,89 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 		// CALIBRATION OF YAW OFFSET //
 		 /////////////////////////////
 
-	static float yaw_offset = 0;
-	static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
-	static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
-	static int no_rot_counter = 0;	// keeps track of the amount of time steps without rotation
-	int no_rot_duration = 20;		// time steps of no rotation required before calibrating
-	int avg_size = 10; 				// amount of samples to take the average of, for the yaws
-	static uint last_calibration_time = 0;
-
-	// if calibration is necessary
-	if ((calibration_needed || vision_available) && HAL_GetTick() - start_time > CALIBRATE_AFTER) {
-		static float yaw0 = 0; 	// starting yaw, which is used to detect a change in yaw within the duration
-		// check for calibration possibility (which is when the yaw has not changed much for sufficiently long)
-		if (fabs(yaw0 - xsens_yaw) < 0.01) {
-			if (no_rot_counter > no_rot_duration) {
-				// calculate offset (calibrate)
-				float avg_xsens_yaw = atan2f(avg_xsens_vec[1], avg_xsens_vec[0]);
-				if (vision_available) { // if vision would not be availabe, the yaw would simply be reset to 0;
-					float avg_vision_yaw = atan2f(avg_vision_vec[1], avg_vision_vec[0]);
-					yaw_offset = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
-				} else {
-					yaw_offset = -avg_xsens_yaw;
-
-				}
-				calibration_needed = false; // done with calibrating
-				last_calibration_time = HAL_GetTick();
-				no_rot_counter = 0;			// reset timer
-			} else if (no_rot_counter > no_rot_duration - avg_size) {
-				// averaging angles requires summing their unit vectors
-				avg_xsens_vec[0] += cosf(xsens_yaw);
-				avg_xsens_vec[1] += sinf(xsens_yaw);
-				avg_vision_vec[0] += cosf(vision_yaw);
-				avg_vision_vec[1] += sinf(vision_yaw);
-			}
-		} else { // so fabs(yaw0 - xsens_yaw) > 0.01
-			// reset comparation yaw to current yaw
-			yaw0 = xsens_yaw;
-			// reset timer and averages
-			no_rot_counter = 0;
-			avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
-			avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
-		}
-		no_rot_counter++;
-	} else {
-		// reset timer and averages
-		no_rot_counter = 0;
-		avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
-		avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
-	}
-
-	// get and offset xsens data
+	xsens_yaw = calibrateYaw(xsens_yaw, vision_yaw, vision_available);
 	float xsensData[3];
 	xsensData[body_x] = -accptr[0];
 	xsensData[body_y] = -accptr[1];
-	xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
-	rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also be calibrated to the offset yaw
+	xsensData[body_w] = constrainAngle(xsens_yaw);
 
-	// check whether recalibration of yaw is highly necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
-	if (vision_available && !calibration_needed) {
-		// assuming 7 steps of delay between vision and xsens (so 70 ms) (might be off)
-		static float xsens_yaw_buffer[7] = {0,0,0,0,0,0,0};
-		for (int i = 0; i < 6; i++) {
-			xsens_yaw_buffer[i] = xsens_yaw_buffer[i+1];
-		}
-		xsens_yaw_buffer[6] = xsensData[body_w];
-
-		// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
-		static int check_counter = 0;
-		if (HAL_GetTick() - last_calibration_time > 100 && fabs(constrainAngle(vision_yaw - xsens_yaw_buffer[0])) > 0.2) {
-			check_counter++;
-		} else {
-			check_counter = 0;
-		}
-		if (check_counter > 10) {
-			calibration_needed = true;
-			check_counter = 0;
-		}
-	}
+//	static float yaw_offset = 0;
+//	static float avg_xsens_vec[2] = {0}; 	// vector describing the average yaw measured by xsens over a number of time steps
+//	static float avg_vision_vec[2] = {0}; 	// vector describing the average yaw measured by vision over a number of time steps
+//	static int no_rot_counter = 0;	// keeps track of the amount of time steps without rotation
+//	int no_rot_duration = 20;		// time steps of no rotation required before calibrating
+//	int avg_size = 10; 				// amount of samples to take the average of, for the yaws
+//	static uint last_calibration_time = 0;
+//
+//	// if calibration is necessary
+//	if ((calibration_needed || vision_available) && HAL_GetTick() - start_time > CALIBRATE_AFTER) {
+//		static float yaw0 = 0; 	// starting yaw, which is used to detect a change in yaw within the duration
+//		// check for calibration possibility (which is when the yaw has not changed much for sufficiently long)
+//		if (fabs(yaw0 - xsens_yaw) < 0.01) {
+//			if (no_rot_counter > no_rot_duration) {
+//				// calculate offset (calibrate)
+//				float avg_xsens_yaw = atan2f(avg_xsens_vec[1], avg_xsens_vec[0]);
+//				if (vision_available) { // if vision would not be availabe, the yaw would simply be reset to 0;
+//					float avg_vision_yaw = atan2f(avg_vision_vec[1], avg_vision_vec[0]);
+//					yaw_offset = constrainAngle(avg_vision_yaw - avg_xsens_yaw);
+//				} else {
+//					yaw_offset = -avg_xsens_yaw;
+//
+//				}
+//				calibration_needed = false; // done with calibrating
+//				last_calibration_time = HAL_GetTick();
+//				no_rot_counter = 0;			// reset timer
+//			} else if (no_rot_counter > no_rot_duration - avg_size) {
+//				// averaging angles requires summing their unit vectors
+//				avg_xsens_vec[0] += cosf(xsens_yaw);
+//				avg_xsens_vec[1] += sinf(xsens_yaw);
+//				avg_vision_vec[0] += cosf(vision_yaw);
+//				avg_vision_vec[1] += sinf(vision_yaw);
+//			}
+//		} else { // so fabs(yaw0 - xsens_yaw) > 0.01
+//			// reset comparation yaw to current yaw
+//			yaw0 = xsens_yaw;
+//			// reset timer and averages
+//			no_rot_counter = 0;
+//			avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
+//			avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
+//		}
+//		no_rot_counter++;
+//	} else {
+//		// reset timer and averages
+//		no_rot_counter = 0;
+//		avg_xsens_vec[0] = 0; avg_xsens_vec[1] = 0;
+//		avg_vision_vec[0] = 0; avg_vision_vec[1] = 0;
+//	}
+//
+//	// get and offset xsens data
+//	float xsensData[3];
+//	xsensData[body_x] = -accptr[0];
+//	xsensData[body_y] = -accptr[1];
+//	xsensData[body_w] = constrainAngle(xsens_yaw + yaw_offset);
+//	rotate(-yaw_offset, xsensData, xsensData); // the free accelerations should also be calibrated to the offset yaw
+//
+//	// check whether recalibration of yaw is highly necessary. If so, calibration needed is set to true, which leads to halting the robot until calibrated.
+//	if (vision_available && !calibration_needed) {
+//		// assuming 7 steps of delay between vision and xsens (so 70 ms) (might be off)
+//		static float xsens_yaw_buffer[7] = {0,0,0,0,0,0,0};
+//		for (int i = 0; i < 6; i++) {
+//			xsens_yaw_buffer[i] = xsens_yaw_buffer[i+1];
+//		}
+//		xsens_yaw_buffer[6] = xsensData[body_w];
+//
+//		// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
+//		static int check_counter = 0;
+//		if (HAL_GetTick() - last_calibration_time > 100 && fabs(constrainAngle(vision_yaw - xsens_yaw_buffer[0])) > 0.2) {
+//			check_counter++;
+//		} else {
+//			check_counter = 0;
+//		}
+//		if (check_counter > 10) {
+//			calibration_needed = true;
+//			check_counter = 0;
+//		}
+//	}
 
 
 	  /////////////////////////
