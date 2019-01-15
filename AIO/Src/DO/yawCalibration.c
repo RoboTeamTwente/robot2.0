@@ -13,9 +13,11 @@
 void isCalibrationNeeded(float visionYaw, float xsensYaw);
 void isRotatingSlow(float xsensYaw);
 float constrainAngle(float x);
+void bufferYaw(float xsensYaw);
 
 static bool calibration_needed = false;
 static bool rotating_slow = false;
+static float xsensYawBuffer[5] = {0, 0, 0, 0, 0};
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
@@ -24,11 +26,7 @@ float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
 	static float avgXsensVec[2] = {0}, avgVisionVec[2] = {0};
 	int restDuration = 20; // number of time steps to do for averaging TODO: test this
 
-	///-------- DEBUG ----------------
-//	SetLD(5, isCalibrationNeeded(visionYaw, xsensYaw));
-//	SetLD(6, isRotatingSlow(xsensYaw));
-	///------------------------------
-
+	bufferYaw(xsensYaw);
 	isCalibrationNeeded(visionYaw, xsensYaw);
 	isRotatingSlow(xsensYaw);
 
@@ -60,7 +58,7 @@ float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
 void isCalibrationNeeded(float visionYaw, float xsensYaw) {
 	// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
 	static int checkCounter = 0;
-	if (fabs(constrainAngle(visionYaw - xsensYaw)) > 0.2) {
+	if (fabs(constrainAngle(visionYaw - xsensYawBuffer[0])) > 0.2) {
 		checkCounter++;
 	} else {
 		checkCounter = 0;
@@ -90,10 +88,9 @@ void isRotatingSlow(float xsensYaw) {
 	}
 }
 
-//Scales the angle to the range Pi to -Pi in radians
-//float constrainAngle(float x){
-//    x = fmodf(x + M_PI, 2*M_PI);
-//    if (x < 0)
-//        x += 2*M_PI;
-//    return x - M_PI;
-//}
+void bufferYaw(float xsensYaw) {
+	for (int i = 0; i < 4; i++) {
+		xsensYawBuffer[i] = xsensYawBuffer[i+1];
+	}
+	xsensYawBuffer[4] = xsensYaw;
+}
