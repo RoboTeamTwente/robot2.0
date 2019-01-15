@@ -80,7 +80,6 @@ bool halt = true;
 bool calibration_needed = true;
 bool vision_available = false;
 
-
 //float wheelsPWM[4] = {0};
 float velocityRef[3] = {0};
 float vision_yaw = 0;
@@ -200,7 +199,7 @@ int main(void)
 		//TODO: test vision angle and calibration etc.
 		vision_available = receivedRoboData.use_cam_info;
 		if (vision_available) {
-			vision_yaw = ((float)receivedRoboData.cam_rotation/1024.0F)*M_PI;
+			vision_yaw = ((float)receivedRoboData.cam_rotation/1024.0F)*180;
 		}
 
 		//dribbler
@@ -265,9 +264,29 @@ int main(void)
 
 	geneva_Update();
 	MT_Update();
+
+	if (vision_available) {
+		SetLD(5, 1);
+		SetLD(4, 1);
+		SetLD(3, 1);
+		SetLD(2, 1);
+		SetLD(1, 1);
+		uint tempTimer = HAL_GetTick();
+		while ((HAL_GetTick() - tempTimer < 1000)) {
+
+		}
+	} else {
+		SetLD(5, 0);
+		SetLD(4, 0);
+		SetLD(3, 0);
+		SetLD(2, 0);
+		SetLD(1, 0);
+	}
+	//SetLD(3, 0);
+
 	if((HAL_GetTick() - printtime > 1000)){
 		printtime = HAL_GetTick();
-		ToggleLD(1);
+		//ToggleLD(1);
 
 		//CHECK NRF STATUS REGISTER EVERY SECOND...IF NRF IS CONSTIPATED, FLUSH SHIT OUT
 		if(readReg(STATUS) != 0x0e) {
@@ -278,15 +297,15 @@ int main(void)
 		}
 
 		if(*MT_GetStatusWord() & 0b00011000){
-			//uprintf("calibrating Xsens.\n\r");
+			uprintf("calibrating Xsens.\n\r");
 		}else if(started_icc == false){
 			started_icc = true;
 			if(MT_UseIcc() == MT_succes)
 				uprintf("Xsens calibration done.\n\r");
 		}
-//		uprintf("Vision available? ");
-//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
-		uprintf("Vision yaw: %f\n\r", vision_yaw/M_PI*180);
+		uprintf("Vision available? ");
+		uprintf(vision_available ? "yes\n\r" : "no\n\r");
+		uprintf("Vision yaw: %f\n\r", vision_yaw);
 		uprintf("XSens yaw: %f\n\r", MT_GetAngles()[2]);
 		uprintf("XSens rate of turn: %f\n\r", MT_GetGyro()[2]);
 		uprintf("\n\r");
