@@ -90,7 +90,7 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 
 	// get and filter wheel speeds
 	float w_wheels[4] = {0,0,0,0};
-	wheelFilter(w_wheels);//edits the above array
+	//wheelFilter(w_wheels);//edits the above array
 
 	// calibration of yaw offset
 	// we use the xsens data for the control, but that has drift
@@ -114,7 +114,7 @@ bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	// control part
 
 	if (!calibration_needed){
-		vel_control_Callback(w_wheels, xsensData, velocityRef);
+		vel_control_Callback(output, xsensData, velocityRef);
 	}
 
 	return calibration_needed;
@@ -249,20 +249,19 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 
 	float angleErr = constrainAngle((vel_ref[body_w] - State[body_w]));//constrain it to one circle turn
 	float angleComp = PID(angleErr, &angleK);// PID control from control_util.h
-	float velLocalRef[3] = {0};
+	float velLocalRef[3] = {0,0,0};
 	global2Local(vel_ref, velLocalRef, State[body_w]); //transfer global to local
 
 	// PID control from control_util.h
-	velLocalRef[body_x] += PID((velLocalRef[body_x]-State[body_x]), &velxK); //error compensation plus requested velocity
-	velLocalRef[body_y] += PID((velLocalRef[body_y]-State[body_y]), &velyK);
+	//velLocalRef[body_x] += PID((velLocalRef[body_x]-State[body_x]), &velxK); //error compensation plus requested velocity
+	//velLocalRef[body_y] += PID((velLocalRef[body_y]-State[body_y]), &velyK);
 
 	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
 
+	float flo = 2;
 	for (int i = 0; i < 4; ++i){
-		wheel_ref[i] += angleComp; //add necessary rotation value
+		wheel_ref[i] = flo; //add necessary rotation value
 	}
-
-	scaleAndLimit(wheel_ref);
 
 	return;
 }

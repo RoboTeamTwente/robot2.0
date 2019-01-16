@@ -289,6 +289,7 @@ int main(void)
 		//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
 		//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 		//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
+		uprintf("k");
 	}
   /* USER CODE END WHILE */
 
@@ -453,7 +454,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim7.Instance){
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		float wheelsPWM[4] = {0,0,0,0};
+		velocityRef[0] = 0;
+		velocityRef[1] = 0;
+		velocityRef[2] = 0;
+		vision_yaw = 0;
+		vision_available = true;
 		calibration_needed = DO_Control(velocityRef, vision_yaw, vision_available, wheelsPWM); // outputs to wheelsPWM
+		wheelsPWM[0] = 100;
 		if (calibration_needed) {
 			halt = true;
 		}
