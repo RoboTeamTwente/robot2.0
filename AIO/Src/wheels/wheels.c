@@ -23,9 +23,10 @@
 
 #define gearratio 2.5f
 #define max_voltage 12//see datasheet
+#define max_pwm 255
 #define sconstant 374//RPM/V see datasheet
 #define wconstant (float)60/(2*M_PI*(float)sconstant) // RPM/V to V/w
-#define PWM2Omega (float)(wconstant*MAX_PWM/max_voltage)*gearratio //(V/W)*(pwm/voltage)
+#define PWM2Omega (float)(wconstant*max_pwm/max_voltage)*gearratio //(V/W)*(pwm/voltage)
 
 bool reverse[N_WHEELS] = {0};
 float global_power[N_WHEELS];
@@ -173,8 +174,8 @@ void wheels_SetOutput(float power[N_WHEELS]){
 				power[i] = 0.0F;
 			}else if(power[i] < PWM_ROUNDUP){
 				power[i] = PWM_ROUNDUP;
-			}else if(power[i] > MAX_PWM){
-				power[i] = MAX_PWM;
+			}else if(power[i] > max_pwm){
+				power[i] = max_pwm;
 			}
 
 		}
