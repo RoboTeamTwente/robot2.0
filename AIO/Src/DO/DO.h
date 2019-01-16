@@ -1,38 +1,48 @@
 /*
- * DO.h
+ * control.h
  *
- *  Created on: Mar 27, 2018
- *      Author: Leon
+ *  Created on: Nov 6, 2018
+ *      Author: kjhertenberg
  */
+/*
+Description: Determines the wanted wheel speed, based on received data
+
+Instructions:
+1) Initialize
+2) Receives data of it's state
+3) Combine data, not in here yet
+4) Transform data to right frame and units
+5) Apply control functions
+6) Scale and limit the outgoing signal
+
+Extra functions:
+
+GPIO Pins: None
+
+Notes:
+Still need to add the right specs
+*/
 
 #ifndef DO_DO_H_
 #define DO_DO_H_
-
+#define TIME_DIFF 0.01F // time difference due to 100Hz
 #include <stdbool.h>
+#include "control_util.h"
 
-typedef enum {
-	DO_succes,
-	DO_error
-}DO_States;
+///////////////////////////////////////////////////// VARIABLE STRUCT
+//// Structs
 
-typedef enum {
-	body_x,
-	body_y,
-	body_w,
-}body_handles;
 
-DO_States DO_Init();
+	//TODO: add control values based on tests
+
+
+
+///////////////////////////////////////////////////// FUNCTION PROTOTYPES
+//// PUBLIC
+
+int vel_control_Init();
 
 bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]);
 
-float constrainAngle(float x);
-void body2Wheels(float F[3], float output[4]);
-void wheels2Body(float w[4], float output[3]);
-void rotate(float yaw, float input[3], float output[3]);
-float compute_limit_scale(float input[3], float limit);
-void disturbanceObserver(float yaw, float localInput[3], float globalAcc[2], float output[3]);
-void pController(float input[3], float kp[3], float output[3]);
-void controller(float velocityRef[3], float w_wheels[4], float xsensData[3], float output[4]);
-float angleController(float angleRef, float yaw);
-
 #endif /* DO_DO_H_ */
+

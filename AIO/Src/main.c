@@ -151,7 +151,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   puttystruct.handle = HandleCommand;
   PuttyInterface_Init(&puttystruct);
-  DO_Init();
+  vel_control_Init();
   dribbler_Init();
   ballsensorInit();
   wheels_Init();

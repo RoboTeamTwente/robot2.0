@@ -21,6 +21,12 @@
 #define GEAR_RATIO 2.5F			// motor to wheel
 #define X__ENCODING 4			// counts per pulse X1, X2 or X4
 
+#define gearratio 2.5f
+#define max_voltage 12//see datasheet
+#define sconstant 374//RPM/V see datasheet
+#define wconstant (float)60/(2*M_PI*(float)sconstant) // RPM/V to V/w
+#define PWM2Omega (float)(wconstant*MAX_PWM/max_voltage)*gearratio //(V/W)*(pwm/voltage)
+
 bool reverse[N_WHEELS] = {0};
 float global_power[N_WHEELS];
 
@@ -100,27 +106,28 @@ static inline void SetDir(wheels_handles wheel, bool reverse){
 
 void wheels_Init(){
 	wheels_state = wheels_ready;
-	HAL_TIM_Base_Start(&htim1);
-	HAL_TIM_Base_Start(&htim3);
-	HAL_TIM_Base_Start(&htim4);
-	HAL_TIM_Base_Start(&htim5);
-	HAL_TIM_Base_Start(&htim8);
-	HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_2);
-	HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
+	HAL_TIM_Base_Start(&htim1); //RF
+	HAL_TIM_Base_Start(&htim8); //RB
+	HAL_TIM_Base_Start(&htim3); //LB
+	HAL_TIM_Base_Start(&htim4); //LF
+	HAL_TIM_Base_Start(&htim5); //TIME
+	HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_2); //RF
+	HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_1); //RB
+	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1); //LB
+	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2); //LF
 }
+
 void wheels_DeInit(){
 	wheels_state = wheels_uninitialized;
-	HAL_TIM_Base_Stop(&htim1);
-	HAL_TIM_Base_Stop(&htim3);
-	HAL_TIM_Base_Stop(&htim4);
-	HAL_TIM_Base_Stop(&htim5);
-	HAL_TIM_Base_Stop(&htim8);
-	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_2);
-	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2);
+	HAL_TIM_Base_Stop(&htim1); //RF
+	HAL_TIM_Base_Stop(&htim8); //RB
+	HAL_TIM_Base_Stop(&htim3); //LB
+	HAL_TIM_Base_Stop(&htim4); //LF
+	HAL_TIM_Base_Stop(&htim5); //TIME
+	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_2); //RF
+	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1); //RB
+	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_1); //LB
+	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2); //LF
 }
 
 void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadPerSec, float power[N_WHEELS]){
@@ -151,6 +158,9 @@ void wheels_SetOutput(float power[N_WHEELS]){
 		return;
 	case wheels_ready:
 		memcpy(prev_reverse, reverse, N_WHEELS);
+		for(int i = wheels_RF; i <= wheels_LF; i++){
+				power[i] = PWM2Omega*power[i];
+			}
 		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
 			if(power[i] <= -1.0F){
 				power[i] = -power[i];
@@ -163,8 +173,8 @@ void wheels_SetOutput(float power[N_WHEELS]){
 				power[i] = 0.0F;
 			}else if(power[i] < PWM_ROUNDUP){
 				power[i] = PWM_ROUNDUP;
-			}else if(power[i] > 100){
-				power[i] = 100;
+			}else if(power[i] > MAX_PWM){
+				power[i] = MAX_PWM;
 			}
 
 		}
