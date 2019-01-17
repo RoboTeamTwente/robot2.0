@@ -69,8 +69,9 @@ void pid_Control(float sensor_output, PID_controller_HandleTypeDef* pc){
 	static uint e_cnt;
 	float err = pc->ref - sensor_output;
 	pc->pid.P = pc->K_terms.Kp*err;
-	pc->pid.I += pc->K_terms.Ki*err*pc->timestep;
-
+	if (abs(err)>75){
+		pc->pid.I += pc->K_terms.Ki*err*pc->timestep;
+	}
 	pc->pid.D = (pc->K_terms.Kd*(err-AverageErr(prev_e, FILTER_SIZE)))/pc->timestep;
 	prev_e[e_cnt++] = err;
 	e_cnt %= FILTER_SIZE;

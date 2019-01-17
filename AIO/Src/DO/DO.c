@@ -23,9 +23,9 @@
 uint start_time;
 
 PIDvariables angleK = {
-		.kP = 0,//kp
+		.kP = 2,//kp
 		.kI = 0,//ki
-		.kD = 0,//kd
+		.kD = 0.5,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero
 		.timeDiff = TIME_DIFF
@@ -237,19 +237,10 @@ bool checkYawcalibration(bool calibration_needed, bool vision_available, float v
 
 void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 
-	/*For dry testing
-	State[body_w] = MT_GetAngles()[2]/180*M_PI;
-	vel_ref[body_x] = 0;
-	vel_ref[body_y] = 0;
-	vel_ref[body_w] = 0*M_PI;
-	State[body_x] = 0;
-	State[body_y] = 0;
-	State[body_w] = 0*M_PI;
-	*/
 
 	float angleErr = constrainAngle((vel_ref[body_w] - State[body_w]));//constrain it to one circle turn
 	float angleComp = PID(angleErr, &angleK);// PID control from control_util.h
-	float velLocalRef[3] = {0,0,0};
+	static float velLocalRef[3] = {0};
 	global2Local(vel_ref, velLocalRef, State[body_w]); //transfer global to local
 
 	// PID control from control_util.h
@@ -259,7 +250,7 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
 
 	for (int i = 0; i < 4; ++i){
-		wheel_ref[i] += 0; //add necessary rotation value
+		wheel_ref[i] += angleComp; //add necessary rotation value
 	}
 
 	return;
@@ -269,9 +260,9 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 static void body2Wheels(float wheelspeed[4], float velocity[3]){
 	//mixing matrix
 	//TODO check minuses
-	float velx2wheel = 1/(sin60*velocity[body_x]*rad_wheel);
-	float vely2wheel = 1/(cos60*velocity[body_y]*rad_wheel);
-	float rot2wheel = 1/(rad_robot*velocity[body_w]*rad_wheel);
+	float velx2wheel = (sin60*velocity[body_x]/rad_wheel);
+	float vely2wheel = (cos60*velocity[body_y]/rad_wheel);
+	float rot2wheel =  (rad_robot*velocity[body_w]/rad_wheel);
 	wheelspeed[wheels_RF] = -(velx2wheel + vely2wheel);
 	wheelspeed[wheels_RB] = -(velx2wheel - vely2wheel);
 	wheelspeed[wheels_LB] = -(-velx2wheel - vely2wheel);
