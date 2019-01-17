@@ -237,7 +237,7 @@ int main(void)
 		halt = false;
 	}else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
 		halt = true;
-		vision_available = false;
+		//vision_available = false;
 	}
 	// check if battery is empty
 	if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
@@ -264,6 +264,11 @@ int main(void)
 
 	//uprintf("ball: %i\n",preparedAckData.ballSensor);
 
+	// ------ TEMPORARY TESTING ---------
+	vision_yaw = M_PI;
+	vision_available = true;
+	// ----------------------------------
+
 	geneva_Update();
 	MT_Update();
 
@@ -288,10 +293,11 @@ int main(void)
 		}
 		uprintf("Vision available? ");
 		uprintf(vision_available ? "yes\n\r" : "no\n\r");
-		uprintf("Vision yaw: %f\n\r", vision_yaw/M_PI*180);
-		uprintf("XSens yaw: %f\n\r", MT_GetAngles()[2]+yawOffset/M_PI*180);
-		uprintf("XSens rate of turn: %f\n\r", MT_GetGyro()[2]);
-		uprintf("Yaw offset: %f\n\r", yawOffset);
+		uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
+		//uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
+		uprintf("Calibrated XSens yaw: %f degrees\n\r", MT_GetAngles()[2]+yawOffset/M_PI*180);
+		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
+		uprintf("Yaw offset: %f degrees\n\r", yawOffset/M_PI*180);
 		uprintf("\n\r");
 		//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
 		//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
@@ -462,7 +468,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim7.Instance){
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		float wheelsPWM[4] = {0,0,0,0};
-		calibration_needed = true;
+		calibration_needed = false;
 		yawOffset = DO_Control(velocityRef, vision_yaw, vision_available, wheelsPWM); // outputs to wheelsPWM
 		if (calibration_needed) {
 			halt = true;

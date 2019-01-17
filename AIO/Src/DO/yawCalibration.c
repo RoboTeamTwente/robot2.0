@@ -8,29 +8,31 @@
 #include "yawCalibration.h"
 #include "stdbool.h"
 #include <math.h>
+#include "DO.h" // for function constrainAngle()
+
+///////////////////////////////////////////////////// DEFINITIONS
+#define BUFFER_SIZE 5 // assume 50 ms (5 time steps) delay between vision and XSens
+#define restDuration 20 // number of time steps to do for averaging TODO: test this
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
-void isCalibrationNeeded(float visionYaw, float xsensYaw);
-void isRotatingSlow(float xsensYaw);
-float constrainAngle(float x);
+bool isCalibrationNeeded(float visionYaw, float xsensYaw, float yawOffset);
+bool isRotatingSlow(float xsensYaw);
 void bufferYaw(float xsensYaw);
 
-static bool calibration_needed = false;
-static bool rotating_slow = false;
-static float xsensYawBuffer[5] = {0, 0, 0, 0, 0};
+static float xsensYawBuffer[BUFFER_SIZE] = {0, 0, 0, 0, 0};
+static int bufferIndex = 0;
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
 	static float yawOffset = 0;
 	static int restCounter = 0;
 	static float avgXsensVec[2] = {0}, avgVisionVec[2] = {0};
-	int restDuration = 20; // number of time steps to do for averaging TODO: test this
 
-	bufferYaw(xsensYaw);
-	isCalibrationNeeded(visionYaw, xsensYaw);
-	isRotatingSlow(xsensYaw);
+	SetLD(4, isCalibrationNeeded(visionYaw, xsensYaw, yawOffset));
+	SetLD(5, isRotatingSlow(xsensYaw));
+	SetLD(6, visionAvailable);
 
-	if (calibration_needed && rotating_slow && visionAvailable) {
+	if (isCalibrationNeeded(visionYaw, xsensYaw, yawOffset) && isRotatingSlow(xsensYaw) && visionAvailable) {
 		if (restCounter > restDuration) {
 			// calculate offset
 			float avgVisionYaw = atan2f(avgVisionVec[1], avgVisionVec[0]);
@@ -51,27 +53,31 @@ float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
 		avgXsensVec[0] = 0; avgXsensVec[1] = 0;
 		avgVisionVec[0] = 0; avgVisionVec[1] = 0;
 	}
+	bufferYaw(xsensYaw);
 	return constrainAngle(xsensYaw + yawOffset);
 }
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
-void isCalibrationNeeded(float visionYaw, float xsensYaw) {
+bool isCalibrationNeeded(float visionYaw, float xsensYaw, float yawOffset) {
 	// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
+	static bool calibrationNeeded = false;
 	static int checkCounter = 0;
-	if (fabs(constrainAngle(visionYaw - xsensYawBuffer[0])) > 0.2) {
+	if (fabs(constrainAngle(visionYaw - (xsensYawBuffer[bufferIndex] + yawOffset))) > M_PI/180) { // require 1 degree accuracy
 		checkCounter++;
 	} else {
 		checkCounter = 0;
-		calibration_needed = false;
+		calibrationNeeded = false;
 	}
 	if (checkCounter > 10) {
 		checkCounter = 0;
-		calibration_needed = true;
+		calibrationNeeded = true;
 	}
+	return calibrationNeeded;
 }
 
-void isRotatingSlow(float xsensYaw) {
+bool isRotatingSlow(float xsensYaw) {
 	// Check if robot has been rotating sufficiently slow for several time steps
+	static bool rotatingSlow = false;
 	static int rotateCounter = 0;
 	static float startXsensYaw = 0;
 	if (fabs(constrainAngle(startXsensYaw - xsensYaw)) < 0.01) {
@@ -79,18 +85,24 @@ void isRotatingSlow(float xsensYaw) {
 	} else {
 		rotateCounter = 0;
 		startXsensYaw = xsensYaw;
-		rotating_slow = false;
+		rotatingSlow = false;
 	}
 	if (rotateCounter > 10) {
 		rotateCounter = 0;
 		startXsensYaw = xsensYaw;
-		rotating_slow = true;
+		rotatingSlow = true;
 	}
+	return rotatingSlow;
 }
 
 void bufferYaw(float xsensYaw) {
-	for (int i = 0; i < 4; i++) {
-		xsensYawBuffer[i] = xsensYawBuffer[i+1];
-	}
-	xsensYawBuffer[4] = xsensYaw;
+	xsensYawBuffer[bufferIndex] = xsensYaw;
+	bufferIndex = bufferIndex >= BUFFER_SIZE ? 0 : bufferIndex + 1;
 }
+
+//void bufferYaw(float xsensYaw) {
+//	for (int i=0; i < 4; i++) {
+//		xsensYawBuffer[i] = xsensYawBuffer[i+1];
+//	}
+//	xsensYawBuffer[4] = xsensYaw;
+//}
