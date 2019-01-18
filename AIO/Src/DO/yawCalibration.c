@@ -8,7 +8,13 @@
 #include "yawCalibration.h"
 #include "stdbool.h"
 #include <math.h>
-#include "DO.h" // for function constrainAngle()
+#include "DO.h" 		// function constrainAngle()
+#include "../MTi/MTiControl.h" // function MT_GetGyro()
+
+//------------ settings for testing ----------------------
+bool alwaysCalibrate = true;
+bool compensateWithGyro = false;
+//--------------------------------------------------------
 
 ///////////////////////////////////////////////////// DEFINITIONS
 #define BUFFER_SIZE 5 // assume 50 ms (5 time steps) delay between vision and XSens
@@ -27,10 +33,15 @@ float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
 	static float yawOffset = 0;
 	static int restCounter = 0;
 	static float avgXsensVec[2] = {0}, avgVisionVec[2] = {0};
+	static float prevVisionYaw = 0;
 
 	SetLD(4, isCalibrationNeeded(visionYaw, xsensYaw, yawOffset));
 	SetLD(5, isRotatingSlow(xsensYaw));
 	SetLD(6, visionAvailable);
+
+	if (compensateWithGyro && visionYaw == prevVisionYaw) {
+		visionYaw += MT_GetGyro()[2] * 0.01; // time interval: 10 ms
+	}
 
 	if (isCalibrationNeeded(visionYaw, xsensYaw, yawOffset) && isRotatingSlow(xsensYaw) && visionAvailable) {
 		if (restCounter > restDuration) {
@@ -54,15 +65,24 @@ float calibrateYaw(float xsensYaw, float visionYaw, bool visionAvailable) {
 		avgVisionVec[0] = 0; avgVisionVec[1] = 0;
 	}
 	bufferYaw(xsensYaw);
+	prevVisionYaw = visionYaw;
 	return constrainAngle(xsensYaw + yawOffset);
 }
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
 bool isCalibrationNeeded(float visionYaw, float xsensYaw, float yawOffset) {
 	// if vision yaw and xsens yaw deviate too much for several time steps, set calibration needed to true
+
+	//--------- testing ---------
+	if (alwaysCalibrate) {
+		return true;
+	}
+	xsensYaw = compensateWithGyro ? xsensYaw : xsensYawBuffer[bufferIndex];
+	//---------------------------
+
 	static bool calibrationNeeded = false;
 	static int checkCounter = 0;
-	if (fabs(constrainAngle(visionYaw - (xsensYawBuffer[bufferIndex] + yawOffset))) > M_PI/180) { // require 1 degree accuracy
+	if (fabs(constrainAngle(visionYaw - (xsensYaw + yawOffset))) > M_PI/180) { // require 1 degree accuracy
 		checkCounter++;
 	} else {
 		checkCounter = 0;
@@ -100,9 +120,3 @@ void bufferYaw(float xsensYaw) {
 	bufferIndex = bufferIndex >= BUFFER_SIZE ? 0 : bufferIndex + 1;
 }
 
-//void bufferYaw(float xsensYaw) {
-//	for (int i=0; i < 4; i++) {
-//		xsensYawBuffer[i] = xsensYawBuffer[i+1];
-//	}
-//	xsensYawBuffer[4] = xsensYaw;
-//}
