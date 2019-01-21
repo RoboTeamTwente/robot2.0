@@ -63,16 +63,16 @@ static inline void ResetEncoder(wheels_handles wheel){
 static inline void SetPWM(wheels_handles wheel, float power){
 	switch(wheel){
 	case wheels_RF:
-		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, power / 100 * MAX_PWM);
+		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, MAX_PWM - power / 100 * MAX_PWM);
 		break;
 	case wheels_RB:
-		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, power / 100 * MAX_PWM);
+		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, MAX_PWM - power / 100 * MAX_PWM);
 		break;
 	case wheels_LB:
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, power / 100 * MAX_PWM);
+		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, MAX_PWM - power / 100 * MAX_PWM);
 		break;
 	case wheels_LF:
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, power / 100 * MAX_PWM);
+		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, MAX_PWM - power / 100 * MAX_PWM);
 		break;
 	}
 }
@@ -143,9 +143,10 @@ void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadP
 }
 
 void wheels_SetOutput(float power[N_WHEELS]){
-	switch(wheels_state){
 	bool prev_reverse[N_WHEELS];
 	bool delay[N_WHEELS] = {false};
+
+	switch(wheels_state){
 	case wheels_uninitialized:
 //		uprintf("ERROR wheels_uninitialized\n\r");
 		return;

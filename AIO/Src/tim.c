@@ -10,7 +10,7 @@
   * inserted by the user or by software development tools
   * are owned by their respective copyright owners.
   *
-  * COPYRIGHT(c) 2018 STMicroelectronics
+  * COPYRIGHT(c) 2019 STMicroelectronics
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -308,7 +308,7 @@ void MX_TIM9_Init(void)
   TIM_OC_InitTypeDef sConfigOC;
 
   htim9.Instance = TIM9;
-  htim9.Init.Prescaler = 1;
+  htim9.Init.Prescaler = 0;
   htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim9.Init.Period = MAX_PWM;
   htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -733,7 +733,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* timHandle)
     */
     GPIO_InitStruct.Pin = PWM_RB_Pin|PWM_RF_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF3_TIM9;
     HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
@@ -794,7 +794,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* timHandle)
     */
     GPIO_InitStruct.Pin = PWM_LB_Pin|PWM_LF_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF9_TIM12;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
