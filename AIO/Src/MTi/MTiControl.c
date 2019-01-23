@@ -24,6 +24,7 @@ struct XbusMessage* ReceivedMessageStorage;
 uint MT_Data_succerr[2] = {0};
 float angles[3];
 float acc[3];
+float gyro[3];
 uint8_t raw[128];
 uint32_t statusword;
 
@@ -386,6 +387,9 @@ float* MT_GetAcceleration(){
 }
 float* MT_GetAngles(){
 	return angles;
+}
+float* MT_GetGyro(){
+	return gyro;
 }
 void MT_FactoryReset(){
 	struct XbusMessage mess = { .mid = XMID_RestoreFactoryDef,

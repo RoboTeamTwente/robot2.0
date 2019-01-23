@@ -103,6 +103,10 @@ float* MT_GetAcceleration();
  * 	retval: pointer to array of 3 floats { x, y, z}
  */
 float* MT_GetAngles();
+/*	Returns the last received Gyroscope values
+ * 	retval: pointer to array of 3 floats { x, y, z}
+ */
+float* MT_GetGyro();
 /*	Resets the Xsens to factory settings
  *
  */
