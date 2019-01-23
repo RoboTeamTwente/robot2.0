@@ -8,6 +8,8 @@
 #ifndef UTILS_CONTROL_UTIL_H_
 #define UTILS_CONTROL_UTIL_H_
 
+#include <math.h>
+
 typedef enum {
 	body_x,
 	body_y,
@@ -32,6 +34,14 @@ inline float PID(float err, PIDvariables* K){
 	K->prev_e = err;
 	float PIDvalue = P + I + D;
 	return PIDvalue;
+}
+
+//Scales the angle to the range Pi to -Pi in radians
+static float constrainAngle(float x){
+    x = fmodf(x + M_PI, 2*M_PI);
+    if (x < 0)
+        x += 2*M_PI;
+    return x - M_PI;
 }
 
 #endif /* UTILS_CONTROL_UTIL_H_ */

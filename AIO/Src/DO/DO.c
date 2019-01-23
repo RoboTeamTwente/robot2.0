@@ -60,9 +60,6 @@ static void global2Local(float input[3], float output[2], float  yaw);
 //scales and limit the signal
 static void scaleAndLimit(float wheel_ref[4]);
 
-//Scales the angle to the range Pi to -Pi in radians
-static float constrainAngle(float x);
-
 static void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]);
 
 static void wheelFilter(float w_wheels[4]);
@@ -160,12 +157,4 @@ static void global2Local(float global[3], float local[3], float  yaw){
 
 static void scaleAndLimit(float wheel_ref[4]){
 	//TODO: add some limitation stuff here
-}
-
-//Scales the angle to the range Pi to -Pi in radians
-static float constrainAngle(float x){
-    x = fmodf(x + M_PI, 2*M_PI);
-    if (x < 0)
-        x += 2*M_PI;
-    return x - M_PI;
 }
