@@ -42,7 +42,7 @@ Still need to add the right specs
 
 int vel_control_Init();
 
-bool DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]);
+void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]);
 
 #endif /* DO_DO_H_ */
 
