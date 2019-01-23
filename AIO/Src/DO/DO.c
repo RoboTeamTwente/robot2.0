@@ -65,7 +65,7 @@ static void vel_control_Callback(float wheel_ref[4], float State[3], float vel_r
 
 static void wheelFilter(float w_wheels[4]);
 
-static void getXsensData(xsensData);
+static void getXsensData(float xsensData[3]);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
@@ -77,8 +77,8 @@ int vel_control_Init(){
 
 void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]){
 	// get and filter wheel speeds
-//	float w_wheels[4] = {0,0,0,0};
-//	wheelFilter(w_wheels);//edits the above array
+	float w_wheels[4] = {0,0,0,0};
+	wheelFilter(w_wheels);//edits the above array
 
 	// get and offset xsens data
 	getXsensData(xsensData);
@@ -96,7 +96,7 @@ float getYaw() {
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
 
-void getXsensData(float xsensData[3]){
+static void getXsensData(float xsensData[3]){
 
 	xsensData[body_x] = -MT_GetAcceleration()[0]; // TODO: why the minus signs?
 	xsensData[body_y] = -MT_GetAcceleration()[1];
@@ -104,7 +104,7 @@ void getXsensData(float xsensData[3]){
 
 }
 
-void wheelFilter(float w_wheels[4]){
+static void wheelFilter(float w_wheels[4]){
 	// get and filter wheel speeds
 	static float w_prev[4] = {0,0,0,0};
 		 // filtering wheel speeds
