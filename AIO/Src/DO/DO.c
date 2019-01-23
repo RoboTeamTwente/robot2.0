@@ -22,6 +22,7 @@
 #define sin60 0.866F	// sine of 60 degrees
 
 uint start_time;
+static float xsensData[3];
 
 PIDvariables angleK = {
 		.kP = 2,//kp
@@ -64,7 +65,7 @@ static void vel_control_Callback(float wheel_ref[4], float State[3], float vel_r
 
 static void wheelFilter(float w_wheels[4]);
 
-static float* getXsensData();
+static void getXsensData(xsensData);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
@@ -80,7 +81,7 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 //	wheelFilter(w_wheels);//edits the above array
 
 	// get and offset xsens data
-	float* xsensData = getXsensData();
+	getXsensData(xsensData);
 
 	// calibration of xsens data by calculating yaw offset
 	calibrateXsens(xsensData, vision_yaw, vision_available);
@@ -89,16 +90,18 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	vel_control_Callback(output, xsensData, velocityRef);
 }
 
+float getYaw() {
+	return xsensData[2];
+}
+
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
 
-float* getXsensData(){
+void getXsensData(float xsensData[3]){
 
-	float xsensData[3];
 	xsensData[body_x] = -MT_GetAcceleration()[0]; // TODO: why the minus signs?
 	xsensData[body_y] = -MT_GetAcceleration()[1];
 	xsensData[body_w] = MT_GetAngles()[2]/180*M_PI;
 
-	return xsensData;
 }
 
 void wheelFilter(float w_wheels[4]){
