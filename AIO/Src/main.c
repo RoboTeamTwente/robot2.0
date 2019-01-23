@@ -459,7 +459,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		//velocityRef[2] = -0.5*M_PI;
 		//vision_yaw = -0.5*M_PI;
 		//vision_available = true;
-		calibration_needed = DO_Control(velocityRef, vision_yaw, vision_available, wheelsPWM); // outputs to wheelsPWM
+		DO_Control(velocityRef, vision_yaw, vision_available, wheelsPWM); // outputs to wheelsPWM
 		if (calibration_needed) {
 			halt = true;
 		}
