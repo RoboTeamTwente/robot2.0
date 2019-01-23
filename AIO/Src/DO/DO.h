@@ -29,20 +29,11 @@ Still need to add the right specs
 #include <stdbool.h>
 #include "control_util.h"
 
-///////////////////////////////////////////////////// VARIABLE STRUCT
-//// Structs
-
-
-	//TODO: add control values based on tests
-
-
-
-///////////////////////////////////////////////////// FUNCTION PROTOTYPES
-//// PUBLIC
+///////////////////////////////////////////////////// PUBLIC FUNCTION DECLARATIONS
 
 int vel_control_Init();
 
-void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float output[4]);
+void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float wheel_ref[4]);
 
 float getYaw(); // For debugging
 
