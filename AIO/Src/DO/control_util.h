@@ -10,6 +10,14 @@
 
 #include <math.h>
 
+///////////////////////////////////////////////////// DEFINITIONS
+// Basically set constants
+#define rad_robot 0.0775F 	// robot radius (m) (from center to wheel contact point)
+#define rad_wheel 0.0275F 	// wheel radius (m)
+#define cos60 0.5F		// cosine of 60 degrees (wheel angle is at 60 degrees)
+#define sin60 0.866F	// sine of 60 degrees
+#define TIME_DIFF 0.01F // time difference due to 100Hz frequency
+
 typedef enum {
 	body_x,
 	body_y,
@@ -24,6 +32,31 @@ typedef struct {
 	float prev_e;
 	float timeDiff;
 }PIDvariables;
+
+static PIDvariables angleK = {
+		.kP = 2,//kp
+		.kI = 0,//ki
+		.kD = 0.5,//kd
+		.I = 0,//always starts as zero
+		.prev_e = 0,//always starts as zero
+		.timeDiff = TIME_DIFF
+};
+static PIDvariables velxK = {
+		.kP = 0,//kp
+		.kI = 0,//ki
+		.kD = 0,//kd
+		.I = 0,//always starts as zero
+		.prev_e = 0,//always starts as zero
+		.timeDiff = TIME_DIFF
+};
+static PIDvariables velyK = {
+		.kP = 0,//kp
+		.kI = 0,//ki
+		.kD = 0,//kd
+		.I = 0,//always starts as zero
+		.prev_e = 0,//always starts as zero
+		.timeDiff = TIME_DIFF
+};
 
 //PID control, static to not have multiple implementation error
 inline float PID(float err, PIDvariables* K){
