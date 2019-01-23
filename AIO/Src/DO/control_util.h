@@ -17,6 +17,7 @@
 #define cos60 0.5F		// cosine of 60 degrees (wheel angle is at 60 degrees)
 #define sin60 0.866F	// sine of 60 degrees
 #define TIME_DIFF 0.01F // time difference due to 100Hz frequency
+#define PWM_LIMIT 90 // limit of the PWM that is send to the wheels
 
 typedef enum {
 	body_x,
