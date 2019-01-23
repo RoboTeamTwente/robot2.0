@@ -263,6 +263,12 @@ int main(void)
 
 	//uprintf("ball: %i\n",preparedAckData.ballSensor);
 
+	// ------ TEMPORARY TESTING ---------
+	//      also turn off line 239
+//	vision_yaw = 0.5*M_PI;
+//	vision_available = true;
+	// ----------------------------------
+
 	geneva_Update();
 	MT_Update();
 	if((HAL_GetTick() - printtime > 1000)){
@@ -284,12 +290,19 @@ int main(void)
 			if(MT_UseIcc() == MT_succes)
 				uprintf("Xsens calibration done.\n\r");
 		}
+//		uprintf("Vision available? ");
+//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
+//		uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
+//		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
+//		uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
+//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
+//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
+//		uprintf("\n\r");
 		//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
 		//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
 		//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 		//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
-		uprintf("k");
 	}
   /* USER CODE END WHILE */
 
