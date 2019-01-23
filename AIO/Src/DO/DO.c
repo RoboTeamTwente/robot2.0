@@ -83,11 +83,7 @@ static void wheelFilter(float w_wheels[4]){
 }
 
 static void scaleAndLimit(float wheel_ref[4]){
-	float maxPWM = 1;
 	for (wheels_handles i = wheels_RF; i <= wheels_LF; i++) {
-		maxPWM = wheel_ref[i] > maxPWM ? wheel_ref[i] : maxPWM;
-	}
-	for (wheels_handles i = wheels_RF; i <= wheels_LF; i++) {
-		wheel_ref[i] *= PWM_LIMIT/maxPWM;
+		wheel_ref[i] = wheel_ref[i] > PWM_LIMIT ? PWM_LIMIT : wheel_ref[i];
 	}
 }
