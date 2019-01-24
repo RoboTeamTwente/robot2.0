@@ -1,111 +1,46 @@
 /*
  * wheels.c
  *
- *  Created on: Mar 27, 2018
- *      Author: Leon
+ *  Created on: Dec 4, 2018
+ *      Author: kjhertenberg
  */
 
 #include "wheels.h"
-
+#include <stdio.h>
 #include <math.h>
-#include <stdbool.h>
 #include "tim.h"
-#include "../PuttyInterface/PuttyInterface.h"
+#include "stdbool.h"
 
-#define PWM_CUTOFF 3.0F		// arbitrary treshold below PWM_ROUNDUP
+
+///////////////////////////////////////////////////// DEFINITIONS
+
+
+#define PWM_CUTOFF 3.0F			// arbitrary treshold below PWM_ROUNDUP
 #define PWM_ROUNDUP 3.1F 		// below this value the motor driver is unreliable
-#define ROBOT_RADIUS 0.0775F
-#define WHEEL_RADIUS 0.0275F
-#define HTIM5_FREQ 1000000.0F	//Hz
-#define PULSES_PER_ROTATION 1024
-#define GEAR_RATIO 2.5F			// motor to wheel
-#define X__ENCODING 4			// counts per pulse X1, X2 or X4
 
 #define gearratio 2.5f
-#define max_voltage 12//see datasheet
 #define max_pwm 255
+#define max_voltage 12//see datasheet
 #define sconstant 374//RPM/V see datasheet
 #define wconstant (float)60/(2*M_PI*(float)sconstant) // RPM/V to V/w
 #define PWM2Omega (float)(wconstant*max_pwm/max_voltage)*gearratio //(V/W)*(pwm/voltage)
 
-bool reverse[N_WHEELS] = {0};
-float global_power[N_WHEELS];
 
-enum {
-	wheels_uninitialized,
-	wheels_ready,
-	wheels_braking
-}wheels_state;// keeps track of the state of this system
+///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
 
-enum wheel_braking_states{
-	no_brake,
-	first_brake_period,
-	second_brake_period,
-	third_brake_period,
-}brake_state[N_WHEELS];// keeps track of the braking state of each wheel
+static void SetPWM(int pwm[4]);
 
-/*----------------------------------static functions-------------------------------*/
-/*	Set an encoder to zero
- *
- */
-static inline void ResetEncoder(wheels_handles wheel){
-	switch(wheel){
-	case wheels_RF:
-		__HAL_TIM_SET_COUNTER(&htim1, 0);
-		break;
-	case wheels_RB:
-		__HAL_TIM_SET_COUNTER(&htim8, 0);
-		break;
-	case wheels_LB:
-		__HAL_TIM_SET_COUNTER(&htim3, 0);
-		break;
-	case wheels_LF:
-		__HAL_TIM_SET_COUNTER(&htim4, 0);
-		break;
-	}
-}
-/*	Set Pwm for one wheel
- *
- */
-static inline void SetPWM(wheels_handles wheel, float power){
-	switch(wheel){
-	case wheels_RF:
-		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, power / 100 * MAX_PWM);
-		break;
-	case wheels_RB:
-		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, power / 100 * MAX_PWM);
-		break;
-	case wheels_LB:
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, power / 100 * MAX_PWM);
-		break;
-	case wheels_LF:
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, power / 100 * MAX_PWM);
-		break;
-	}
-}
-/*	Set direction for one wheel
- *
- */
-static inline void SetDir(wheels_handles wheel, bool reverse){
-	switch(wheel){
-	case wheels_RF:
-		HAL_GPIO_WritePin(FR_RF_GPIO_Port,FR_RF_Pin, reverse);
-		break;
-	case wheels_RB:
-		HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, reverse);
-		break;
-	case wheels_LB:
-		HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, reverse);
-		break;
-	case wheels_LF:
-		HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, reverse);
-		break;
-	}
+static void SetDir(bool direction[4]);
 
-}
-/*----------------------------------public functions-------------------------------*/
+static void getEncoderData(int encoderdata[4]);
 
-void wheels_Init(){
+static float deriveEncoder(int encoderData, int prev_encoderData);
+
+static void limitScale();
+
+///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
+
+void wheelsInit(){
 	wheels_state = wheels_ready;
 	HAL_TIM_Base_Start(&htim1); //RF
 	HAL_TIM_Base_Start(&htim8); //RB
@@ -118,7 +53,7 @@ void wheels_Init(){
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2); //LF
 }
 
-void wheels_DeInit(){
+void wheelsDeInit(){
 	wheels_state = wheels_uninitialized;
 	HAL_TIM_Base_Stop(&htim1); //RF
 	HAL_TIM_Base_Stop(&htim8); //RB
@@ -131,145 +66,104 @@ void wheels_DeInit(){
 	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2); //LF
 }
 
-void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadPerSec, float power[N_WHEELS]){
-	// Jelle's variant, using forces instead of velocities (for testing)
-	static float cos_a0 = cosf(60.0F  * 3.1415F/180.0F);
-	static float sin_a0 = sinf(60.0F  * 3.1415F/180.0F);
-	float xForce; //positive x = moving forward
-	float yForce; //positive y = moving to the right
-	float robotTorque;
+void wheelsCallback(float wheelref[4]){
 
-	xForce = -cosf(direction) * magnitude * 1537.7;
-	yForce = -sinf(direction) * magnitude * 1537.7;
-	robotTorque = rotSign * wRadPerSec * 31.5;
-
-	power[wheels_RF] = ( xForce/(4*sin_a0) + yForce/(4*cos_a0) - robotTorque/(4*ROBOT_RADIUS) ) * WHEEL_RADIUS;
-	power[wheels_RB] = ( xForce/(4*sin_a0) - yForce/(4*cos_a0) - robotTorque/(4*ROBOT_RADIUS) ) * WHEEL_RADIUS;
-	power[wheels_LB] = ( -xForce/(4*sin_a0) - yForce/(4*cos_a0) - robotTorque/(4*ROBOT_RADIUS) ) * WHEEL_RADIUS;
-	power[wheels_LF] = ( -xForce/(4*sin_a0) + yForce/(4*cos_a0) - robotTorque/(4*ROBOT_RADIUS) ) * WHEEL_RADIUS;
-
-}
-
-void wheels_SetOutput(float power[N_WHEELS]){
+	//TODO: add braking for rapid switching direction
+	//TODO: Add slipping case
+	/* dry testing
+	wheelref[0] = 0;
+	wheelref[1] = 0;
+	wheelref[2] = 0;
+	wheelref[3] = 0;
+	*/
+	static bool direction[4] = {0}; // 0 is counter clock-wise TODO:confirm
+	static int prev_state[4] = {0};
+	int state[4] = {0};
+	int output[4] = {0};
+	int pwm[4] = {0};
+	float err[4] = {0};
+	float wheelspeed[4] = {0};
 	switch(wheels_state){
-	bool prev_reverse[N_WHEELS];
-	bool delay[N_WHEELS] = {false};
-	case wheels_uninitialized:
-//		uprintf("ERROR wheels_uninitialized\n\r");
-		return;
-	case wheels_ready:
-		memcpy(prev_reverse, reverse, N_WHEELS);
-		for(int i = wheels_RF; i <= wheels_LF; i++){
-				power[i] = PWM2Omega*power[i];
-			}
-		for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-			if(power[i] <= -1.0F){
-				power[i] = -power[i];
-				reverse[i] = 1;
-			}else if(power[i] >= 1.0F){
-				reverse[i] = 0;
-			}
-			// TODO: FEW TWEAKS MADE THAT NEED TESTING
-			if(power[i] < PWM_CUTOFF){
-				power[i] = 0.0F;
-			}else if(power[i] < PWM_ROUNDUP){
-				power[i] = PWM_ROUNDUP;
-			}else if(power[i] > max_pwm){
-				power[i] = max_pwm;
+		default:
+			break;
+		case wheels_ready:
+
+			//get encoder data
+			getEncoderData(state);
+
+			//derive wheelspeed
+			for(int i = wheels_RF; i <= wheels_LF; i++){
+				wheelspeed[i] = deriveEncoder(state[i], prev_state[i]);
+				err[i] = wheelref[i]-wheelspeed[i];
+				prev_state[i] = state[i];
 			}
 
+			//combine reference and PID
+			output[wheels_RF] = wheelref[wheels_RF] + PID(err[wheels_RF], &RFK);
+			output[wheels_RB] = wheelref[wheels_RB] + PID(err[wheels_RB], &RBK);
+			output[wheels_LB] = wheelref[wheels_LB] + PID(err[wheels_LB], &LBK);
+			output[wheels_LF] = wheelref[wheels_LF] + PID(err[wheels_LF], &LFK);
+
+
+			limitScale(output, pwm, direction);
+			SetDir(direction);
+			SetPWM(pwm);
+			break;
 		}
+	return;
+}
 
-		memcpy(global_power, power, 4 * sizeof(float));
+///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
+static void limitScale(float output[4], float pwm[4], float direction[4]){
 
-		for(wheels_handles wheel = wheels_RF; wheel < N_WHEELS; wheel++){
-			delay[wheel] = prev_reverse[wheel] != reverse[wheel];
+	//Scale
+	for(int i = wheels_RF; i <= wheels_LF; i++){
+		output[i] = PWM2Omega*output[i];
+	}
+	//Limit
+	for(int i = wheels_RF; i <= wheels_LF; i++){
+		if(output[i] <= -1.0F){
+			pwm[i] = -output[i];
+			direction[i] = 1;
+		}else if(output[i] >= 1.0F){
+			pwm[i] = output[i];
+			direction[i] = 0;
 		}
-
-
-		for(wheels_handles wheel = wheels_RF; wheel < N_WHEELS; wheel++){
-			if(delay[wheel]){
-				SetPWM(wheel, 0);
-				brake_state[wheel] = first_brake_period;
-			}else{
-				SetDir(wheel,reverse[wheel]);
-
-				SetPWM(wheel, global_power[wheel]);
-			}
+		else {
+			pwm[i] = 0.0F;
 		}
-		if(delay[wheels_RF] || delay[wheels_RB] || delay[wheels_LB] || delay[wheels_LF]){
-			HAL_TIM_Base_Stop(&htim14);											// Stop timer
-			__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
-			__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
-			HAL_TIM_Base_Start_IT(&htim14);
+		if(pwm[i] < PWM_CUTOFF){
+			pwm[i] = 0.0F;
+		}else if(pwm[i] < PWM_ROUNDUP){
+			pwm[i] = PWM_ROUNDUP;
+		}else if(pwm[i] > max_pwm){
+			pwm[i] = max_pwm;
 		}
-		return;
-	default:
-		break;
 	}
 }
 
-inline int16_t wheels_GetEncoder(wheels_handles wheel){
-	switch(wheel){
-	case wheels_RF:
-		return __HAL_TIM_GET_COUNTER(&htim1);
-	case wheels_RB:
-		return __HAL_TIM_GET_COUNTER(&htim8);
-	case wheels_LB:
-		return -__HAL_TIM_GET_COUNTER(&htim3); //  minus due to inverted routing (right leon?)		 yes - Leon
-	case wheels_LF:
-		return __HAL_TIM_GET_COUNTER(&htim4);
-	default:
-		return 0;
-	}
+static void getEncoderData(int encoderData[4]){
+	encoderData[wheels_RF] = __HAL_TIM_GET_COUNTER(&htim1);
+	encoderData[wheels_RB] = __HAL_TIM_GET_COUNTER(&htim8);
+	encoderData[wheels_LB] = -__HAL_TIM_GET_COUNTER(&htim3); //  TODO: minus due to inverted routing (old robot)
+	encoderData[wheels_LF] = __HAL_TIM_GET_COUNTER(&htim4);
 }
 
-float wheels_GetSpeed(wheels_handles wheel){
-	static uint prev_time[N_WHEELS];
-	int16_t counts;
-	uint useconds;
-	float seconds;
-	float RPS;
-	float motor_rotations;
-	float wheel_rotations;
-	counts = wheels_GetEncoder(wheel);
-	ResetEncoder(wheel);
-	useconds = __HAL_TIM_GET_COUNTER(&htim5) - prev_time[wheel];
-	prev_time[wheel] = __HAL_TIM_GET_COUNTER(&htim5);
-	seconds = (float)useconds/HTIM5_FREQ;
-	motor_rotations = counts / (float)(PULSES_PER_ROTATION * X__ENCODING);
-	wheel_rotations = motor_rotations/GEAR_RATIO;
-	RPS = wheel_rotations / seconds;
-	return RPS * 2 * M_PI;
+static float deriveEncoder(int encoderData, int prev_encoderData){
+	float wheel_speed = (encoderData-prev_encoderData)/TIME_DIFF;
+	return wheel_speed;
 }
 
-void wheels_Callback(){
-	uint8_t cnt = 0;
-	for(wheels_handles wheel = wheels_RF; wheel < N_WHEELS; wheel++){
-		switch(brake_state[wheel]){
-		case no_brake:
-			cnt++;
-			break;
-		case first_brake_period:
-			brake_state[wheel] = second_brake_period;
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
-			break;
-		case second_brake_period:
-			SetDir(wheel,reverse[wheel]);
-			brake_state[wheel] = third_brake_period;
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
-			break;
-		case third_brake_period:
-			cnt++;
-			SetPWM(wheel, global_power[wheel]);
-			brake_state[wheel] = no_brake;
-			break;
-		}
-	}
-	if(cnt == 4){
-		HAL_TIM_Base_Stop(&htim14);											// Stop timer
-		__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
-		__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
-	}
+static void SetPWM(int pwm[4]){
+	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, pwm[0]);
+	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, pwm[1]);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, pwm[2]);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, pwm[3]);
+}
+
+static void SetDir(bool direction[4]){
+		HAL_GPIO_WritePin(FR_RF_GPIO_Port,FR_RF_Pin, direction[0]);
+		HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, direction[1]);
+		HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, direction[2]);
+		HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, direction[3]);
 }

@@ -1,50 +1,78 @@
 /*
  * wheels.h
  *
- *  Created on: Mar 27, 2018
- *      Author: Leon
+ *  Created on: Dec 4, 2018
+ *      Author: kjhertenberg
  */
 
-#ifndef WHEELS_WHEELS_H_
-#define WHEELS_WHEELS_H_
+/*Description:
+Instructions:
+1)
+Extra functions:
+Notes:
+*/
 
-#include <stdint.h>
 
-#define FOREACHWHEEL(X) for(wheels_handles X = wheels_RF; X <= wheels_LF; X++)
+#ifndef WHEELS_H_
+#define WHEELS_H_
+#define TIME_DIFF 0.01F // time difference due to 100Hz
+#include <stdbool.h>
+#include "../DO/control_util.h"
 
-#define N_WHEELS 4				// number of wheels
+
+
+///////////////////////////////////////////////////// VARIABLE STRUCT
+//// Structs
 
 typedef enum {
-	wheels_RF,
-	wheels_RB,
-	wheels_LB,
-	wheels_LF
-}wheels_handles;
+	wheels_uninitialized,
+	wheels_ready
+}wheels_states;// keeps track of the state of this system
 
-void wheels_Init();
-void wheels_DeInit();
+static int wheels_state = wheels_uninitialized;
 
-void calcMotorSpeeds (float magnitude, float direction, int rotSign, float wRadPerSec, float power[4]);
-/*	Set a power for each wheel
- * 	param:
- * 		power[4]: an array of four percentages in sequence from RF, RB, LB, LF
- */
-void wheels_SetOutput(float power[4]);
-/*	returns the encoder count of one whee;
- * 	ret: encoder count
- * 	param:
- * 		wheel: which wheel to get the count from
- */
-int16_t wheels_GetEncoder(wheels_handles wheel);
-/*	returns the speed of the wheels (resets the encoder of this wheel)
- * 	ret: speed in rotations per second
- * 	param:
- * 		wheel: which wheel to get the speed from
- */
-float wheels_GetSpeed(wheels_handles wheel);
-/*	will be used to brake before switching directions
- *
- */
-void wheels_Callback();
+//TODO: add control values based on tests
+static PIDvariables RFK = {
+		.kP = 0,//kp
+		.kI = 0,//ki
+		.kD = 0,//kd
+		.I = 0,//always starts as zero
+		.prev_e = 0,//always starts as zero
+		.timeDiff = TIME_DIFF
+};
+static PIDvariables RBK = {
+		.kP = 0,//kp
+		.kI = 0,//ki
+		.kD = 0,//kd
+		.I = 0,//always starts as zero
+		.prev_e = 0,//always starts as zero
+		.timeDiff = TIME_DIFF
+};
+static PIDvariables LBK = {
+		.kP = 0,//kp
+		.kI = 0,//ki
+		.kD = 0,//kd
+		.I = 0,//always starts as zero
+		.prev_e = 0,//always starts as zero
+		.timeDiff = TIME_DIFF
+};
+static PIDvariables LFK = {
+		.kP = 0,//kp
+		.kI = 0,//ki
+		.kD = 0,//kd
+		.I = 0,//always starts as zero
+		.prev_e = 0,//always starts as zero
+		.timeDiff = TIME_DIFF
+};
 
-#endif /* WHEELS_WHEELS_H_ */
+
+///////////////////////////////////////////////////// FUNCTION PROTOTYPES
+//// PUBLIC
+
+void wheelsInit();
+
+void wheelsDeInit();
+
+void wheelsCallback(float wheelref[4]);
+
+#endif /* WHEELS_H_ */

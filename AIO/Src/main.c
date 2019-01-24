@@ -154,7 +154,7 @@ int main(void)
   vel_control_Init();
   dribbler_Init();
   ballsensorInit();
-  wheels_Init();
+  wheelsInit();
   MT_Init();
   geneva_Init();
   kick_Init();
@@ -198,10 +198,10 @@ int main(void)
 		}
 
 		//TODO: test vision angle and calibration etc.
-//		vision_available = receivedRoboData.use_cam_info;
-//		if (vision_available) {
-//			vision_yaw = ((float)receivedRoboData.cam_rotation/1024.0F)*M_PI;
-//		}
+		vision_available = receivedRoboData.use_cam_info;
+		if (vision_available) {
+			vision_yaw = ((float)receivedRoboData.cam_rotation/1024.0F)*M_PI;
+		}
 
 		//dribbler
 		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
@@ -243,7 +243,7 @@ int main(void)
 		if(battery_count++ == 1000){
 			uprintf("Battery empty!\n\r");
 			ToggleLD(4);
-			wheels_DeInit();
+			wheelsDeInit();
 			kick_DeInit();
 			dribbler_Deinit();
 			geneva_Deinit();
@@ -297,7 +297,6 @@ int main(void)
 		uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
 		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
 		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
-		uprintf("Wheels speed: {%f, %f, %f, %f}\n\r", wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB), wheels_GetSpeed(wheels_LF));
 		uprintf("Wheels PWM: {%f, %f, %f, %f}\n\r", wheelsPWM[wheels_RF], wheelsPWM[wheels_RB], wheelsPWM[wheels_LB], wheelsPWM[wheels_LF]);
 		uprintf("\n\r");
 		//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
@@ -485,12 +484,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		 // send PWM to motors
 		if (halt) { // when communication is lost for too long, we send 0 to the motors
 			float wheel_powers[4] = {0,0,0,0};
-			wheels_SetOutput(wheel_powers);
+			wheelsCallback(wheel_powers);
 		} else {
 			// copy the controller output before sending it to SetOutput, to make sure it doesnt get altered at the wrong time
 			float wheel_powers[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
 //			float wheel_powers[4] = {20,20,20,20};
-			wheels_SetOutput(wheel_powers);
+			wheelsCallback(wheel_powers);
 		}
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 0);
 
@@ -504,7 +503,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
-		wheels_Callback();
+		//wheels_Callback();
 	}
 }
 

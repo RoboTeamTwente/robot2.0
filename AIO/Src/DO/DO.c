@@ -34,8 +34,8 @@ int vel_control_Init(){
 
 void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float wheel_ref[4]){
 	// get and filter wheel speeds
-	float w_wheels[4] = {0,0,0,0};
-	wheelFilter(w_wheels);//edits the above array
+//	float w_wheels[4] = {0,0,0,0};
+//	wheelFilter(w_wheels);//edits the above array
 
 	// get and offset xsens data
 	getXsensData(xsensData);
@@ -68,23 +68,23 @@ static void getXsensData(float xsensData[3]){
 	xsensData[body_w] = MT_GetAngles()[2]/180*M_PI;
 }
 
-static void wheelFilter(float w_wheels[4]){
-	// get and filter wheel speeds
-	static float w_prev[4] = {0,0,0,0};
-	// filtering wheel speeds
-	for(wheels_handles i = wheels_RF; i <= wheels_LF; i++){
-		if (!isnan(w_prev[i])){
-			//TODO Test ratio
-			w_wheels[i] = 0.4*(-wheels_GetSpeed(i)) + 0.6*w_prev[i];
-		} else {
-			w_wheels[i] = -wheels_GetSpeed(i);
-		}
-		w_prev[i] = w_wheels[i];
-	}
-}
+//static void wheelFilter(float w_wheels[4]){
+//	// get and filter wheel speeds
+//	static float w_prev[4] = {0,0,0,0};
+//	// filtering wheel speeds
+//	for(wheel_names i = wheels_RF; i <= wheels_LF; i++){
+//		if (!isnan(w_prev[i])){
+//			//TODO Test ratio
+//			w_wheels[i] = 0.4*(-wheels_GetSpeed(i)) + 0.6*w_prev[i];
+//		} else {
+//			w_wheels[i] = -wheels_GetSpeed(i);
+//		}
+//		w_prev[i] = w_wheels[i];
+//	}
+//}
 
 static void scaleAndLimit(float wheel_ref[4]){
-	for (wheels_handles i = wheels_RF; i <= wheels_LF; i++) {
+	for (wheel_names i = wheels_RF; i <= wheels_LF; i++) {
 		wheel_ref[i] = wheel_ref[i] > PWM_LIMIT ? PWM_LIMIT : wheel_ref[i];
 	}
 }

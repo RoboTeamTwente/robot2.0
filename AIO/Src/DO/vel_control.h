@@ -9,7 +9,6 @@
 #define DO_VEL_CONTROL_H_
 
 #include "control_util.h"
-#include "../wheels/wheels.h"
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION DECLARATIONS
 

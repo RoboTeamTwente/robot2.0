@@ -25,6 +25,13 @@ typedef enum {
 	body_w,
 }body_handles;
 
+typedef enum {
+	wheels_RF,
+	wheels_RB,
+	wheels_LB,
+	wheels_LF,
+}wheel_names;
+
 typedef struct {
 	float kP;
 	float kI;
