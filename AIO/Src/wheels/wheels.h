@@ -74,6 +74,7 @@ static int brake_state[4] = {first_brake_period, first_brake_period, first_brake
 static int pwm[4] = {0};
 static bool direction[4] = {0}; // 0 is counter clock-wise TODO:confirm
 static float wheelspeed[4] = {0};
+static PIDvariables wheelsK[4];
 
 
 ///////////////////////////////////////////////////// FUNCTION PROTOTYPES

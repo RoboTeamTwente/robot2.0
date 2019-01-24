@@ -18,12 +18,12 @@
 #define PWM_CUTOFF 240.0F			// arbitrary treshold below PWM_ROUNDUP
 #define PWM_ROUNDUP 250.0F 		// below this value the motor driver is unreliable
 
-#define GEAR_RATIO 2.5F
+#define GEAR_RATIO 2.5F // gear ratio between motor and wheel
 #define MAX_PWM 2400
 #define MAX_VOLTAGE 12//see datasheet
 #define SPEED_CONSTANT 374/60 //[RPS/V] see datasheet
-#define RPStoPWM (float)(1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // [pwm/RPS]
-#define PULSES_PER_ROTATION (float)4*1024 // number of pulses of the encode per rotation of the motor
+#define RPStoPWM (float)(1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // conversion factor from rotations per second of the wheel to required PWM on the motor
+#define PULSES_PER_ROTATION (float)4*1024 // number of pulses of the encoder per rotation of the motor (see datasheet)
 #define ENCODERtoSPEED (float)1/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to RPS of the wheel
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
@@ -36,12 +36,20 @@ static void getEncoderData(int encoderdata[4]);
 
 static float computeWheelSpeed(int encoderData, int prev_encoderData);
 
-static void limitScale(int output[4], int pwm[4], bool direction[4]);
+static void limitScale(int output, wheel_names wheel);
+
+static bool directionSwitched(wheel_names wheel);
+
+static void restartCallbackTimer();
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
 void wheelsInit(){
 	wheels_state = wheels_ready;
+	wheelsK[0] = RFK;
+	wheelsK[1] = RBK;
+	wheelsK[2] = LBK;
+	wheelsK[3] = LFK;
 	HAL_TIM_Base_Start(&htim1); //RF
 	HAL_TIM_Base_Start(&htim8); //RB
 	HAL_TIM_Base_Start(&htim3); //LB
@@ -68,54 +76,41 @@ void wheelsDeInit(){
 
 void setWheelSpeed(float wheelref[4]){
 
-	//TODO: add braking for rapid switching direction
 	//TODO: Add slipping case
 	/* dry testing
 	wheelref[0] = 0;
 	wheelref[1] = 0;
 	wheelref[2] = 0;
 	wheelref[3] = 0;
-	*/
+	 */
 	static int prev_state[4] = {0};
 	int state[4] = {0};
-	int output[4] = {0};
 	float err[4] = {0};
 	switch(wheels_state){
-		default:
-			break;
-		case wheels_ready:
+	case wheels_ready:
+		getEncoderData(state);
 
-			//get encoder data
-			getEncoderData(state);
+		//derive wheelspeed
+		for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
+			wheelspeed[wheel] = computeWheelSpeed(state[wheel], prev_state[wheel]);
+			err[wheel] = wheelref[wheel]-wheelspeed[wheel];
+			prev_state[wheel] = state[wheel];
 
-			//derive wheelspeed
-			for(int i = wheels_RF; i <= wheels_LF; i++){
-				wheelspeed[i] = computeWheelSpeed(state[i], prev_state[i]);
-				err[i] = wheelref[i]-wheelspeed[i];
-				prev_state[i] = state[i];
+			int output = wheelref[wheel] + PID(err[wheel], &wheelsK[wheel]); // add PID to reference RPS
+
+			limitScale(output, wheel);
+			if (directionSwitched(wheel)) {
+				brake_state[wheel] = first_brake_period;
+				restartCallbackTimer();
 			}
-
-			//combine reference and PID
-			output[wheels_RF] = wheelref[wheels_RF] + PID(err[wheels_RF], &RFK);
-			output[wheels_RB] = wheelref[wheels_RB] + PID(err[wheels_RB], &RBK);
-			output[wheels_LB] = wheelref[wheels_LB] + PID(err[wheels_LB], &LBK);
-			output[wheels_LF] = wheelref[wheels_LF] + PID(err[wheels_LF], &LFK);
-
-			limitScale(output, pwm, direction);
-			for (wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++) {
-				SetDir(wheel);
-				SetPWM(wheel);
-			}
-			break;
+			SetDir(wheel);
+			SetPWM(wheel);
 		}
-	return;
+		break;
+	default:
+		break;
+	}
 }
-
-float getWheelSpeed(wheel_names wheel) {
-	return wheelspeed[wheel];
-}
-
-///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
 
 void wheelsCallback() {
 	uint8_t cnt = 0;
@@ -141,38 +136,55 @@ void wheelsCallback() {
 			break;
 		}
 	}
+	// TODO: why at cnt == 4 ?
+	// TODO: can restartCallbackTimer() be used here?
 	if(cnt == 4){
-		HAL_TIM_Base_Stop(&htim14);											// Stop timer
+		HAL_TIM_Base_Stop(&htim14);
 		__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
-		__HAL_TIM_SET_COUNTER(&htim14, 0);									// Clear timer
+		__HAL_TIM_SET_COUNTER(&htim14, 0);
 	}
 }
 
-static void limitScale(int output[4], int pwm[4], bool direction[4]){
+float getWheelSpeed(wheel_names wheel) {
+	return wheelspeed[wheel];
+}
 
-	//Convert to PWM
-	for(int i = wheels_RF; i <= wheels_LF; i++){
-		output[i] = RPStoPWM*output[i];
+///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
+
+static bool directionSwitched(wheel_names wheel) {
+	static bool prevDirection[4] = {0};
+	if (direction[wheel] != prevDirection[wheel]) {
+		prevDirection[wheel] = direction[wheel];
+		return true;
 	}
-	//Limit
-	for(int i = wheels_RF; i <= wheels_LF; i++){
-		if(output[i] <= -1.0F){
-			pwm[i] = -output[i];
-			direction[i] = 1;
-		}else if(output[i] >= 1.0F){
-			pwm[i] = output[i];
-			direction[i] = 0;
-		}
-		else {
-			pwm[i] = 0.0F;
-		}
-		if(pwm[i] < PWM_CUTOFF){
-			pwm[i] = 0.0F;
-		}else if(pwm[i] < PWM_ROUNDUP){
-			pwm[i] = PWM_ROUNDUP;
-		}else if(pwm[i] > MAX_PWM){
-			pwm[i] = MAX_PWM;
-		}
+	return false;
+}
+
+static void restartCallbackTimer() {
+	HAL_TIM_Base_Stop(&htim14);
+	__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
+	__HAL_TIM_SET_COUNTER(&htim14, 0);
+	__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
+	HAL_TIM_Base_Start_IT(&htim14);
+}
+
+static void limitScale(int output, wheel_names wheel){
+	output *= RPStoPWM;
+	if(output <= -1.0F){
+		pwm[wheel] = -output;
+		direction[wheel] = 1;
+	} else if(output >= 1.0F){
+		pwm[wheel] = output;
+		direction[wheel] = 0;
+	} else {
+		pwm[wheel] = 0.0F;
+	}
+	if(pwm[wheel] < PWM_CUTOFF){
+		pwm[wheel] = 0.0F;
+	} else if(pwm[wheel] < PWM_ROUNDUP){
+		pwm[wheel] = PWM_ROUNDUP;
+	} else if(pwm[wheel] > MAX_PWM){
+		pwm[wheel] = MAX_PWM;
 	}
 }
 
@@ -184,8 +196,7 @@ static void getEncoderData(int encoderData[4]){
 }
 
 static float computeWheelSpeed(int encoderData, int prev_encoderData){
-	float wheel_speed = ENCODERtoSPEED*(encoderData-prev_encoderData);
-	return wheel_speed;
+	return ENCODERtoSPEED * (encoderData-prev_encoderData);
 }
 
 static void SetPWM(wheel_names wheel){
@@ -212,12 +223,12 @@ static void SetDir(wheel_names wheel){
 		break;
 	case wheels_RB:
 		HAL_GPIO_WritePin(FR_RB_GPIO_Port,FR_RB_Pin, direction[wheels_RB]);
-			break;
+		break;
 	case wheels_LB:
-			HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, direction[wheels_LB]);
-			break;
+		HAL_GPIO_WritePin(FR_LB_GPIO_Port,FR_LB_Pin, direction[wheels_LB]);
+		break;
 	case wheels_LF:
-			HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, direction[wheels_LF]);
-			break;
+		HAL_GPIO_WritePin(FR_LF_GPIO_Port,FR_LF_Pin, direction[wheels_LF]);
+		break;
 	}
 }
