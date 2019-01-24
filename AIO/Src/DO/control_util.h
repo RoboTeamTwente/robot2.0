@@ -35,9 +35,9 @@ typedef struct {
 }PIDvariables;
 
 static PIDvariables angleK = {
-		.kP = 2,//kp
+		.kP = 5,//kp
 		.kI = 0,//ki
-		.kD = 0.5,//kd
+		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero
 		.timeDiff = TIME_DIFF
@@ -60,7 +60,7 @@ static PIDvariables velyK = {
 };
 
 //PID control, static to not have multiple implementation error
-inline float PID(float err, PIDvariables* K){
+static float PID(float err, PIDvariables* K){
 	float P = K->kP*err;
 	K->I += err*K->timeDiff;
 	float I = K->kI*K->I;

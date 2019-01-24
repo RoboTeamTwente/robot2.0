@@ -31,13 +31,13 @@ static int bufferIndex = 0;
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 void calibrateXsens(float xsensData[3], float visionYaw, bool visionAvailable) {
-	// Very primitive way of debugging
 	static float yawOffset = 0;
 	static int restCounter = 0;
 	static float avgXsensVec[2] = {0}, avgVisionVec[2] = {0};
 	static float prevVisionYaw = 0;
 	float xsensYaw = xsensData[body_w];
 
+	// Very primitive way of debugging
 //	SetLD(4, isCalibrationNeeded(visionYaw, xsensYaw, yawOffset));
 //	SetLD(5, isRotatingSlow(xsensYaw));
 //	SetLD(6, visionAvailable);

@@ -25,6 +25,7 @@ static void getXsensData(float xsensData[3]);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
+// TODO: Koen what's the point of this? start_time is not used....
 int vel_control_Init(){
 	HAL_TIM_Base_Start_IT(&htim7);
 	start_time = HAL_GetTick();
