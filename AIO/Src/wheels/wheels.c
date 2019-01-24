@@ -18,12 +18,13 @@
 #define PWM_CUTOFF 240.0F			// arbitrary treshold below PWM_ROUNDUP
 #define PWM_ROUNDUP 250.0F 		// below this value the motor driver is unreliable
 
-#define gearratio 2.5f
-#define max_pwm 2400
-#define max_voltage 12//see datasheet
-#define speedConstant 374/60 //[RPS/V] see datasheet
-#define RPStoPWM (float)(1/speedConstant)*(max_pwm/max_voltage)*gearratio // [pwm/RPS]
-
+#define GEAR_RATIO 2.5F
+#define MAX_PWM 2400
+#define MAX_VOLTAGE 12//see datasheet
+#define SPEED_CONSTANT 374/60 //[RPS/V] see datasheet
+#define RPStoPWM (float)(1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // [pwm/RPS]
+#define PULSES_PER_ROTATION (float)4*1024 // number of pulses of the encode per rotation of the motor
+#define ENCODERtoSPEED (float)1/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to RPS of the wheel
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
 
@@ -33,7 +34,7 @@ static void SetDir(wheel_names wheel);
 
 static void getEncoderData(int encoderdata[4]);
 
-static float deriveEncoder(int encoderData, int prev_encoderData);
+static float computeWheelSpeed(int encoderData, int prev_encoderData);
 
 static void limitScale(int output[4], int pwm[4], bool direction[4]);
 
@@ -89,7 +90,7 @@ void setWheelSpeed(float wheelref[4]){
 
 			//derive wheelspeed
 			for(int i = wheels_RF; i <= wheels_LF; i++){
-				wheelspeed[i] = deriveEncoder(state[i], prev_state[i]);
+				wheelspeed[i] = computeWheelSpeed(state[i], prev_state[i]);
 				err[i] = wheelref[i]-wheelspeed[i];
 				prev_state[i] = state[i];
 			}
@@ -169,8 +170,8 @@ static void limitScale(int output[4], int pwm[4], bool direction[4]){
 			pwm[i] = 0.0F;
 		}else if(pwm[i] < PWM_ROUNDUP){
 			pwm[i] = PWM_ROUNDUP;
-		}else if(pwm[i] > max_pwm){
-			pwm[i] = max_pwm;
+		}else if(pwm[i] > MAX_PWM){
+			pwm[i] = MAX_PWM;
 		}
 	}
 }
@@ -182,8 +183,8 @@ static void getEncoderData(int encoderData[4]){
 	encoderData[wheels_LF] = __HAL_TIM_GET_COUNTER(&htim4);
 }
 
-static float deriveEncoder(int encoderData, int prev_encoderData){
-	float wheel_speed = ((encoderData-prev_encoderData)/TIME_DIFF)/(gearratio*1024*4);
+static float computeWheelSpeed(int encoderData, int prev_encoderData){
+	float wheel_speed = ENCODERtoSPEED*(encoderData-prev_encoderData);
 	return wheel_speed;
 }
 
