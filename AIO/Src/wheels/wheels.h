@@ -19,17 +19,19 @@ Notes:
 #include <stdbool.h>
 #include "../DO/control_util.h"
 
-
-
-///////////////////////////////////////////////////// VARIABLE STRUCT
-//// Structs
+///////////////////////////////////////////////////// TYPES/STRUCTS
 
 typedef enum {
 	wheels_uninitialized,
 	wheels_ready
 }wheels_states;// keeps track of the state of this system
 
-static int wheels_state = wheels_uninitialized;
+typedef enum {
+	no_brake,
+	first_brake_period,
+	second_brake_period,
+	third_brake_period
+}brake_states;// keeps track of the brake state of this system
 
 //TODO: add control values based on tests
 static PIDvariables RFK = {
@@ -65,6 +67,14 @@ static PIDvariables LFK = {
 		.timeDiff = TIME_DIFF
 };
 
+///////////////////////////////////////////////////// VARIABLES
+
+static int wheels_state = wheels_uninitialized;
+static int brake_state[4] = {first_brake_period, first_brake_period, first_brake_period, first_brake_period};
+static int pwm[4] = {0};
+static bool direction[4] = {0}; // 0 is counter clock-wise TODO:confirm
+static float wheelspeed[4] = {0};
+
 
 ///////////////////////////////////////////////////// FUNCTION PROTOTYPES
 //// PUBLIC
@@ -73,6 +83,10 @@ void wheelsInit();
 
 void wheelsDeInit();
 
-void wheelsCallback(float wheelref[4]);
+void setWheelSpeed(float wheelref[4]);
+
+float getWheelSpeed(wheel_names wheel);
+
+void wheelsCallback();
 
 #endif /* WHEELS_H_ */

@@ -290,13 +290,14 @@ int main(void)
 			if(MT_UseIcc() == MT_succes)
 				uprintf("Xsens calibration done.\n\r");
 		}
-		uprintf("Vision available? ");
-		uprintf(vision_available ? "yes\n\r" : "no\n\r");
-		uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
+//		uprintf("Vision available? ");
+//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
+//		uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
 		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
-		uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
-		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
-		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
+//		uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
+//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
+//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
+		uprintf("Wheel speeds: {%f, %f, %f, %f}\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
 		uprintf("Wheels PWM: {%f, %f, %f, %f}\n\r", wheelsPWM[wheels_RF], wheelsPWM[wheels_RB], wheelsPWM[wheels_LB], wheelsPWM[wheels_LF]);
 		uprintf("\n\r");
 		//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
@@ -484,12 +485,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		 // send PWM to motors
 		if (halt) { // when communication is lost for too long, we send 0 to the motors
 			float wheel_powers[4] = {0,0,0,0};
-			wheelsCallback(wheel_powers);
+			for (int i=0; i<4; i++) {wheelsPWM[i]=0;}
+			setWheelSpeed(wheel_powers);
 		} else {
 			// copy the controller output before sending it to SetOutput, to make sure it doesnt get altered at the wrong time
 			float wheel_powers[4] = {wheelsPWM[0],wheelsPWM[1],wheelsPWM[2],wheelsPWM[3]};
 //			float wheel_powers[4] = {20,20,20,20};
-			wheelsCallback(wheel_powers);
+			setWheelSpeed(wheel_powers);
 		}
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 0);
 
@@ -504,6 +506,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
 		//wheels_Callback();
+		wheelsCallback();
 	}
 }
 
