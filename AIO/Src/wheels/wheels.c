@@ -184,11 +184,12 @@ static void limitScale(wheel_names wheel){
 
 // Get the current encoder data for all wheels
 static int getEncoderData(wheel_names wheel){
+	// NOTE: RF and RB are swapped to match with wheel reference
 	switch (wheel) {
 	case wheels_RF:
-		return __HAL_TIM_GET_COUNTER(&htim1);
-	case wheels_RB:
 		return __HAL_TIM_GET_COUNTER(&htim8);
+	case wheels_RB:
+		return __HAL_TIM_GET_COUNTER(&htim1);
 	case wheels_LB:
 		return -__HAL_TIM_GET_COUNTER(&htim3); //  TODO: minus due to inverted routing (old robot)
 	case wheels_LF:

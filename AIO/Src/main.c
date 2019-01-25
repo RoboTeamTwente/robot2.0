@@ -270,7 +270,7 @@ int main(void)
 
 	geneva_Update();
 	MT_Update();
-	if((HAL_GetTick() - printtime > 1000)){
+	if((HAL_GetTick() - printtime > 500)){
 		printtime = HAL_GetTick();
 		ToggleLD(1);
 
@@ -466,7 +466,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim7.Instance){
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		//wheelsPWM = {0,0,0,0};
-		velocityRef[0] = 0;
+		velocityRef[0] = 0.5;
 		velocityRef[1] = 0;
 		velocityRef[2] = 0.0*M_PI;
 //		vision_yaw = -0.5*M_PI;
