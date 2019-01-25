@@ -18,7 +18,7 @@ static void global2Local(float input[3], float output[2], float  yaw);
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
 void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
-	float angleErr = constrainAngle(vel_ref[body_w] - State[body_w]);//constrain it to one circle turn
+	float angleErr = constrainAngle(State[body_w] - vel_ref[body_w]);//constrain it to one circle turn
 	float angleComp = PID(angleErr, &angleK);// PID control from control_util.h
 	static float velLocalRef[3] = {0};
 	global2Local(vel_ref, velLocalRef, State[body_w]); //transfer global to local
@@ -30,7 +30,7 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
 
 	for (int i = 0; i < 4; ++i){
-		wheel_ref[i] += angleComp; //add necessary rotation value
+		//wheel_ref[i] += angleComp; //add necessary rotation value
 	}
 }
 

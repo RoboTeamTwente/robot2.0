@@ -20,7 +20,7 @@ static float xsensData[3];
 ///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
 
 static void scaleAndLimit(float wheel_ref[4]); //scales and limit the signal
-static void wheelFilter(float w_wheels[4]);
+//static void wheelFilter(float w_wheels[4]);
 static void getXsensData(float xsensData[3]);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
@@ -84,7 +84,18 @@ static void getXsensData(float xsensData[3]){
 //}
 
 static void scaleAndLimit(float wheel_ref[4]){
+	// TODO: it doesn't work if you use the defined constants from control_util, go fix!
+	float margin = 0.3; // give the PID a little space to adjust
+	float rpsFactor = RPStoPWM;
+	float rps_limit = PWM_LIMIT/rpsFactor;
+	float rps_cutoff = PWM_CUTOFF/rpsFactor + margin;
 	for (wheel_names i = wheels_RF; i <= wheels_LF; i++) {
-		wheel_ref[i] = wheel_ref[i] > PWM_LIMIT ? PWM_LIMIT : wheel_ref[i];
+		if (fabs(wheel_ref[i]) > rps_limit) {
+			wheel_ref[i] = rps_limit*fabs(wheel_ref[i])/wheel_ref[i];
+		} else if (fabs(wheel_ref[i]) < margin) {
+			wheel_ref[i] = 0;
+		} else if (fabs(wheel_ref[i]) < rps_cutoff) {
+			wheel_ref[i] = rps_cutoff*fabs(wheel_ref[i])/wheel_ref[i];
+		}
 	}
 }

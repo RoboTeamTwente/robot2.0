@@ -11,18 +11,14 @@
 #include "tim.h"
 #include "stdbool.h"
 
-///////////////////////////////////////////////////// DEFINITIONS
+///////////////////////////////////////////////////// VARIABLES
 
-#define PWM_CUTOFF 240.0F			// arbitrary treshold below PWM_ROUNDUP
-#define PWM_ROUNDUP 250.0F 		// below this value the motor driver is unreliable
-
-#define GEAR_RATIO 2.5F // gear ratio between motor and wheel
-#define MAX_PWM 2400
-#define MAX_VOLTAGE 12//see datasheet
-#define SPEED_CONSTANT 374/60 //[RPS/V] see datasheet
-#define RPStoPWM (float)(1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // conversion factor from rotations per second of the wheel to required PWM on the motor
-#define PULSES_PER_ROTATION (float)4*1024 // number of pulses of the encoder per rotation of the motor (see datasheet)
-#define ENCODERtoRPS (float)1/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to RPS of the wheel
+static int wheels_state = wheels_uninitialized;
+static int brake_state[4] = {first_brake_period, first_brake_period, first_brake_period, first_brake_period};
+static int pwm[4] = {0};
+static bool direction[4] = {0}; // 0 is counter clock-wise TODO:confirm
+static float wheelspeed[4] = {0};
+static PIDvariables wheelsK[4];
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
 
@@ -33,16 +29,14 @@ static float computeWheelSpeed(wheel_names wheel);
 static void limitScale(wheel_names wheel);
 static bool directionSwitched(wheel_names wheel);
 static void restartCallbackTimer();
+static void initPID(float kP, float kI, float kD);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
 // Initialize wheels
 void wheelsInit(){
+	initPID(0.1, 0, 0);
 	wheels_state = wheels_ready;
-	wheelsK[0] = RFK;
-	wheelsK[1] = RBK;
-	wheelsK[2] = LBK;
-	wheelsK[3] = LFK;
 	HAL_TIM_Base_Start(&htim1); //RF
 	HAL_TIM_Base_Start(&htim8); //RB
 	HAL_TIM_Base_Start(&htim3); //LB
@@ -134,6 +128,20 @@ float getWheelSpeed(wheel_names wheel) {
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
 
+// Set PID values
+static void initPID(float kP, float kI, float kD) {
+	wheelsK[0] = RFK;
+	wheelsK[1] = RBK;
+	wheelsK[2] = LBK;
+	wheelsK[3] = LFK;
+
+	for (wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++) {
+		wheelsK[wheel].kP = kP;
+		wheelsK[wheel].kI = kI;
+		wheelsK[wheel].kD = kD;
+	}
+}
+
 // Check if the direction switched for a certain wheel
 static bool directionSwitched(wheel_names wheel) {
 	static bool prevDirection[4] = {0};
@@ -169,8 +177,8 @@ static void limitScale(wheel_names wheel){
 		pwm[wheel] = 0.0F;
 	} else if(pwm[wheel] < PWM_ROUNDUP){
 		pwm[wheel] = PWM_ROUNDUP;
-	} else if(pwm[wheel] > MAX_PWM){
-		pwm[wheel] = MAX_PWM;
+	} else if(pwm[wheel] > PWM_LIMIT){
+		pwm[wheel] = PWM_LIMIT;
 	}
 }
 
