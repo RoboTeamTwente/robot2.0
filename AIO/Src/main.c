@@ -468,7 +468,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		//wheelsPWM = {0,0,0,0};
 		velocityRef[0] = 0;
 		velocityRef[1] = 0;
-		//velocityRef[2] = 0.0*M_PI;
+		velocityRef[2] = 0.0*M_PI;
 //		vision_yaw = -0.5*M_PI;
 //		vision_available = true;
 		halt = false;

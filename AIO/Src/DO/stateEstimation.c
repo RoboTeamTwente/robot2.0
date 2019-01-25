@@ -27,9 +27,10 @@ void estimateState(float State[3], float xsensData[3]) {
 	float velocities[3];
 	wheels2Body(wheelSpeeds, velocities);
 
-	// Put into State variable
+	// Put data into State variable
 	State[body_x] = velocities[body_x];
 	State[body_y] = velocities[body_y];
+	State[body_w] = xsensData[body_w];
 }
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
