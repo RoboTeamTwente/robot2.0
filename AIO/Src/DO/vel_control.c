@@ -30,7 +30,7 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
 
 	for (int i = 0; i < 4; ++i){
-		//wheel_ref[i] += angleComp; //add necessary rotation value
+		wheel_ref[i] += angleComp; //add necessary rotation value
 	}
 }
 

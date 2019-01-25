@@ -13,6 +13,7 @@
 #include "../MTi/MTiControl.h"
 #include "yawCalibration.h"
 #include "vel_control.h"
+#include "stateEstimation.h"
 
 uint start_time;
 static float xsensData[3];
@@ -43,11 +44,8 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	// calibration of xsens data by calculating yaw offset
 	calibrateXsens(xsensData, vision_yaw, vision_available);
 
-	static float State[3];
-	// TODO: Do some kind of state estimation
-	for (int i = 0; i < 3; i++) {
-		State[i] = xsensData[i];
-	}
+	static float State[3] = {0};
+	estimateState(State, xsensData);
 
 	// control part
 	vel_control_Callback(wheel_ref, State, velocityRef);
@@ -67,21 +65,6 @@ static void getXsensData(float xsensData[3]){
 	xsensData[body_y] = -MT_GetAcceleration()[1];
 	xsensData[body_w] = MT_GetAngles()[2]/180*M_PI;
 }
-
-//static void wheelFilter(float w_wheels[4]){
-//	// get and filter wheel speeds
-//	static float w_prev[4] = {0,0,0,0};
-//	// filtering wheel speeds
-//	for(wheel_names i = wheels_RF; i <= wheels_LF; i++){
-//		if (!isnan(w_prev[i])){
-//			//TODO Test ratio
-//			w_wheels[i] = 0.4*(-wheels_GetSpeed(i)) + 0.6*w_prev[i];
-//		} else {
-//			w_wheels[i] = -wheels_GetSpeed(i);
-//		}
-//		w_prev[i] = w_wheels[i];
-//	}
-//}
 
 static void scaleAndLimit(float wheel_ref[4]){
 	// TODO: it doesn't work if you use the defined constants from control_util, go fix!
