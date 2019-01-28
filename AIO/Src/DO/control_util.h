@@ -22,19 +22,19 @@
 #define sin60 0.866F	// sine of 60 degrees
 
 // Wheels
-#define PWM_CUTOFF 240.0F			// arbitrary treshold below PWM_ROUNDUP
-#define PWM_ROUNDUP 250.0F 		// below this value the motor driver is unreliable
+#define PWM_CUTOFF 240F			// arbitrary treshold below PWM_ROUNDUP
+#define PWM_ROUNDUP 250F 		// below this value the motor driver is unreliable
 #define GEAR_RATIO 2.5F // gear ratio between motor and wheel
-#define MAX_PWM 2400
-#define PWM_LIMIT 1000 // should be equal to MAX_PWM by default
-#define MAX_VOLTAGE 12//see datasheet
-#define SPEED_CONSTANT (374.0/60.0) //[RPS/V] see datasheet
+#define MAX_PWM 2400 // defined in CubeMX
+#define PWM_LIMIT 2000 // should be equal to MAX_PWM by default
+#define MAX_VOLTAGE 12 // see datasheet
+#define SPEED_CONSTANT (2*M_PI/60.0 * 374.0) //[(rad/s)/V] see datasheet
 #define PULSES_PER_ROTATION (float)4*1024 // number of pulses of the encoder per rotation of the motor (see datasheet)
 
-#define RPStoPWM (1.0/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // conversion factor from rotations per second of the wheel to required PWM on the motor
-#define ENCODERtoRPS (float)1/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to RPS of the wheel
-#define RPS_LIMIT (PWM_LIMIT/RPStoPWM) // Highest wheel speed that is allowed
-#define RPS_CUTOFF (PWM_CUTOFF/RPStoPWM) // Lowest wheel speed that is allowed
+#define OMEGAtoPWM (1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // conversion factor from wheel speed [rad/s] to required PWM on the motor
+#define ENCODERtoOMEGA (float)2*M_PI/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to wheel speed [rad/s]
+#define OMEGA_LIMIT (PWM_LIMIT/OMEGAtoPWM) // Highest wheel speed that is allowed
+#define OMEGA_CUTOFF (PWM_CUTOFF/OMEGAtoPWM) // Lowest wheel speed that is allowed
 
 ///////////////////////////////////////////////////// STRUCTS AND VARIABLES
 
@@ -61,7 +61,7 @@ typedef struct {
 }PIDvariables;
 
 static PIDvariables angleK = {
-		.kP = 7,//kp
+		.kP = 15,//kp
 		.kI = 0,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
@@ -69,7 +69,7 @@ static PIDvariables angleK = {
 		.timeDiff = TIME_DIFF
 };
 static PIDvariables velxK = {
-		.kP = 1,//kp
+		.kP = 0,//kp
 		.kI = 0,//ki
 		.kD = 0,//kd
 		.I = 0,//always starts as zero
@@ -77,7 +77,7 @@ static PIDvariables velxK = {
 		.timeDiff = TIME_DIFF
 };
 static PIDvariables velyK = {
-		.kP = 1,//kp
+		.kP = 0,//kp
 		.kI = 0,//ki
 		.kD = 0,//kd
 		.I = 0,//always starts as zero

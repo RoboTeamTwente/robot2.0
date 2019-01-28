@@ -67,7 +67,6 @@ static PIDvariables LFK = {
 		.timeDiff = TIME_DIFF
 };
 
-
 ///////////////////////////////////////////////////// FUNCTION PROTOTYPES
 //// PUBLIC
 
@@ -78,6 +77,8 @@ void wheelsDeInit();
 void setWheelSpeed(float wheelref[4]);
 
 float getWheelSpeed(wheel_names wheel);
+
+int getPWM(wheel_names wheel);
 
 void wheelsCallback();
 

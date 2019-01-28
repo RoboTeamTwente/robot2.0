@@ -69,7 +69,7 @@ static void getXsensData(float xsensData[3]){
 static void scaleAndLimit(float wheel_ref[4]){
 	// TODO: it doesn't work if you use the defined constants from control_util, go fix!
 	float margin = 0.3; // give the PID a little space to adjust
-	float rpsFactor = RPStoPWM;
+	float rpsFactor = OMEGAtoPWM;
 	float rps_limit = PWM_LIMIT/rpsFactor;
 	float rps_cutoff = PWM_CUTOFF/rpsFactor + margin;
 	for (wheel_names i = wheels_RF; i <= wheels_LF; i++) {

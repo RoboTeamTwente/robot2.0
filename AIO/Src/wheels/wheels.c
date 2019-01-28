@@ -35,7 +35,7 @@ static void initPID(float kP, float kI, float kD);
 
 // Initialize wheels
 void wheelsInit(){
-	initPID(0.1, 0, 0);
+	initPID(0, 0.1, 0);
 	wheels_state = wheels_ready;
 	HAL_TIM_Base_Start(&htim1); //RF
 	HAL_TIM_Base_Start(&htim8); //RB
@@ -66,15 +66,14 @@ void wheelsDeInit(){
 void setWheelSpeed(float wheelref[4]){
 	//TODO: Add slipping case
 	float err[4] = {0};
-	switch(wheels_state){
-	case wheels_ready:
+	if (wheels_state == wheels_ready) {
 		//derive wheelspeed
 		for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
 			wheelspeed[wheel] = computeWheelSpeed(wheel);
 			err[wheel] = wheelref[wheel]-wheelspeed[wheel];
 
-			int output = wheelref[wheel] + PID(err[wheel], &wheelsK[wheel]); // add PID to reference RPS
-			pwm[wheel] = RPStoPWM*output; // convert to pwm
+			int output = wheelref[wheel] + PID(err[wheel], &wheelsK[wheel]); // add PID to wheels reference angular velocity
+			pwm[wheel] = OMEGAtoPWM*output; // convert to pwm
 
 			limitScale(wheel);
 			if (directionSwitched(wheel)) {
@@ -121,9 +120,14 @@ void wheelsCallback() {
 	}
 }
 
-// Get the current wheel speed in RPS
+// Get the current wheel speed in radians per second
 float getWheelSpeed(wheel_names wheel) {
 	return wheelspeed[wheel];
+}
+
+// Get the current PWM that is sent to the wheels
+int getPWM(wheel_names wheel) {
+	return pwm[wheel];
 }
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
@@ -199,11 +203,11 @@ static int getEncoderData(wheel_names wheel){
 	}
 }
 
-// Compute wheel speed for a certain wheel in RPS
+// Compute wheel speed for a certain wheel in radians per second
 static float computeWheelSpeed(wheel_names wheel){
 	static int prevEncoderData[4] = {0};
 	int encoderData = getEncoderData(wheel);
-	float wheelSpeed = ENCODERtoRPS * (encoderData-prevEncoderData[wheel]);
+	float wheelSpeed = ENCODERtoOMEGA * (encoderData-prevEncoderData[wheel]);
 	prevEncoderData[wheel] = encoderData;
 	return wheelSpeed;
 }
