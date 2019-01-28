@@ -270,7 +270,7 @@ int main(void)
 
 	geneva_Update();
 	MT_Update();
-	if((HAL_GetTick() - printtime > 100)){
+	if((HAL_GetTick() - printtime > 500)){
 		printtime = HAL_GetTick();
 		ToggleLD(1);
 
@@ -467,11 +467,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim7.Instance){
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		//wheelsPWM = {0,0,0,0};
-		velocityRef[0] = 0.8;
+		velocityRef[0] = 0.0;
 		velocityRef[1] = 0.0;
 		velocityRef[2] = 0.0*M_PI;
-		vision_yaw = 0.0*M_PI;
-		vision_available = true;
+//		vision_yaw = 0.0*M_PI;
+//		vision_available = true;
 		halt = false;
 		DO_Control(velocityRef, vision_yaw, vision_available, wheels_ref); // outputs to wheels_ref
 //		if (calibration_needed) {

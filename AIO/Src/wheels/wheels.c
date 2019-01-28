@@ -24,7 +24,8 @@ static PIDvariables wheelsK[4];
 
 static void SetPWM(wheel_names wheel);
 static void SetDir(wheel_names wheel);
-static int getEncoderData(wheel_names wheel);
+static short int getEncoderData(wheel_names wheel);
+static void ResetEncoder(wheel_names wheel);
 static float computeWheelSpeed(wheel_names wheel);
 static void limitScale(wheel_names wheel);
 static bool directionSwitched(wheel_names wheel);
@@ -35,7 +36,7 @@ static void initPID(float kP, float kI, float kD);
 
 // Initialize wheels
 void wheelsInit(){
-	initPID(0, 0.1, 0);
+	initPID(1, 0.3, 0);
 	wheels_state = wheels_ready;
 	HAL_TIM_Base_Start(&htim1); //RF
 	HAL_TIM_Base_Start(&htim8); //RB
@@ -70,6 +71,7 @@ void setWheelSpeed(float wheelref[4]){
 		//derive wheelspeed
 		for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
 			wheelspeed[wheel] = computeWheelSpeed(wheel);
+			//SetLD(3+wheel, fabs(wheelspeed[wheel]) > 1000);
 			err[wheel] = wheelref[wheel]-wheelspeed[wheel];
 
 			int output = wheelref[wheel] + PID(err[wheel], &wheelsK[wheel]); // add PID to wheels reference angular velocity
@@ -187,7 +189,7 @@ static void limitScale(wheel_names wheel){
 }
 
 // Get the current encoder data for all wheels
-static int getEncoderData(wheel_names wheel){
+static short int getEncoderData(wheel_names wheel){
 	// NOTE: RF and RB are swapped to match with wheel reference
 	switch (wheel) {
 	case wheels_RF:
@@ -203,12 +205,32 @@ static int getEncoderData(wheel_names wheel){
 	}
 }
 
+// Set motor encoder to zero
+static void ResetEncoder(wheel_names wheel) {
+	// NOTE: RF and RB are swapped to match with wheel reference
+	switch (wheel) {
+	case wheels_RF:
+		__HAL_TIM_SET_COUNTER(&htim8, 0);
+		break;
+	case wheels_RB:
+		__HAL_TIM_SET_COUNTER(&htim1, 0);
+		break;
+	case wheels_LB:
+		__HAL_TIM_SET_COUNTER(&htim3, 0);
+		break;
+	case wheels_LF:
+		__HAL_TIM_SET_COUNTER(&htim4, 0);
+		break;
+	}
+}
+
 // Compute wheel speed for a certain wheel in radians per second
 static float computeWheelSpeed(wheel_names wheel){
-	static int prevEncoderData[4] = {0};
-	int encoderData = getEncoderData(wheel);
-	float wheelSpeed = ENCODERtoOMEGA * (encoderData-prevEncoderData[wheel]);
-	prevEncoderData[wheel] = encoderData;
+	//static int prevEncoderData[4] = {0};
+	short int encoderData = getEncoderData(wheel);
+	float wheelSpeed = ENCODERtoOMEGA * (encoderData);
+	//prevEncoderData[wheel] = encoderData;
+	ResetEncoder(wheel);
 	return wheelSpeed;
 }
 
@@ -216,16 +238,16 @@ static float computeWheelSpeed(wheel_names wheel){
 static void SetPWM(wheel_names wheel){
 	switch (wheel) {
 	case wheels_RF:
-		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, pwm[wheels_RF]);
+		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, MAX_PWM-pwm[wheels_RF]);
 		break;
 	case wheels_RB:
-		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, pwm[wheels_RB]);
+		__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, MAX_PWM-pwm[wheels_RB]);
 		break;
 	case wheels_LB:
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, pwm[wheels_LB]);
+		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, MAX_PWM-pwm[wheels_LB]);
 		break;
 	case wheels_LF:
-		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, pwm[wheels_LF]);
+		__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, MAX_PWM-pwm[wheels_LF]);
 		break;
 	}
 }
