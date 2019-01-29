@@ -14,7 +14,7 @@
 ///////////////////////////////////////////////////// VARIABLES
 
 static int wheels_state = wheels_uninitialized;
-static int brake_state[4] = {first_brake_period, first_brake_period, first_brake_period, first_brake_period};
+static int brake_state[4] = {no_brake};
 static int pwm[4] = {0};
 static bool direction[4] = {0}; // 0 is counter clock-wise TODO:confirm
 static float wheelspeed[4] = {0};
@@ -36,7 +36,7 @@ static void initPID(float kP, float kI, float kD);
 
 // Initialize wheels
 void wheelsInit(){
-	initPID(1, 0.3, 0);
+	initPID(0.5, 0.5, 0);
 	wheels_state = wheels_ready;
 	HAL_TIM_Base_Start(&htim1); //RF
 	HAL_TIM_Base_Start(&htim8); //RB
@@ -71,7 +71,6 @@ void setWheelSpeed(float wheelref[4]){
 		//derive wheelspeed
 		for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
 			wheelspeed[wheel] = computeWheelSpeed(wheel);
-			//SetLD(3+wheel, fabs(wheelspeed[wheel]) > 1000);
 			err[wheel] = wheelref[wheel]-wheelspeed[wheel];
 
 			int output = wheelref[wheel] + PID(err[wheel], &wheelsK[wheel]); // add PID to wheels reference angular velocity
@@ -81,6 +80,10 @@ void setWheelSpeed(float wheelref[4]){
 			if (directionSwitched(wheel)) {
 				brake_state[wheel] = first_brake_period;
 				restartCallbackTimer();
+			}
+			// RB encoder is malfunctional
+			if (wheel == wheels_RB) {
+				pwm[wheel] = 0;
 			}
 			SetDir(wheel);
 			SetPWM(wheel);
@@ -176,14 +179,15 @@ static void limitScale(wheel_names wheel){
 	} else if(pwm[wheel] >= 1.0F){
 		direction[wheel] = 0;
 	} else {
-		pwm[wheel] = 0.0F;
+		pwm[wheel] = 0; // the motor does not brake if pwm 0 is sent
 	}
 	// Limit PWM
-	if(pwm[wheel] < PWM_CUTOFF){
-		pwm[wheel] = 0.0F;
-	} else if(pwm[wheel] < PWM_ROUNDUP){
-		pwm[wheel] = PWM_ROUNDUP;
-	} else if(pwm[wheel] > PWM_LIMIT){
+//	if(pwm[wheel] < PWM_CUTOFF){
+//		pwm[wheel] = 0.0F;
+//	} else if(pwm[wheel] < PWM_ROUNDUP){
+//		pwm[wheel] = PWM_ROUNDUP;
+//	} else
+		if(pwm[wheel] > PWM_LIMIT){
 		pwm[wheel] = PWM_LIMIT;
 	}
 }

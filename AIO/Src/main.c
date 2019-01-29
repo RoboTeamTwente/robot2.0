@@ -258,7 +258,7 @@ int main(void)
 	}else{
 		SetLD(2, 1);
 	}
-//	preparedAckData.ballSensor = ballsensorMeasurementLoop(1, receivedRoboData.do_chip, 30);
+	preparedAckData.ballSensor = ballsensorMeasurementLoop(1, receivedRoboData.do_chip, 30);
 
 	//uprintf("ball: %i\n",preparedAckData.ballSensor);
 
@@ -270,9 +270,9 @@ int main(void)
 
 	geneva_Update();
 	MT_Update();
-	if((HAL_GetTick() - printtime > 500)){
+	if((HAL_GetTick() - printtime >= 5)){
 		printtime = HAL_GetTick();
-		ToggleLD(1);
+		//ToggleLD(1);
 
 		//CHECK NRF STATUS REGISTER EVERY SECOND...IF NRF IS CONSTIPATED, FLUSH SHIT OUT
 		if(readReg(STATUS) != 0x0e) {
@@ -289,17 +289,21 @@ int main(void)
 			if(MT_UseIcc() == MT_succes)
 				uprintf("Xsens calibration done.\n\r");
 		}
+
+		uprintf("s: %d %d %d %d\n\r", (int)getWheelSpeed(wheels_RF), (int)getWheelSpeed(wheels_RB), (int)getWheelSpeed(wheels_LB), (int)getWheelSpeed(wheels_LF));
+		uprintf("r: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
+
 //		uprintf("Vision available? ");
 //		uprintf(vision_available ? "yes\n\r" : "no\n\r");
 //		uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
 //		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
-		uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
+//		uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
 //		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
 //		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
-		uprintf("Wheel speeds: {%f, %f, %f, %f}\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
-		uprintf("Wheels ref: {%f, %f, %f, %f}\n\r", wheels_ref[wheels_RF], wheels_ref[wheels_RB], wheels_ref[wheels_LB], wheels_ref[wheels_LF]);
-		uprintf("PWM: {%d, %d, %d, %d}\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
-		uprintf("\n\r");
+//		uprintf("Wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
+//		uprintf("Wheel ref: %f %f %f %f\n\r", wheels_ref[wheels_RF], wheels_ref[wheels_RB], wheels_ref[wheels_LB], wheels_ref[wheels_LF]);
+//		uprintf("PWM: {%d, %d, %d, %d}\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
+//		uprintf("\n\r");
 		//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
 		//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
 		//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
@@ -467,12 +471,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim7.Instance){
 //		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		//wheelsPWM = {0,0,0,0};
-		velocityRef[0] = 0.0;
-		velocityRef[1] = 0.0;
 		velocityRef[2] = 0.0*M_PI;
-//		vision_yaw = 0.0*M_PI;
-//		vision_available = true;
+		vision_yaw = 0.0*M_PI;
+		vision_available = true;
 		halt = false;
+
+		if (HAL_GetTick() > 5000 && HAL_GetTick() < 15000) {
+			velocityRef[0] = 1.0;
+			velocityRef[1] = 0.0;
+		} else {
+			velocityRef[0] = 0.0;
+			velocityRef[1] = 0.0;
+		}
+
 		DO_Control(velocityRef, vision_yaw, vision_available, wheels_ref); // outputs to wheels_ref
 //		if (calibration_needed) {
 //			halt = true;
@@ -503,8 +514,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
-		//wheels_Callback();
-		wheelsCallback();
+		//wheelsCallback();
 	}
 }
 

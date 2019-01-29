@@ -45,9 +45,9 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	// control part
 	vel_control_Callback(wheel_ref, State, velocityRef);
 
-	for (wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++) {
-		wheel_ref[wheel] = fabs(wheel_ref[wheel]) < OMEGA_ROUNDUP ? wheel_ref[wheel]/fabs(wheel_ref[wheel])*OMEGA_ROUNDUP : wheel_ref[wheel];
-	}
+//	for (wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++) {
+//		wheel_ref[wheel] = fabs(wheel_ref[wheel]) < OMEGA_ROUNDUP ? wheel_ref[wheel]/fabs(wheel_ref[wheel])*OMEGA_ROUNDUP : wheel_ref[wheel];
+//	}
 }
 
 float getYaw() {
