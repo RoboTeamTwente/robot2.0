@@ -1,41 +1,41 @@
 
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  ** This notice applies to any and all portions of this file
-  * that are not between comment pairs USER CODE BEGIN and
-  * USER CODE END. Other portions of this file, whether 
-  * inserted by the user or by software development tools
-  * are owned by their respective copyright owners.
-  *
-  * COPYRIGHT(c) 2018 STMicroelectronics
-  *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ ** This notice applies to any and all portions of this file
+ * that are not between comment pairs USER CODE BEGIN and
+ * USER CODE END. Other portions of this file, whether
+ * inserted by the user or by software development tools
+ * are owned by their respective copyright owners.
+ *
+ * COPYRIGHT(c) 2018 STMicroelectronics
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *   1. Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright notice,
+ *      this list of conditions and the following disclaimer in the documentation
+ *      and/or other materials provided with the distribution.
+ *   3. Neither the name of STMicroelectronics nor the names of its contributors
+ *      may be used to endorse or promote products derived from this software
+ *      without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ ******************************************************************************
+ */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_hal.h"
@@ -101,279 +101,279 @@ void HandleCommand(char* input);
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  *
-  * @retval None
-  */
+ * @brief  The application entry point.
+ *
+ * @retval None
+ */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration----------------------------------------------------------*/
+	/* MCU Configuration----------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_TIM8_Init();
-  MX_TIM4_Init();
-  MX_TIM3_Init();
-  MX_TIM2_Init();
-  MX_TIM9_Init();
-  MX_TIM12_Init();
-  MX_TIM10_Init();
-  MX_TIM11_Init();
-  MX_USART2_UART_Init();
-  MX_I2C1_Init();
-  MX_SPI2_Init();
-  MX_USART3_UART_Init();
-  MX_TIM1_Init();
-  MX_TIM6_Init();
-  MX_TIM7_Init();
-  MX_TIM5_Init();
-  MX_TIM13_Init();
-  MX_TIM14_Init();
-  /* USER CODE BEGIN 2 */
-  puttystruct.handle = HandleCommand;
-  PuttyInterface_Init(&puttystruct);
-  vel_control_Init();
-  dribbler_Init();
-  ballsensorInit();
-  wheelsInit();
-  MT_Init();
-  geneva_Init();
-  kick_Init();
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_TIM8_Init();
+	MX_TIM4_Init();
+	MX_TIM3_Init();
+	MX_TIM2_Init();
+	MX_TIM9_Init();
+	MX_TIM12_Init();
+	MX_TIM10_Init();
+	MX_TIM11_Init();
+	MX_USART2_UART_Init();
+	MX_I2C1_Init();
+	MX_SPI2_Init();
+	MX_USART3_UART_Init();
+	MX_TIM1_Init();
+	MX_TIM6_Init();
+	MX_TIM7_Init();
+	MX_TIM5_Init();
+	MX_TIM13_Init();
+	MX_TIM14_Init();
+	/* USER CODE BEGIN 2 */
+	puttystruct.handle = HandleCommand;
+	PuttyInterface_Init(&puttystruct);
+	vel_control_Init();
+	dribbler_Init();
+	ballsensorInit();
+	wheelsInit();
+	MT_Init();
+	geneva_Init();
+	kick_Init();
 
-  if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
-	  Wireless_Init(ReadAddress(), 103);
-  }else{
-	  Wireless_Init(ReadAddress(), 80);
-  }
+	if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
+		Wireless_Init(ReadAddress(), 103);
+	}else{
+		Wireless_Init(ReadAddress(), 80);
+	}
 
-  /* USER CODE END 2 */
+	/* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  uint printtime = 0;
-  uint battery_count = 0;
-  preparedAckData.batteryState = 0;
-  enable_acks = 0;
-  while (1)
-  {
-	HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
+	uint printtime = 0;
+	uint battery_count = 0;
+	preparedAckData.batteryState = 0;
+	enable_acks = 0;
+	while (1)
+	{
+		HAL_GPIO_TogglePin(Switch_GPIO_Port,Switch_Pin);
 
-	if(Wireless_newData()) {
-		Wireless_newPacketHandler();
-		//printBallPosition();
-		//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+		if(Wireless_newData()) {
+			Wireless_newPacketHandler();
+			//printBallPosition();
+			//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
-		if (!calibration_needed) {
-			  halt = false; // robot is only allowed to move after packages are received and yaw calibration is not needed
-		}
-		LastPackageTime = HAL_GetTick();
+			if (!calibration_needed) {
+				halt = false; // robot is only allowed to move after packages are received and yaw calibration is not needed
+			}
+			LastPackageTime = HAL_GetTick();
 
-		//TODO: test this data coming in
-		float velRefAmp = (float)receivedRoboData.rho * 0.004F;
-		float velRefDir = (float)receivedRoboData.theta / 1024.0F * M_PI;
-		float angularVelRef = (float)receivedRoboData.velocity_angular / 512.0F * 16.0F*M_PI;
-		velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
-		velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
-		if(receivedRoboData.use_angle){
-			velocityRef[body_w] = angularVelRef;
-		}
+			//TODO: test this data coming in
+			float velRefAmp = (float)receivedRoboData.rho * 0.004F;
+			float velRefDir = (float)receivedRoboData.theta / 1024.0F * M_PI;
+			float angularVelRef = (float)receivedRoboData.velocity_angular / 512.0F * 16.0F*M_PI;
+			velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
+			velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
+			if(receivedRoboData.use_angle){
+				velocityRef[body_w] = angularVelRef;
+			}
 
-		//TODO: test vision angle and calibration etc.
-		vision_available = receivedRoboData.use_cam_info;
-		if (vision_available) {
-			vision_yaw = ((float)receivedRoboData.cam_rotation/1024.0F)*M_PI;
-		}
+			//TODO: test vision angle and calibration etc.
+			vision_available = receivedRoboData.use_cam_info;
+			if (vision_available) {
+				vision_yaw = ((float)receivedRoboData.cam_rotation/1024.0F)*M_PI;
+			}
 
-		//dribbler
-		dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
+			//dribbler
+			dribbler_SetSpeed(receivedRoboData.velocity_dribbler);
 
-		//kicker
-		float kick_power = (float)receivedRoboData.kick_chip_power/255.0F*8.0F; // represented kick power
-		if (kick_power > 4.5F) {
-			corrected_kick_power = 99.0; // above a certain command, we cannot shoot any faster, so we choose maximum power for certainty
-		} else {
-			corrected_kick_power = (kick_power*0.5F+1.0F)/8.0F*100.0F; // scale (0 to 8) range to (1 to 5) range such that in software the command matches the start velocity of the ball
-		}
-//		uprintf("[%f, %f, %i]\n\r", kick_power, (float)(corrected_kick_power)/100*8,corrected_kick_power);
-		if (receivedRoboData.kick_chip_forced/* && ((HAL_GetTick() - kick_timer) > 0)*/){
-			kick_timer = HAL_GetTick() + 1000U;
+			//kicker
 			float kick_power = (float)receivedRoboData.kick_chip_power/255.0F*8.0F; // represented kick power
-			float corrected_kick_power;
 			if (kick_power > 4.5F) {
-				corrected_kick_power = 99; // above a certain command, we cannot shoot any faster, so we choose maximum power for certainty
+				corrected_kick_power = 99.0; // above a certain command, we cannot shoot any faster, so we choose maximum power for certainty
 			} else {
 				corrected_kick_power = (kick_power*0.5F+1.0F)/8.0F*100.0F; // scale (0 to 8) range to (1 to 5) range such that in software the command matches the start velocity of the ball
 			}
-			kick_Shoot(corrected_kick_power,!receivedRoboData.do_chip);
-		}
+			//		uprintf("[%f, %f, %i]\n\r", kick_power, (float)(corrected_kick_power)/100*8,corrected_kick_power);
+			if (receivedRoboData.kick_chip_forced/* && ((HAL_GetTick() - kick_timer) > 0)*/){
+				kick_timer = HAL_GetTick() + 1000U;
+				float kick_power = (float)receivedRoboData.kick_chip_power/255.0F*8.0F; // represented kick power
+				float corrected_kick_power;
+				if (kick_power > 4.5F) {
+					corrected_kick_power = 99; // above a certain command, we cannot shoot any faster, so we choose maximum power for certainty
+				} else {
+					corrected_kick_power = (kick_power*0.5F+1.0F)/8.0F*100.0F; // scale (0 to 8) range to (1 to 5) range such that in software the command matches the start velocity of the ball
+				}
+				kick_Shoot(corrected_kick_power,!receivedRoboData.do_chip);
+			}
 
-		//geneva
-		if (receivedRoboData.geneva_drive_state != 0){
-			geneva_SetPosition(receivedRoboData.geneva_drive_state-1);
-		}
+			//geneva
+			if (receivedRoboData.geneva_drive_state != 0){
+				geneva_SetPosition(receivedRoboData.geneva_drive_state-1);
+			}
 
-	}else if(wheels_testing){
-		velocityRef[body_w] = wheels_testing_power;
-		halt = false;
-	}else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
+		}else if(wheels_testing){
+			velocityRef[body_w] = wheels_testing_power;
+			halt = false;
+		}else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
 		halt = true;
 		vision_available = false;
-	}
-	// check if battery is empty
-	if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
-		if(battery_count++ == 1000){
-			uprintf("Battery empty!\n\r");
-			ToggleLD(4);
-			wheelsDeInit();
-			kick_DeInit();
-			dribbler_Deinit();
-			geneva_Deinit();
-			preparedAckData.batteryState = 1;
-			Wireless_Deinit();
 		}
-	}
-
-
-	preparedAckData.ballSensor = ballsensorMeasurementLoop(receivedRoboData.do_kick, receivedRoboData.do_chip, corrected_kick_power);
-	if(preparedAckData.ballSensor == NOBALL){
-		SetLD(2, 0);
-	}else{
-		SetLD(2, 1);
-	}
-	preparedAckData.ballSensor = ballsensorMeasurementLoop(1, receivedRoboData.do_chip, 30);
-
-	//uprintf("ball: %i\n",preparedAckData.ballSensor);
-
-	// ------ TEMPORARY TESTING ---------
-	//      also turn off line 239
-//	vision_yaw = 0.5*M_PI;
-//	vision_available = true;
-	// ----------------------------------
-
-	geneva_Update();
-	MT_Update();
-	if((HAL_GetTick() - printtime >= 5)){
-		printtime = HAL_GetTick();
-		//ToggleLD(1);
-
-		//CHECK NRF STATUS REGISTER EVERY SECOND...IF NRF IS CONSTIPATED, FLUSH SHIT OUT
-		if(readReg(STATUS) != 0x0e) {
-			nrfPrintStatus(readReg(STATUS));
-			uprintf("--> Flushing constipated NRF\n");
-			flushRX();
-			clearInterrupts();
+		// check if battery is empty
+		if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
+			if(battery_count++ == 1000){
+				uprintf("Battery empty!\n\r");
+				ToggleLD(4);
+				wheelsDeInit();
+				kick_DeInit();
+				dribbler_Deinit();
+				geneva_Deinit();
+				preparedAckData.batteryState = 1;
+				Wireless_Deinit();
+			}
 		}
 
-		if(*MT_GetStatusWord() & 0b00011000){
-			//uprintf("calibrating Xsens.\n\r");
-		}else if(started_icc == false){
-			started_icc = true;
-			if(MT_UseIcc() == MT_succes)
-				uprintf("Xsens calibration done.\n\r");
+
+		preparedAckData.ballSensor = ballsensorMeasurementLoop(receivedRoboData.do_kick, receivedRoboData.do_chip, corrected_kick_power);
+		if(preparedAckData.ballSensor == NOBALL){
+			SetLD(2, 0);
+		}else{
+			SetLD(2, 1);
 		}
+		preparedAckData.ballSensor = ballsensorMeasurementLoop(1, receivedRoboData.do_chip, 30);
 
-		uprintf("s: %d %d %d %d\n\r", (int)getWheelSpeed(wheels_RF), (int)getWheelSpeed(wheels_RB), (int)getWheelSpeed(wheels_LB), (int)getWheelSpeed(wheels_LF));
-		uprintf("r: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
+		//uprintf("ball: %i\n",preparedAckData.ballSensor);
 
-//		uprintf("Vision available? ");
-//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
-//		uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
-//		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
-//		uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
-//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
-//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
-//		uprintf("Wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
-//		uprintf("Wheel ref: %f %f %f %f\n\r", wheels_ref[wheels_RF], wheels_ref[wheels_RB], wheels_ref[wheels_LB], wheels_ref[wheels_LF]);
-//		uprintf("PWM: {%d, %d, %d, %d}\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
-//		uprintf("\n\r");
-		//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
-		//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
-		//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
-		//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
-		//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
-	}
-  /* USER CODE END WHILE */
+		// ------ TEMPORARY TESTING ---------
+		//      also turn off line 239
+		//	vision_yaw = 0.5*M_PI;
+		//	vision_available = true;
+		// ----------------------------------
 
-  /* USER CODE BEGIN 3 */
-	PuttyInterface_Update(&puttystruct);
-  } // end while loop
-  /* USER CODE END 3 */
+		geneva_Update();
+		MT_Update();
+		if((HAL_GetTick() - printtime >= 100)){
+			printtime = HAL_GetTick();
+			ToggleLD(1);
+
+			//CHECK NRF STATUS REGISTER EVERY SECOND...IF NRF IS CONSTIPATED, FLUSH SHIT OUT
+			if(readReg(STATUS) != 0x0e) {
+				nrfPrintStatus(readReg(STATUS));
+				uprintf("--> Flushing constipated NRF\n");
+				flushRX();
+				clearInterrupts();
+			}
+
+			if(*MT_GetStatusWord() & 0b00011000){
+				//uprintf("calibrating Xsens.\n\r");
+			}else if(started_icc == false){
+				started_icc = true;
+				if(MT_UseIcc() == MT_succes)
+					uprintf("Xsens calibration done.\n\r");
+			}
+
+//			uprintf("s: %d %d %d %d\n\r", (int)getWheelSpeed(wheels_RF), (int)getWheelSpeed(wheels_RB), (int)getWheelSpeed(wheels_LB), (int)getWheelSpeed(wheels_LF));
+//			uprintf("r: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
+
+			//		uprintf("Vision available? ");
+			//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
+			//		uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
+			//		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
+					uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
+			//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
+			//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
+					uprintf("Wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
+					uprintf("Wheel ref: %f %f %f %f\n\r", wheels_ref[wheels_RF], wheels_ref[wheels_RB], wheels_ref[wheels_LB], wheels_ref[wheels_LF]);
+					uprintf("PWM: {%d, %d, %d, %d}\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
+			//		uprintf("\n\r");
+			//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
+			//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
+			//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
+			//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
+			//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
+		}
+		/* USER CODE END WHILE */
+
+		/* USER CODE BEGIN 3 */
+		PuttyInterface_Update(&puttystruct);
+	} // end while loop
+	/* USER CODE END 3 */
 
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
 
-  RCC_OscInitTypeDef RCC_OscInitStruct;
-  RCC_ClkInitTypeDef RCC_ClkInitStruct;
+	RCC_OscInitTypeDef RCC_OscInitStruct;
+	RCC_ClkInitTypeDef RCC_ClkInitStruct;
 
-    /**Configure the main internal regulator output voltage 
-    */
-  __HAL_RCC_PWR_CLK_ENABLE();
+	/**Configure the main internal regulator output voltage
+	 */
+	__HAL_RCC_PWR_CLK_ENABLE();
 
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-    /**Initializes the CPU, AHB and APB busses clocks 
-    */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 192;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
+	/**Initializes the CPU, AHB and APB busses clocks
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+	RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+	RCC_OscInitStruct.PLL.PLLM = 4;
+	RCC_OscInitStruct.PLL.PLLN = 192;
+	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+	RCC_OscInitStruct.PLL.PLLQ = 4;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+	{
+		_Error_Handler(__FILE__, __LINE__);
+	}
 
-    /**Initializes the CPU, AHB and APB busses clocks 
-    */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+	/**Initializes the CPU, AHB and APB busses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+			|RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+	{
+		_Error_Handler(__FILE__, __LINE__);
+	}
 
-    /**Configure the Systick interrupt time 
-    */
-  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
+	/**Configure the Systick interrupt time
+	 */
+	HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
-    /**Configure the Systick 
-    */
-  HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+	/**Configure the Systick
+	 */
+	HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
-  /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+	/* SysTick_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
 /* USER CODE BEGIN 4 */
@@ -469,29 +469,39 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 	if(htim->Instance == htim6.Instance){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
-//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
+		//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
 		//wheelsPWM = {0,0,0,0};
-		velocityRef[2] = 0.0*M_PI;
-		vision_yaw = 0.0*M_PI;
-		vision_available = true;
-		halt = false;
+//		velocityRef[0] = 0.0;
+//		velocityRef[1] = 0.0;
+//		velocityRef[2] = 0.0*M_PI;
+//		vision_yaw = 0.0*M_PI;
+//		vision_available = true;
+//		halt = false;
 
-		if (HAL_GetTick() > 5000 && HAL_GetTick() < 15000) {
-			velocityRef[0] = 1.0;
-			velocityRef[1] = 0.0;
-		} else {
-			velocityRef[0] = 0.0;
-			velocityRef[1] = 0.0;
-		}
+//		static float incVel;
+//		static uint velTimer;
+//
+//		if (HAL_GetTick() < 5000) {
+//			incVel = -4.5;
+//			velTimer = 0;
+//		} else if (incVel < 4.5) {
+//			velocityRef[0] = incVel;
+//			if (HAL_GetTick() - velTimer > 1000) {
+//				incVel += 0.1;
+//				velTimer = HAL_GetTick();
+//			}
+//		} else {
+//			velocityRef[0] = 0.0;
+//		}
 
 		DO_Control(velocityRef, vision_yaw, vision_available, wheels_ref); // outputs to wheels_ref
-//		if (calibration_needed) {
-//			halt = true;
-//		}
+		//		if (calibration_needed) {
+		//			halt = true;
+		//		}
 		//else{
 		//	halt = false;
 		//}
-		 // send PWM to motors
+		// send PWM to motors
 		if (halt) { // when communication is lost for too long, we send 0 to the motors
 			float wheel_powers[4] = {0,0,0,0};
 			for (int i=0; i<4; i++) {wheels_ref[i]=0;}
@@ -499,18 +509,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		} else {
 			// copy the controller output before sending it to SetOutput, to make sure it doesnt get altered at the wrong time
 			float wheel_powers[4] = {wheels_ref[0],wheels_ref[1],wheels_ref[2],wheels_ref[3]};
-//			float wheel_powers[4] = {20,20,20,20};
+			//			float wheel_powers[4] = {20,20,20,20};
 			setWheelSpeed(wheel_powers);
 		}
-//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 0);
+		//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 0);
 
-//		fillXSensData(xsensData);
+		//		fillXSensData(xsensData);
 
 		//if(wheels_testing)	uprintf("wheels speeds are[%f %f %f %f]\n\r", wheels_GetSpeed(wheels_LF), wheels_GetSpeed(wheels_RF), wheels_GetSpeed(wheels_RB), wheels_GetSpeed(wheels_LB));
 		//if(wheels_testing)	uprintf("wheels encoders are[%d %d %d %d]\n\r", wheels_GetEncoder(wheels_RF), wheels_GetEncoder(wheels_RB), wheels_GetEncoder(wheels_LB), wheels_GetEncoder(wheels_LF));
-//		float * euler;
-//		euler = MT_GetAngles();
-//		if(Xsens_state == Xsens_Measure && print_euler)	uprintf("euler angles[%f, %f, %f]\n\r", euler[0], euler[1], euler[2]);
+		//		float * euler;
+		//		euler = MT_GetAngles();
+		//		if(Xsens_state == Xsens_Measure && print_euler)	uprintf("euler angles[%f, %f, %f]\n\r", euler[0], euler[1], euler[2]);
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){
@@ -534,44 +544,44 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @param  file: The file name as string.
-  * @param  line: The line in file as a number.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @param  file: The file name as string.
+ * @param  line: The line in file as a number.
+ * @retval None
+ */
 void _Error_Handler(char *file, int line)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  while(1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
+	/* USER CODE BEGIN Error_Handler_Debug */
+	/* User can add his own implementation to report the HAL error return state */
+	while(1)
+	{
+	}
+	/* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t* file, uint32_t line)
 { 
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
+	/* USER CODE BEGIN 6 */
+	/* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
+	/* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

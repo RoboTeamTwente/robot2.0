@@ -40,7 +40,8 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	calibrateXsens(xsensData, vision_yaw, vision_available);
 
 	static float State[3] = {0};
-	estimateState(State, xsensData);
+	State[2] = xsensData[2];
+	//estimateState(State, xsensData);
 
 	// control part
 	vel_control_Callback(wheel_ref, State, velocityRef);

@@ -36,7 +36,7 @@ static void initPID(float kP, float kI, float kD);
 
 // Initialize wheels
 void wheelsInit(){
-	initPID(0.5, 0.5, 0);
+	initPID(5.0, 0.0, 0);
 	wheels_state = wheels_ready;
 	HAL_TIM_Base_Start(&htim1); //RF
 	HAL_TIM_Base_Start(&htim8); //RB
