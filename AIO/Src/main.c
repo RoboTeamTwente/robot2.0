@@ -181,15 +181,15 @@ int main(void)
 			//printBallPosition();
 			//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 
-			if (!calibration_needed) {
-				halt = false; // robot is only allowed to move after packages are received and yaw calibration is not needed
-			}
+			//if (!calibration_needed) {
+			halt = false; // robot is only allowed to move after packages are received and yaw calibration is not needed
+			//}
 			LastPackageTime = HAL_GetTick();
 
 			//TODO: test this data coming in
 			float velRefAmp = (float)receivedRoboData.rho * 0.004F;
 			float velRefDir = (float)receivedRoboData.theta / 1024.0F * M_PI;
-			float angularVelRef = (float)receivedRoboData.velocity_angular / 512.0F * 16.0F*M_PI;
+			float angularVelRef = (float)receivedRoboData.velocity_angular / 512.0F * M_PI;
 			velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
 			velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
 			if(receivedRoboData.use_angle){
@@ -270,7 +270,7 @@ int main(void)
 
 		geneva_Update();
 		MT_Update();
-		if((HAL_GetTick() - printtime >= 100)){
+		if((HAL_GetTick() - printtime >= 1000)){
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 

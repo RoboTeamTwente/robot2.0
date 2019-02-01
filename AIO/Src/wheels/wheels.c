@@ -79,7 +79,7 @@ void setWheelSpeed(float wheelref[4]){
 			limitScale(wheel);
 			if (directionSwitched(wheel)) {
 				brake_state[wheel] = first_brake_period;
-				restartCallbackTimer();
+				//restartCallbackTimer();
 			}
 			// RB encoder is malfunctional
 			if (wheel == wheels_RB) {
