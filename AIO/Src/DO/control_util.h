@@ -22,7 +22,7 @@
 #define sin60 0.866F	// sine of 60 degrees
 
 // Wheels
-//#define PWM_CUTOFF 24.0F			// arbitrary treshold below PWM_ROUNDUP
+#define PWM_CUTOFF 100.0F			// arbitrary treshold below PWM_ROUNDUP
 //#define PWM_ROUNDUP 25.0F 		// below this value the motor driver is unreliable
 #define GEAR_RATIO 2.5F // gear ratio between motor and wheel
 #define MAX_PWM 2400 // defined in CubeMX
@@ -62,7 +62,7 @@ typedef struct {
 }PIDvariables;
 
 static PIDvariables angleK = {
-		.kP = 25,//kp
+		.kP = 10,//kp
 		.kI = 0,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero

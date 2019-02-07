@@ -81,10 +81,6 @@ void setWheelSpeed(float wheelref[4]){
 				brake_state[wheel] = first_brake_period;
 				//restartCallbackTimer();
 			}
-			// RB encoder is malfunctional
-			if (wheel == wheels_RB) {
-				pwm[wheel] = 0;
-			}
 			SetDir(wheel);
 			SetPWM(wheel);
 		}
@@ -182,12 +178,9 @@ static void limitScale(wheel_names wheel){
 		pwm[wheel] = 0; // the motor does not brake if pwm 0 is sent
 	}
 	// Limit PWM
-//	if(pwm[wheel] < PWM_CUTOFF){
-//		pwm[wheel] = 0.0F;
-//	} else if(pwm[wheel] < PWM_ROUNDUP){
-//		pwm[wheel] = PWM_ROUNDUP;
-//	} else
-		if(pwm[wheel] > PWM_LIMIT){
+	if(pwm[wheel] < PWM_CUTOFF){
+		pwm[wheel] = 0.0F;
+	} else if(pwm[wheel] > PWM_LIMIT){
 		pwm[wheel] = PWM_LIMIT;
 	}
 }

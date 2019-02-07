@@ -37,7 +37,7 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	getXsensData(xsensData);
 
 	// calibration of xsens data by calculating yaw offset
-	calibrateXsens(xsensData, vision_yaw, vision_available);
+	//calibrateXsens(xsensData, vision_yaw, vision_available);
 
 	static float State[3] = {0};
 	State[2] = xsensData[2];
