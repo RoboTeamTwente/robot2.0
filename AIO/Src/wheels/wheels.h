@@ -80,6 +80,4 @@ float getWheelSpeed(wheel_names wheel);
 
 int getPWM(wheel_names wheel);
 
-void wheelsCallback();
-
 #endif /* WHEELS_H_ */

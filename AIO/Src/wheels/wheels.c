@@ -29,7 +29,6 @@ static void ResetEncoder(wheel_names wheel);
 static float computeWheelSpeed(wheel_names wheel);
 static void limitScale(wheel_names wheel);
 static bool directionSwitched(wheel_names wheel);
-static void restartCallbackTimer();
 static void initPID(float kP, float kI, float kD);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
@@ -87,40 +86,6 @@ void setWheelSpeed(float wheelref[4]){
 	}
 }
 
-// Make direction switch smooth by using multiple stages
-void wheelsCallback() {
-	uint8_t cnt = 0;
-	for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-		switch(brake_state[wheel]){
-		case no_brake:
-			cnt++;
-			break;
-		case first_brake_period:
-			brake_state[wheel] = second_brake_period;
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
-			break;
-		case second_brake_period:
-			direction[wheel] = !direction[wheel]; // reverse direction
-			SetDir(wheel);
-			brake_state[wheel] = third_brake_period;
-			__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
-			break;
-		case third_brake_period:
-			cnt++;
-			SetPWM(wheel);
-			brake_state[wheel] = no_brake;
-			break;
-		}
-	}
-	// TODO: why at cnt == 4 ?
-	// TODO: can restartCallbackTimer() be used here?
-	if(cnt == 4){
-		HAL_TIM_Base_Stop(&htim14);
-		__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
-		__HAL_TIM_SET_COUNTER(&htim14, 0);
-	}
-}
-
 // Get the current wheel speed in radians per second
 float getWheelSpeed(wheel_names wheel) {
 	return wheelspeed[wheel];
@@ -155,15 +120,6 @@ static bool directionSwitched(wheel_names wheel) {
 		return true;
 	}
 	return false;
-}
-
-// Restart the timer that is set for wheelsCallback()
-static void restartCallbackTimer() {
-	HAL_TIM_Base_Stop(&htim14);
-	__HAL_TIM_CLEAR_IT(&htim14,TIM_IT_UPDATE);
-	__HAL_TIM_SET_COUNTER(&htim14, 0);
-	__HAL_TIM_SET_AUTORELOAD(&htim14, 1500);
-	HAL_TIM_Base_Start_IT(&htim14);
 }
 
 // Limit or scale the PWM such that it can be passed to the motors
@@ -223,10 +179,8 @@ static void ResetEncoder(wheel_names wheel) {
 
 // Compute wheel speed for a certain wheel in radians per second
 static float computeWheelSpeed(wheel_names wheel){
-	//static int prevEncoderData[4] = {0};
 	short int encoderData = getEncoderData(wheel);
 	float wheelSpeed = ENCODERtoOMEGA * (encoderData);
-	//prevEncoderData[wheel] = encoderData;
 	ResetEncoder(wheel);
 	return wheelSpeed;
 }
