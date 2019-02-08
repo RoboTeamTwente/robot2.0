@@ -16,7 +16,6 @@
 #include "stateEstimation.h"
 #include "control_util.h"
 
-uint start_time;
 static float xsensData[3];
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
@@ -25,19 +24,12 @@ static void getXsensData(float xsensData[3]);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
-// TODO: Koen what's the point of this? start_time is not used....
-int vel_control_Init(){
-	HAL_TIM_Base_Start_IT(&htim7);
-	start_time = HAL_GetTick();
-	return 0;
-}
-
 void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float wheel_ref[4]){
-	// get and offset xsens data
+	// get xsens data
 	getXsensData(xsensData);
 
 	// calibration of xsens data by calculating yaw offset
-	//calibrateXsens(xsensData, vision_yaw, vision_available);
+	calibrateXsens(xsensData, vision_yaw, vision_available);
 
 	static float State[3] = {0};
 	State[2] = xsensData[2];
@@ -45,10 +37,6 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 
 	// control part
 	vel_control_Callback(wheel_ref, State, velocityRef);
-
-//	for (wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++) {
-//		wheel_ref[wheel] = fabs(wheel_ref[wheel]) < OMEGA_ROUNDUP ? wheel_ref[wheel]/fabs(wheel_ref[wheel])*OMEGA_ROUNDUP : wheel_ref[wheel];
-//	}
 }
 
 float getYaw() {
