@@ -15,7 +15,6 @@
 ///////////////////////////////////////////////////// VARIABLES
 
 static int wheels_state = wheels_uninitialized;
-static int brake_state[4] = {no_brake};
 static int pwm[4] = {0};
 static bool direction[4] = {0}; // 0 is counter clock-wise TODO:confirm
 static float wheelspeed[4] = {0};
@@ -29,7 +28,6 @@ static short int getEncoderData(wheel_names wheel);
 static void ResetEncoder(wheel_names wheel);
 static float computeWheelSpeed(wheel_names wheel);
 static void limitScale(wheel_names wheel);
-static bool directionSwitched(wheel_names wheel);
 static void initPID(float kP, float kI, float kD);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
@@ -66,9 +64,8 @@ void wheelsDeInit(){
 // Set the desired rotations per second for every wheel
 void setWheelSpeed(float wheelref[4]){
 	//TODO: Add slipping case
-	float err[4] = {0};
 	if (wheels_state == wheels_ready) {
-		//derive wheelspeed
+		float err[4] = {0};
 		for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
 			wheelspeed[wheel] = computeWheelSpeed(wheel);
 			err[wheel] = wheelref[wheel]-wheelspeed[wheel];
@@ -77,10 +74,6 @@ void setWheelSpeed(float wheelref[4]){
 			pwm[wheel] = OMEGAtoPWM*output; // convert to pwm
 
 			limitScale(wheel);
-			if (directionSwitched(wheel)) {
-				brake_state[wheel] = first_brake_period;
-				//restartCallbackTimer();
-			}
 			SetDir(wheel);
 			SetPWM(wheel);
 		}
@@ -111,16 +104,6 @@ static void initPID(float kP, float kI, float kD) {
 		wheelsK[wheel].kI = kI;
 		wheelsK[wheel].kD = kD;
 	}
-}
-
-// Check if the direction switched for a certain wheel
-static bool directionSwitched(wheel_names wheel) {
-	static bool prevDirection[4] = {0};
-	if (direction[wheel] != prevDirection[wheel]) {
-		prevDirection[wheel] = direction[wheel];
-		return true;
-	}
-	return false;
 }
 
 // Limit or scale the PWM such that it can be passed to the motors
