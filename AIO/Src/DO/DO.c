@@ -24,19 +24,25 @@ static void getXsensData(float xsensData[3]);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
+int vel_control_Init(){
+	HAL_TIM_Base_Start_IT(&htim7);
+	return 0;
+}
+
 void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float wheel_ref[4]){
-	// get xsens data
+	// get and offset xsens data
 	getXsensData(xsensData);
 
 	// calibration of xsens data by calculating yaw offset
 	calibrateXsens(xsensData, vision_yaw, vision_available);
 
 	static float State[3] = {0};
-	State[2] = xsensData[2];
-	//estimateState(State, xsensData);
+	//State[2] = xsensData[2];
+	estimateState(State, xsensData);
 
 	// control part
 	vel_control_Callback(wheel_ref, State, velocityRef);
+
 }
 
 float getYaw() {

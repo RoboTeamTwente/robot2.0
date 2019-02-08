@@ -10,6 +10,7 @@
 #include <math.h>
 #include "tim.h"
 #include "stdbool.h"
+#include "../DO/control_util.h"
 
 ///////////////////////////////////////////////////// VARIABLES
 

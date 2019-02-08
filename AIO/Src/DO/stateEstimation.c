@@ -21,7 +21,10 @@ void estimateState(float State[3], float xsensData[3]) {
 
 	// Get wheel speeds
 	float wheelSpeeds[4];
-	wheelFilter(wheelSpeeds);
+	for (wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++) {
+		wheelSpeeds[wheel] = getWheelSpeed(wheel);
+	}
+	//wheelFilter(wheelSpeeds);
 
 	// Transform to velocities
 	float velocities[3];
@@ -38,9 +41,9 @@ void estimateState(float State[3], float xsensData[3]) {
 //multiplies a 3*4 matrix by a vector of 4 elements.
 void wheels2Body(float wheelSpeeds[4], float output[3]){
 	//Applying transpose(M_inv) matrix to go from wheel angular velocity to body velocity (assuming no slip)
-	output[body_x] = (1/sin60*wheelSpeeds[wheels_RF] + 1/sin60*wheelSpeeds[wheels_RB] - 1/sin60*wheelSpeeds[wheels_LB] - 1/sin60*wheelSpeeds[wheels_LF])*rad_wheel/4;
-	output[body_y] = (1/cos60*wheelSpeeds[wheels_RF] - 1/cos60*wheelSpeeds[wheels_RB] - 1/cos60*wheelSpeeds[wheels_LB] + 1/cos60*wheelSpeeds[wheels_LF])*rad_wheel/4;
-	output[body_w] = -(-1/rad_robot*wheelSpeeds[wheels_RF] - 1/rad_robot*wheelSpeeds[wheels_RB] - 1/rad_robot*wheelSpeeds[wheels_LB] - 1/rad_robot*wheelSpeeds[wheels_LF])*rad_wheel/4;
+	output[body_x] = (sin60*wheelSpeeds[wheels_RF] + sin60*wheelSpeeds[wheels_RB] - sin60*wheelSpeeds[wheels_LB] - sin60*wheelSpeeds[wheels_LF])*rad_wheel/4;
+	output[body_y] = (cos60*wheelSpeeds[wheels_RF] - cos60*wheelSpeeds[wheels_RB] - cos60*wheelSpeeds[wheels_LB] + cos60*wheelSpeeds[wheels_LF])*rad_wheel/4;
+	output[body_w] = (wheelSpeeds[wheels_RF] + wheelSpeeds[wheels_RB] + wheelSpeeds[wheels_LB] + wheelSpeeds[wheels_LF])/rad_robot*rad_wheel/4;
 }
 
 //TODO: describe what this does
