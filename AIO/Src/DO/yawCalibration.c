@@ -10,6 +10,7 @@
 #include <math.h>
 #include "DO.h" 		// function constrainAngle()
 #include "../MTi/MTiControl.h" // function MT_GetGyro()
+#include "control_util.h"
 
 //------------ settings for testing ----------------------
 bool alwaysCalibrate = false;
@@ -22,7 +23,7 @@ bool compensateWithGyro = true;
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
 bool isCalibrationNeeded(float visionYaw, float xsensYaw, float yawOffset);
-bool isRotatingSlow(float xsensYaw);
+bool isRotatingSlow(float visionYaw);
 void bufferYaw(float xsensYaw);
 void rotate(float yaw, float input[3], float output[3]);
 
@@ -43,10 +44,10 @@ void calibrateXsens(float xsensData[3], float visionYaw, bool visionAvailable) {
 //	SetLD(6, visionAvailable);
 
 	if (compensateWithGyro && visionYaw == prevVisionYaw) {
-		visionYaw += MT_GetGyro()[2] * 0.01; // time interval: 10 ms
+		visionYaw += MT_GetGyro()[2] * TIME_DIFF;
 	}
 
-	if (isCalibrationNeeded(visionYaw, xsensYaw, yawOffset) && isRotatingSlow(xsensYaw) && visionAvailable) {
+	if (isCalibrationNeeded(visionYaw, xsensYaw, yawOffset) && isRotatingSlow(visionYaw) && visionAvailable) {
 		if (restCounter > restDuration) {
 			// calculate offset
 			float avgVisionYaw = atan2f(avgVisionVec[1], avgVisionVec[0]);
@@ -99,21 +100,21 @@ bool isCalibrationNeeded(float visionYaw, float xsensYaw, float yawOffset) {
 	return calibrationNeeded;
 }
 
-bool isRotatingSlow(float xsensYaw) {
+bool isRotatingSlow(float visionYaw) {
 	// Check if robot has been rotating sufficiently slow for several time steps
 	static bool rotatingSlow = false;
 	static int rotateCounter = 0;
-	static float startXsensYaw = 0;
-	if (fabs(constrainAngle(startXsensYaw - xsensYaw)) < 0.01) {
+	static float startYaw = 0;
+	if (fabs(constrainAngle(startYaw - visionYaw)) < 0.01) {
 		rotateCounter++;
 	} else {
 		rotateCounter = 0;
-		startXsensYaw = xsensYaw;
+		startYaw = visionYaw;
 		rotatingSlow = false;
 	}
 	if (rotateCounter > 10) {
 		rotateCounter = 0;
-		startXsensYaw = xsensYaw;
+		startYaw = visionYaw;
 		rotatingSlow = true;
 	}
 	return rotatingSlow;
