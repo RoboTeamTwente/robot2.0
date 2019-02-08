@@ -22,8 +22,7 @@
 #define sin60 0.866F	// sine of 60 degrees
 
 // Wheels
-#define PWM_CUTOFF 100.0F			// arbitrary treshold below PWM_ROUNDUP
-//#define PWM_ROUNDUP 25.0F 		// below this value the motor driver is unreliable
+#define PWM_CUTOFF 100.0F // arbitrary treshold to avoid motor shutdown
 #define GEAR_RATIO 2.5F // gear ratio between motor and wheel
 #define MAX_PWM 2400 // defined in CubeMX
 #define PWM_LIMIT 2400 // should be equal to MAX_PWM by default
@@ -34,8 +33,6 @@
 #define OMEGAtoPWM (1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // conversion factor from wheel speed [rad/s] to required PWM on the motor
 #define ENCODERtoOMEGA (float)2*M_PI/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to wheel speed [rad/s]
 #define OMEGA_LIMIT (PWM_LIMIT/OMEGAtoPWM) // Highest wheel speed that is allowed
-//#define OMEGA_ROUNDUP 18.8F //(float)(PWM_ROUNDUP/OMEGAtoPWM) // Lowest wheel speed that the motor driver is reliable
-//#define OMEGA_CUTOFF (PWM_CUTOFF/OMEGAtoPWM) // Lowest wheel speed that is allowed
 
 ///////////////////////////////////////////////////// STRUCTS AND VARIABLES
 
@@ -88,7 +85,7 @@ static PIDvariables velyK = {
 
 ///////////////////////////////////////////////////// FUNCTIONS
 
-//PID control, static to not have multiple implementation error
+//PID control
 static float PID(float err, PIDvariables* K){
 	float P = K->kP*err;
 	K->I += err*K->timeDiff;
