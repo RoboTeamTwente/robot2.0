@@ -121,7 +121,7 @@ void HexOut(uint8_t data[], uint8_t length){
 //	while(HAL_UART_GetState(&huartx) != HAL_UART_STATE_READY && HAL_UART_GetState(&huartx) != HAL_UART_STATE_BUSY_TX );
 	while(huartx.gState != HAL_UART_STATE_READY);
 	memcpy(TxBuf, data, length);
-	HAL_UART_Transmit_IT(&huartx, TxBuf, length);
+	HAL_UART_Transmit_DMA(&huartx, TxBuf, length);
 #endif
 #ifdef PUTTY_USB
 	if(usb_comm){
