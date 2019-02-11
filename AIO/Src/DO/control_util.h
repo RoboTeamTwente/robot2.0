@@ -59,7 +59,7 @@ typedef struct {
 }PIDvariables;
 
 static PIDvariables angleK = {
-		.kP = 20,//kp
+		.kP = 25,//kp
 		.kI = 1.5,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
