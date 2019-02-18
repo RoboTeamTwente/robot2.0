@@ -434,6 +434,24 @@ void HandleCommand(char* input){
 		keyboard_control = true;
 		wheels_testing = true;
 	}
+	else if(!strcmp(input, "vel_command")){
+		long in = strtol(input + strlen("vel_command"), NULL, 10);
+		receivedRoboData.rho = in & 0xFFFF;
+		receivedRoboData.theta = (in >> 16) & 0xFFFF;
+
+		float velRefAmp = (float)receivedRoboData.rho * 0.004F;
+		float velRefDir = (float)receivedRoboData.theta / 1024.0F * M_PI;
+		velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
+		velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
+	}
+	else if(!strcmp(input, "angle_command")){
+		receivedRoboData.velocity_angular = strtol(input + strlen("angle_command"), NULL, 10);;
+
+		float angularVelRef = (float)receivedRoboData.velocity_angular / 512.0F * 16.0F*M_PI;
+		if(receivedRoboData.use_angle){
+			velocityRef[body_w] = angularVelRef;
+		}
+	}
 }
 
 
