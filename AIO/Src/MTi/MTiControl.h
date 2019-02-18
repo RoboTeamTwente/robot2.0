@@ -13,6 +13,7 @@
 #include "usart.h"
 #include "stdint.h"
 #include "xbus/xbusparser.h"
+#include "arm_math.h"
 
 #define MAX_RAW_MESSAGE_SIZE 	2055		// maximum extended message length
 #define huartMT huart2						// which huart interface to use
