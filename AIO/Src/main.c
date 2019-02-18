@@ -235,8 +235,8 @@ int main(void)
 		velocityRef[body_w] = wheels_testing_power;
 		halt = false;
 	}else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
-		halt = true;
-		vision_available = false;
+		//halt = true;
+		//vision_available = false;
 	}
 	// check if battery is empty
 	if(HAL_GPIO_ReadPin(empty_battery_GPIO_Port, empty_battery_Pin)){
@@ -434,7 +434,7 @@ void HandleCommand(char* input){
 		keyboard_control = true;
 		wheels_testing = true;
 	}
-	else if(!strcmp(input, "vel_command")){
+	else if(!memcmp(input, "vel_command",strlen("vel_command"))){
 		long in = strtol(input + strlen("vel_command"), NULL, 10);
 		receivedRoboData.rho = in & 0xFFFF;
 		receivedRoboData.theta = (in >> 16) & 0xFFFF;
@@ -443,14 +443,16 @@ void HandleCommand(char* input){
 		float velRefDir = (float)receivedRoboData.theta / 1024.0F * M_PI;
 		velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
 		velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
+		halt = false;
 	}
-	else if(!strcmp(input, "angle_command")){
+	else if(!memcmp(input, "angle_command",strlen("angle_command"))){
 		receivedRoboData.velocity_angular = strtol(input + strlen("angle_command"), NULL, 10);;
 
 		float angularVelRef = (float)receivedRoboData.velocity_angular / 512.0F * 16.0F*M_PI;
-		if(receivedRoboData.use_angle){
-			velocityRef[body_w] = angularVelRef;
-		}
+		//if(receivedRoboData.use_angle){
+		velocityRef[body_w] = angularVelRef;
+		halt = false;
+		//}
 	}
 }
 
