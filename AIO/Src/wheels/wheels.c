@@ -69,7 +69,7 @@ void setWheelSpeed(float wheelref[4]){
 		computeWheelSpeed();
 		for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
 			float err = wheelref[wheel]-wheelspeed[wheel];
-			pwm[wheel] = OMEGAtoPWM*(wheelref[wheel] + PID(err, &wheelsK[wheel])); // add PID to wheels reference angular velocity and convert to pwm
+			pwm[wheel] = wheelref[0];//OMEGAtoPWM*(wheelref[wheel] + PID(err, &wheelsK[wheel])); // add PID to wheels reference angular velocity and convert to pwm
 			limitScale(wheel);
 		}
 	}

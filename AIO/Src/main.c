@@ -497,18 +497,27 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		velocityRef[0] = 0.0;
 		velocityRef[1] = 0.0;
 		velocityRef[2] = 0.0*M_PI;
-
+		*/
 		halt = false;
 		float incVel = 0.5;
 		static uint velTimer;
+		static float refs = 0;
 		int reps = 1;
 		static int count = 0;
+		static int mul = 0;
 
 		if (HAL_GetTick() < 4000) {
 			velTimer = HAL_GetTick();
-		} else if (HAL_GetTick() - velTimer < 1000) {
-			velocityRef[1] = incVel;
-		} else if (HAL_GetTick() - velTimer < 2000) {
+		} else if (HAL_GetTick() - velTimer > 4000){
+			mul = 0;
+			velTimer = HAL_GetTick();
+			if (refs > 1000){
+				refs = 0;
+			}
+		}else if (HAL_GetTick() - velTimer > 2000 && mul == 0) {
+			refs += 100;
+			mul = 1;
+		} /*else if (HAL_GetTick() - velTimer < 2000) {
 			velocityRef[1] = 0.0;
 		} else if (HAL_GetTick() - velTimer < 3000) {
 			velocityRef[1] = -incVel;
@@ -534,7 +543,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			setWheelSpeed(wheel_powers);
 		} else {
 			// copy the controller output before sending it to SetOutput, to make sure it doesnt get altered at the wrong time
-			float wheel_powers[4] = {wheels_ref[0],wheels_ref[1],wheels_ref[2],wheels_ref[3]};
+			float wheel_powers[4] = {mul*refs,wheels_ref[1],wheels_ref[2],wheels_ref[3]};
 			//			float wheel_powers[4] = {20,20,20,20};
 			setWheelSpeed(wheel_powers);
 		}
