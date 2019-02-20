@@ -5,10 +5,12 @@
  *      Author: Leon
  */
 #include "MTiControl.h"
+#include "arm_math.h"
 #include <string.h>
 #include "xbus/xbusutility.h"
 #include "xbus/xsdeviceid.h"
 #include "../PuttyInterface/PuttyInterface.h"
+#include "../test.h"
 
 #define MAX_XDI_CONFIGS 64
 #define MT_DEBUG 0
@@ -27,6 +29,8 @@ float acc[3];
 float gyro[3];
 uint8_t raw[128];
 uint32_t statusword;
+float32_t pState[NUM_SECTIONS*4]={0};  //NUM_SECTIONS is define in test.h
+arm_biquad_casd_df1_inst_f32 S;   //structure that defines the filter
 
 enum reception_states{
 	uninitialized,
@@ -52,6 +56,8 @@ static inline MT_StatusTypeDef WaitForAck(enum XsMessageId XMID);
  */
 // Initialize controlling the MTi device
 MT_StatusTypeDef MT_Init(){
+	arm_biquad_cascade_df1_init_f32(&S,NUM_SECTIONS,pCoeffs,pState);
+	//arm_biquad_cascade_df1_init_f32();
 	MT_StatusTypeDef ret = MT_succes;
 	reception_state = receive_5;
 	cplt_mess_stored_flag = 0;
@@ -73,7 +79,7 @@ MT_StatusTypeDef MT_Init(){
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_StatusWord, 10, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
-		MT_SetFilterProfile(4);
+		MT_SetFilterProfile(2);
 		ret = MT_GoToMeasure();
 		HAL_Delay(50);
 		ret = MT_NoRotation(6);
@@ -114,6 +120,8 @@ MT_StatusTypeDef MT_Update(){
 			case XMID_MTData2:
 				MT_Data_succerr[0]++;
 				PrintMessageData(ReceivedMessageStorage);
+				arm_biquad_cascade_df1_f32(&S,&acc[0],&acc[0],1);
+				arm_biquad_cascade_df1_f32(&S,&acc[1],&acc[1],1);
 				break;
 			case XMID_ReqOutputConfigurationAck:
 				PrintOutputConfig(ReceivedMessageStorage);

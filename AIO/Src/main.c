@@ -152,6 +152,7 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM13_Init();
   MX_TIM14_Init();
+
   /* USER CODE BEGIN 2 */
 	puttystruct.handle = HandleCommand;
 	PuttyInterface_Init(&puttystruct);
@@ -275,7 +276,7 @@ int main(void)
 
 		geneva_Update();
 		MT_Update();
-		if((HAL_GetTick() - printtime >= 1000)){
+		if((HAL_GetTick() - printtime >= 10)){
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -295,8 +296,10 @@ int main(void)
 					uprintf("Xsens calibration done.\n\r");
 			}
 
+			uprintf("acceleration: %f %f %f\n\r", MT_GetAcceleration()[0], MT_GetAcceleration()[1], MT_GetAcceleration()[2]);
+
 //			uprintf("vel ref: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
-			uprintf("Angle ref: %f\n\r", velocityRef[body_w]);
+//			uprintf("Angle ref: %f\n\r", velocityRef[body_w]);
 //			uprintf("kP: %f \n\r", angleK.kP);
 //			uprintf("kI: %f \n\r", angleK.kI);
 //			uprintf("\n\r");
@@ -307,13 +310,13 @@ int main(void)
 			//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
 //					uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
 			//		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
-					uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
+//					uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
 			//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
 			//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
 
-			uprintf("speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
-			uprintf("ref: %f %f %f %f\n\r", wheels_ref[wheels_RF], wheels_ref[wheels_RB], wheels_ref[wheels_LB], wheels_ref[wheels_LF]);
-			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
+//			uprintf("speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
+//			uprintf("ref: %f %f %f %f\n\r", wheels_ref[wheels_RF], wheels_ref[wheels_RB], wheels_ref[wheels_LB], wheels_ref[wheels_LF]);
+//			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
 			//		uprintf("\n\r");
 			//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
 			//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
@@ -325,7 +328,7 @@ int main(void)
 			arm_status status;
 			float32_t aA[9] = {1,0,0,0,1,0,0,0,1};
 			float32_t aB[3] = {1,2,3};
-			float32_t aC[3];
+			float32_t aC[3] = {0};
 			arm_matrix_instance_f32 A;
 			arm_matrix_instance_f32 B;
 			arm_matrix_instance_f32 C;
@@ -333,8 +336,6 @@ int main(void)
 			arm_mat_init_f32(&B, 3, 1, (float32_t *)aB);
 			arm_mat_init_f32(&C, 3, 1, (float32_t *)aC);
 			status = arm_mat_mult_f32(&A, &B, &C);
-
-
 		}
   /* USER CODE END WHILE */
 
@@ -503,7 +504,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 
 		/*------------------------------------
 						TESTING
-		------------------------------------
+		------------------------------------*/
 
 
 		//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
@@ -511,6 +512,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		//		vision_yaw = 0.0*M_PI;
 		//		vision_available = true;
 
+
+		/*
 		velocityRef[0] = 0.0;
 		velocityRef[1] = 0.0;
 		velocityRef[2] = 0.0*M_PI;
@@ -518,12 +521,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		halt = false;
 		float incVel = 0.5;
 		static uint velTimer;
-		static float refs = 0;
-		int reps = 1;
+		int refs = 0;
 		static int count = 0;
 		static int mul = 0;
 
-		if (HAL_GetTick() < 4000) {
+		if (HAL_GetTick() < 10000) {
 			velTimer = HAL_GetTick();
 		} else if (HAL_GetTick() - velTimer > 4000){
 			mul = 0;
@@ -536,18 +538,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			mul = 1;
 		} /*else if (HAL_GetTick() - velTimer < 2000) {
 			velocityRef[1] = 0.0;
+		} else if (HAL_GetTick() - velTimer < 1000) {
+			velocityRef[0] = incVel;
+		} else if (HAL_GetTick() - velTimer < 2000) {
+			velocityRef[0] = 0.0;
 		} else if (HAL_GetTick() - velTimer < 3000) {
-			velocityRef[1] = -incVel;
+			velocityRef[0] = -incVel;
 		} else if (HAL_GetTick() - velTimer < 4000) {
-			velocityRef[1] = 0.0;
+			velocityRef[0] = 0.0;
 
 		} else if (count < reps-1) {
 			velTimer = HAL_GetTick();
 			count++;
 		} else {
-			velocityRef[1] = 0.0;
+			velocityRef[0] = 0.0;
 		}
-		------------------------------------*/
+		*/
+		//------------------------------------
 
 
 
