@@ -296,7 +296,7 @@ int main(void)
 					uprintf("Xsens calibration done.\n\r");
 			}
 
-			uprintf("acceleration: %f %f %f\n\r", MT_GetAcceleration()[0], MT_GetAcceleration()[1], MT_GetAcceleration()[2]);
+			//uprintf("acceleration: %f %f %f\n\r", MT_GetAcceleration()[0], MT_GetAcceleration()[1], MT_GetAcceleration()[2]);
 
 //			uprintf("vel ref: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
 //			uprintf("Angle ref: %f\n\r", velocityRef[body_w]);
@@ -325,8 +325,10 @@ int main(void)
 			//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
 
 			//Matrix testing
+			/*
+#define SIZE 9
 			arm_status status;
-			float32_t aA[9] = {1,0,0,0,1,0,0,0,1};
+			float32_t aA[SIZE] = {1,0,2,0,1,0,0,0,1};
 			float32_t aB[3] = {1,2,3};
 			float32_t aC[3] = {0};
 			arm_matrix_instance_f32 A;
@@ -335,7 +337,11 @@ int main(void)
 			arm_mat_init_f32(&A, 3, 3, (float32_t *)aA);
 			arm_mat_init_f32(&B, 3, 1, (float32_t *)aB);
 			arm_mat_init_f32(&C, 3, 1, (float32_t *)aC);
+			//aA[2] = 0;
 			status = arm_mat_mult_f32(&A, &B, &C);
+			uprintf("A = | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | \n\r", aA[0], aA[1], aA[2], aA[3], aA[4], aA[5], aA[6], aA[7], aA[8]);
+			//uprintf("C = | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | \n\r", aC[0], aC[1], aC[2], aC[3], aC[4], aC[5], aC[6], aC[7], aC[8]);
+			*/
 		}
   /* USER CODE END WHILE */
 
