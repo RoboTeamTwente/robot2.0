@@ -61,6 +61,8 @@
 #include "wireless/wireless.h"
 #include "dribbler/dribbler.h"
 #include "DO/control_util.h"
+#include "arm_math.h"
+//#include "math_helper.h"
 
 /* USER CODE END Includes */
 
@@ -318,6 +320,21 @@ int main(void)
 			//uprintf("status word [%08lx]\n\r", (unsigned long)*MT_GetStatusWord());
 			//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 			//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
+
+			//Matrix testing
+			arm_status status;
+			float32_t aA[9] = {1,0,0,0,1,0,0,0,1};
+			float32_t aB[3] = {1,2,3};
+			float32_t aC[3];
+			arm_matrix_instance_f32 A;
+			arm_matrix_instance_f32 B;
+			arm_matrix_instance_f32 C;
+			arm_mat_init_f32(&A, 3, 3, (float32_t *)aA);
+			arm_mat_init_f32(&B, 3, 1, (float32_t *)aB);
+			arm_mat_init_f32(&C, 3, 1, (float32_t *)aC);
+			status = arm_mat_mult_f32(&A, &B, &C);
+
+
 		}
   /* USER CODE END WHILE */
 
