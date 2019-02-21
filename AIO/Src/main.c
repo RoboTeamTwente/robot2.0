@@ -62,7 +62,7 @@
 #include "dribbler/dribbler.h"
 #include "DO/control_util.h"
 #include "arm_math.h"
-//#include "math_helper.h"
+#include "Kalman/Kalman.h"
 
 /* USER CODE END Includes */
 
@@ -155,6 +155,7 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 	puttystruct.handle = HandleCommand;
+	Kalman_init();
 	PuttyInterface_Init(&puttystruct);
 	vel_control_Init();
 	dribbler_Init();
@@ -276,7 +277,7 @@ int main(void)
 
 		geneva_Update();
 		MT_Update();
-		if((HAL_GetTick() - printtime >= 10)){
+		if((HAL_GetTick() - printtime >= 1000)){
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -325,6 +326,10 @@ int main(void)
 			//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
 
 			//Matrix testing
+			Kalman();
+			//if (HAL_GetTick() > 4000 && HAL_GetTick()< 5000) {
+				//uprintf("Working \n\r");
+			//}
 			/*
 #define SIZE 9
 			arm_status status;
@@ -341,7 +346,7 @@ int main(void)
 			status = arm_mat_mult_f32(&A, &B, &C);
 			uprintf("A = | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | \n\r", aA[0], aA[1], aA[2], aA[3], aA[4], aA[5], aA[6], aA[7], aA[8]);
 			//uprintf("C = | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | \n\r", aC[0], aC[1], aC[2], aC[3], aC[4], aC[5], aC[6], aC[7], aC[8]);
-			*/
+*/
 		}
   /* USER CODE END WHILE */
 
@@ -523,7 +528,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		velocityRef[0] = 0.0;
 		velocityRef[1] = 0.0;
 		velocityRef[2] = 0.0*M_PI;
-		*/
+
 		halt = false;
 		float incVel = 0.5;
 		static uint velTimer;
@@ -542,7 +547,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		}else if (HAL_GetTick() - velTimer > 2000 && mul == 0) {
 			refs += 100;
 			mul = 1;
-		} /*else if (HAL_GetTick() - velTimer < 2000) {
+		} else if (HAL_GetTick() - velTimer < 2000) {
 			velocityRef[1] = 0.0;
 		} else if (HAL_GetTick() - velTimer < 1000) {
 			velocityRef[0] = incVel;
@@ -573,7 +578,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			setWheelSpeed(wheel_powers);
 		} else {
 			// copy the controller output before sending it to SetOutput, to make sure it doesnt get altered at the wrong time
-			float wheel_powers[4] = {mul*refs,wheels_ref[1],wheels_ref[2],wheels_ref[3]};
+			float wheel_powers[4] = {wheels_ref[0], wheels_ref[1],wheels_ref[2],wheels_ref[3]};
 			//			float wheel_powers[4] = {20,20,20,20};
 			setWheelSpeed(wheel_powers);
 		}

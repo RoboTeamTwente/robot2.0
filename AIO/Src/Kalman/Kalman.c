@@ -20,117 +20,47 @@ edits in the array means edits the matrix so each matrix needs it's own array ba
 */
 
 #include "Kalman.h"
-#include "arm_math.h"
-
-#define SIZE 2
-
-
-float32_t aXold[SIZE];
-float32_t aF[SIZE*SIZE];
-float32_t aXcurrent[SIZE];
-float32_t aPold[SIZE*SIZE];
-float32_t aFt[SIZE*SIZE];
-float32_t aFP[SIZE*SIZE];
-float32_t aPcurrent[SIZE*SIZE];
-float32_t ayold[SIZE];
-float32_t az[SIZE];
-float32_t aH[SIZE*SIZE];
-float32_t aHX[SIZE];
-float32_t aS[SIZE*SIZE];
-float32_t aR[SIZE*SIZE];
-float32_t aHt[SIZE*SIZE];
-float32_t aPHt[SIZE*SIZE];
-float32_t aHPHt[SIZE*SIZE];
-float32_t aK[SIZE*SIZE];
-float32_t aSi[SIZE*SIZE];
-float32_t aPHtSi[SIZE*SIZE];
-float32_t aXnew[SIZE];
-float32_t aKy[SIZE];
-float32_t aPnew[SIZE*SIZE];
-float32_t aKt[SIZE*SIZE];
-float32_t aKR[SIZE*SIZE];
-float32_t aKRKt[SIZE*SIZE];
-float32_t aI[SIZE*SIZE];
-float32_t aKH[SIZE*SIZE];
-float32_t aI_KH[SIZE*SIZE];
-float32_t aI_KHt[SIZE*SIZE];
-float32_t aI_KHP[SIZE*SIZE];
-float32_t aI_KHPI_KHt[SIZE*SIZE];
-float32_t aHXnew[SIZE];
-float32_t aynew[SIZE];
-
-arm_matrix_instance_f32 Xold;
-arm_matrix_instance_f32 F;
-arm_matrix_instance_f32 Xcurrent;
-arm_matrix_instance_f32 Pold;
-arm_matrix_instance_f32 Ft;
-arm_matrix_instance_f32 FP;
-arm_matrix_instance_f32 Pcurrent;
-arm_matrix_instance_f32 yold;
-arm_matrix_instance_f32 z;
-arm_matrix_instance_f32 H;
-arm_matrix_instance_f32 HX;
-arm_matrix_instance_f32 S;
-arm_matrix_instance_f32 R;
-arm_matrix_instance_f32 Ht;
-arm_matrix_instance_f32 PHt;
-arm_matrix_instance_f32 HPHt;
-arm_matrix_instance_f32 K;
-arm_matrix_instance_f32 Si;
-arm_matrix_instance_f32 PHtSi;
-arm_matrix_instance_f32 Xnew;
-arm_matrix_instance_f32 Ky;
-arm_matrix_instance_f32 Pnew;
-arm_matrix_instance_f32 Kt;
-arm_matrix_instance_f32 KR;
-arm_matrix_instance_f32 KRKt;
-arm_matrix_instance_f32 I;
-arm_matrix_instance_f32 KH;
-arm_matrix_instance_f32 I_KH;
-arm_matrix_instance_f32 I_KHt;
-arm_matrix_instance_f32 I_KHP;
-arm_matrix_instance_f32 I_KHPI_KHt;
-arm_matrix_instance_f32 HXnew;
-arm_matrix_instance_f32 ynew;
+#include "KalmanV.h"
+#include "../PuttyInterface/PuttyInterface.h"
 
 void Kalman_init(){
-	arm_mat_init_f32(&Xold, SIZE, 1, aXold);
-	arm_mat_init_f32(&F, SIZE, SIZE, aF);
-	arm_mat_init_f32(&Xcurrent, SIZE, 1, aXcurrent);
-	arm_mat_init_f32(&Pold, SIZE, SIZE, aPold);
-	arm_mat_init_f32(&Ft, SIZE, SIZE, aFt);
-	arm_mat_init_f32(&FP, SIZE, SIZE, aFP);
-	arm_mat_init_f32(&Pcurrent, SIZE, SIZE, aPcurrent);
-	arm_mat_init_f32(&yold, SIZE, 1, ayold);
-	arm_mat_init_f32(&z, SIZE, 1, az);
-	arm_mat_init_f32(&H, SIZE, SIZE, aH);
-	arm_mat_init_f32(&HX, SIZE, 1, aHX);
-	arm_mat_init_f32(&S, SIZE, SIZE, aS);
-	arm_mat_init_f32(&R, SIZE, SIZE, aR);
-	arm_mat_init_f329(&Ht, SIZE, SIZE, aHt);
-	arm_mat_init_f32(&PHt, SIZE, SIZE, aPHt);
-	arm_mat_init_f32(&HPHt, SIZE, SIZE, aHPHt);
-	arm_mat_init_f32(&K, SIZE, SIZE, aK);
-	arm_mat_init_f32(&Si, SIZE, SIZE, aSi);
-	arm_mat_init_f32(&PHtSi, SIZE, SIZE, aPHtSi);
-	arm_mat_init_f32(&Xnew, SIZE, 1, aXnew);
-	arm_mat_init_f32(&Ky, SIZE, 1, aKy);
-	arm_mat_init_f32(&Pnew, SIZE, SIZE, aPnew);
-	arm_mat_init_f32(&Kt, SIZE, SIZE, aKt);
-	arm_mat_init_f32(&KR, SIZE, SIZE, aKR);
-	arm_mat_init_f32(&KRKt, SIZE, SIZE, aKRKt);
-	arm_mat_init_f32(&I, SIZE, SIZE, aI);
-	arm_mat_init_f32(&KH, SIZE, SIZE, aKH);
-	arm_mat_init_f32(&I_KH, SIZE, SIZE, aI_KH);
-	arm_mat_init_f32(&I_KHt, SIZE, SIZE, aI_KHt);
-	arm_mat_init_f32(&I_KHP, SIZE, SIZE, aI_KHP);
-	arm_mat_init_f32(&I_KHPI_KHt, SIZE, SIZE, aI_KHPI_KHt);
-	arm_mat_init_f32(&HXnew, SIZE, 1, aHXnew);
-	arm_mat_init_f32(&ynew, SIZE, SIZE, aynew);
+	//Link arrays and matrix objects
+	arm_mat_init_f32(&Xold, STATE, 1, (float32_t *)aXold);
+	arm_mat_init_f32(&F, STATE, STATE, (float32_t *)aF);
+	arm_mat_init_f32(&Xcurrent, STATE, 1, (float32_t *)aXcurrent);
+	arm_mat_init_f32(&Pold, STATE, STATE, (float32_t *)aPold);
+	arm_mat_init_f32(&Ft, STATE, STATE, (float32_t *)aFt);
+	arm_mat_init_f32(&FP, STATE, STATE, (float32_t *)aFP);
+	arm_mat_init_f32(&Pcurrent, STATE, STATE, (float32_t *)aPcurrent);
+	arm_mat_init_f32(&yold, OBSERVE, 1, (float32_t *)ayold);
+	arm_mat_init_f32(&H, OBSERVE, STATE, (float32_t *)aH);
+	arm_mat_init_f32(&HX, OBSERVE, 1, (float32_t *)aHX);
+	arm_mat_init_f32(&S, OBSERVE, OBSERVE, (float32_t *)aS);
+	arm_mat_init_f32(&R, OBSERVE, OBSERVE, (float32_t *)aR);
+	arm_mat_init_f32(&Ht, STATE, OBSERVE, (float32_t *)aHt);
+	arm_mat_init_f32(&PHt, STATE, OBSERVE, (float32_t *)aPHt);
+	arm_mat_init_f32(&HPHt, OBSERVE, OBSERVE, (float32_t *)aHPHt);
+	arm_mat_init_f32(&K, STATE, OBSERVE, (float32_t *)aK);
+	arm_mat_init_f32(&Si, OBSERVE, OBSERVE, (float32_t *)aSi);
+	arm_mat_init_f32(&Xnew, STATE, 1, (float32_t *)aXnew);
+	arm_mat_init_f32(&Ky, STATE, 1, (float32_t *)aKy);
+	arm_mat_init_f32(&Pnew, STATE, STATE, (float32_t *)aPnew);
+	arm_mat_init_f32(&Kt, OBSERVE, STATE, (float32_t *)aKt);
+	arm_mat_init_f32(&KR, STATE, OBSERVE, (float32_t *)aKR);
+	arm_mat_init_f32(&KRKt, STATE, STATE, (float32_t *)aKRKt);
+	arm_mat_init_f32(&KH, STATE, STATE, (float32_t *)aKH);
+	arm_mat_init_f32(&I_KH, STATE, STATE, (float32_t *)aI_KH);
+	arm_mat_init_f32(&I_KHt, STATE, STATE, (float32_t *)aI_KHt);
+	arm_mat_init_f32(&I_KHP, STATE, STATE, (float32_t *)aI_KHP);
+	arm_mat_init_f32(&I_KHPI_KHt, STATE, STATE, (float32_t *)aI_KHPI_KHt);
+	//arm_mat_init_f32(&HXnew, OBSERVE, 1, (float32_t *)aHXnew);
+	//arm_mat_init_f32(&ynew, OBSERVE, 1, (float32_t *)aynew);
 }
 
 
 void Kalman(){
+
+
 	arm_mat_mult_f32(&F, &Xold, &Xcurrent);
 
 	arm_mat_trans_f32(&F, &Ft);
@@ -138,14 +68,15 @@ void Kalman(){
 	arm_mat_mult_f32(&FP, &Ft, &Pcurrent);
 
 	arm_mat_mult_f32(&H, &Xcurrent, &HX);
-	for (int i=0; i<SIZE; i++){
+	for (int i=0; i<OBSERVE; i++){
 		ayold[i] = az[i] - aHX[i];
 	}
+
 
 	arm_mat_trans_f32(&H, &Ht);
 	arm_mat_mult_f32(&Pcurrent, &Ht, &PHt);
 	arm_mat_mult_f32(&H, &PHt, &HPHt);
-	for (int i=0; i<SIZE*SIZE; i++){
+	for (int i=0; i<OBSERVE*OBSERVE; i++){
 		aS[i] = aR[i] - aHPHt[i];
 	}
 
@@ -153,7 +84,7 @@ void Kalman(){
 	arm_mat_mult_f32(&PHt, &Si, &K);
 
 	arm_mat_mult_f32(&K, &yold, &Ky);
-	for (int i=0; i<SIZE; i++){
+	for (int i=0; i<STATE; i++){
 		aXnew[i] = aXcurrent[i] + aKy[i];
 	}
 
@@ -161,22 +92,33 @@ void Kalman(){
 	arm_mat_mult_f32(&K, &R, &KR);
 	arm_mat_mult_f32(&KR, &Kt, &KRKt);
 	arm_mat_mult_f32(&K, &H, &KH);
-	for (int i=0; i<SIZE*SIZE; i++){
+	for (int i=0; i<STATE*STATE; i++){
 		aI_KH[i] = aI[i] - aKH[i];
 	}
 	arm_mat_trans_f32(&I_KH, &I_KHt);
 	arm_mat_mult_f32(&I_KH, &Pcurrent, &I_KHP);
 	arm_mat_mult_f32(&I_KHP, &I_KHt, &I_KHPI_KHt);
-	for (int i=0; i<SIZE*SIZE; i++){
+	for (int i=0; i<STATE*STATE; i++){
 		aPnew[i] = aI_KHPI_KHt[i] + aKRKt[i];
 	}
 
+	uprintf("M = | %.3f | %.3f | %.3f | %.3f | %.3f | \n\r", aXold[0], aXold[1], aK[0], aK[1], ayold[0]);
+
+	/*
 	arm_mat_mult_f32(&H, &Xnew, &HXnew);
-	for (int i=0; i<SIZE; i++){
+	for (int i=0; i<STATE; i++){
 		aynew[i] = az[i] + aHXnew[i];
 	}
-
+	*/
+	for (int i=0; i<STATE; i++){
+			aXold[i] = aXnew[i];
+	}
+	for (int i=0; i<STATE*STATE; i++){
+				aPold[i] = aPnew[i];
+	}
 }
+
+
 
 
 
