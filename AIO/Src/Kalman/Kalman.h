@@ -9,6 +9,6 @@
 #define KALMAN_KALMAN_H_
 
 void Kalman_init();
-void Kalman();
+void Kalman(float vel[3]);
 
 #endif /* KALMAN_KALMAN_H_*/

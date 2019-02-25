@@ -10,18 +10,35 @@
 
 #include "arm_math.h"
 
-#define STATE 2
-#define OBSERVE 1
+#define STATE 4
+#define OBSERVE 2
 #define TIMESTEP 0.01
 
 //create arrays
-float32_t aXold[STATE] = {1,0};
-float32_t aF[STATE*STATE] = {1,TIMESTEP,0,1};
-float32_t aH[OBSERVE*STATE] = {1,0};
-float32_t aR[OBSERVE*OBSERVE] = {1};
-float32_t aI[STATE*STATE] = {1,0,0,1};
+float32_t aXold[STATE] = {0};
+float32_t aF[STATE*STATE] = {
+		1, TIMESTEP, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, TIMESTEP,
+		0, 0, 0, 1};
+float32_t aH[OBSERVE*STATE] = {
+		1, 0, 0, 0,
+		0, 0, 1, 0};
+float32_t aR[OBSERVE*OBSERVE] = {
+		6.25, 0,
+		0, 6.25};
 float32_t az[OBSERVE] = {0};
-float32_t aPold[STATE*STATE] = {1,0,0,1};
+float32_t aI[STATE*STATE] = {
+		1,0,0,0,
+		0,1,0,0,
+		0,0,1,0,
+		0,0,0,1};
+float32_t aPold[STATE*STATE] = {
+		0.5,0,0,0,
+		0,0.5,0,0,
+		0,0,0.5,0,
+		0,0,0,0.5};
+
 //empty arrays
 float32_t aXcurrent[STATE] = {0.0f};
 float32_t aFt[STATE*STATE] = {0.0f};
@@ -34,7 +51,7 @@ float32_t aHt[STATE*OBSERVE] = {0.0f};
 float32_t aPHt[STATE*OBSERVE] = {0.0f};
 float32_t aHPHt[OBSERVE*OBSERVE] = {0.0f};
 float32_t aK[STATE*OBSERVE] = {0.0f};
-float32_t aSi[OBSERVE*OBSERVE] = {0.0f};\
+float32_t aSi[OBSERVE*OBSERVE] = {0.0f};
 float32_t aXnew[STATE] = {0.0f};
 float32_t aKy[STATE] = {0.0f};
 float32_t aPnew[STATE*STATE] = {0.0f};

@@ -58,8 +58,10 @@ void Kalman_init(){
 }
 
 
-void Kalman(){
+void Kalman(float vel[2]){
 
+	az[0] = vel[0];
+	az[1] = vel[1];
 
 	arm_mat_mult_f32(&F, &Xold, &Xcurrent);
 
@@ -102,7 +104,7 @@ void Kalman(){
 		aPnew[i] = aI_KHPI_KHt[i] + aKRKt[i];
 	}
 
-	uprintf("M = | %.3f | %.3f | %.3f | %.3f | %.3f | \n\r", aXold[0], aXold[1], aK[0], aK[1], ayold[0]);
+	uprintf("M = | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f | \n\r", aXold[0], aXold[1], aK[0], aK[1], ayold[0], az[0]);
 
 	/*
 	arm_mat_mult_f32(&H, &Xnew, &HXnew);

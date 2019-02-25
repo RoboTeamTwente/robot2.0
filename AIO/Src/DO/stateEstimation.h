@@ -13,6 +13,7 @@
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION DECLARATIONS
 
+float velocities[3];
 void estimateState(float State[3], float xsensData[3]);
 
 #endif /* DO_STATEESTIMATION_H_ */

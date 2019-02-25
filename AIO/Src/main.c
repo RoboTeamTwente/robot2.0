@@ -238,7 +238,7 @@ int main(void)
 			}
 
 		}else if(wheels_testing){
-			velocityRef[body_w] = wheels_testing_power;
+			velocityRef[body_x] = wheels_testing_power;
 			halt = false;
 		}else if((HAL_GetTick() - LastPackageTime > STOP_AFTER)/* && !user_control*/){; // if no new wireless data
 		halt = true;
@@ -278,6 +278,9 @@ int main(void)
 		geneva_Update();
 		MT_Update();
 		if((HAL_GetTick() - printtime >= 1000)){
+			float velocities[3] = {0};
+			getvel(velocities);
+			Kalman(velocities);
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -299,7 +302,7 @@ int main(void)
 
 			//uprintf("acceleration: %f %f %f\n\r", MT_GetAcceleration()[0], MT_GetAcceleration()[1], MT_GetAcceleration()[2]);
 
-//			uprintf("vel ref: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
+			uprintf("vel ref: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
 //			uprintf("Angle ref: %f\n\r", velocityRef[body_w]);
 //			uprintf("kP: %f \n\r", angleK.kP);
 //			uprintf("kI: %f \n\r", angleK.kI);
@@ -315,7 +318,7 @@ int main(void)
 			//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
 			//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
 
-//			uprintf("speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
+			uprintf("speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
 //			uprintf("ref: %f %f %f %f\n\r", wheels_ref[wheels_RF], wheels_ref[wheels_RB], wheels_ref[wheels_LB], wheels_ref[wheels_LF]);
 //			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
 			//		uprintf("\n\r");
@@ -325,28 +328,7 @@ int main(void)
 			//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 			//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
 
-			//Matrix testing
-			Kalman();
-			//if (HAL_GetTick() > 4000 && HAL_GetTick()< 5000) {
-				//uprintf("Working \n\r");
-			//}
-			/*
-#define SIZE 9
-			arm_status status;
-			float32_t aA[SIZE] = {1,0,2,0,1,0,0,0,1};
-			float32_t aB[3] = {1,2,3};
-			float32_t aC[3] = {0};
-			arm_matrix_instance_f32 A;
-			arm_matrix_instance_f32 B;
-			arm_matrix_instance_f32 C;
-			arm_mat_init_f32(&A, 3, 3, (float32_t *)aA);
-			arm_mat_init_f32(&B, 3, 1, (float32_t *)aB);
-			arm_mat_init_f32(&C, 3, 1, (float32_t *)aC);
-			//aA[2] = 0;
-			status = arm_mat_mult_f32(&A, &B, &C);
-			uprintf("A = | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | \n\r", aA[0], aA[1], aA[2], aA[3], aA[4], aA[5], aA[6], aA[7], aA[8]);
-			//uprintf("C = | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | \n\r", aC[0], aC[1], aC[2], aC[3], aC[4], aC[5], aC[6], aC[7], aC[8]);
-*/
+
 		}
   /* USER CODE END WHILE */
 
@@ -508,7 +490,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
 
-//		velocityRef[0] = 0.0;
+//		velocityRef[0] = 1.0;
 //		velocityRef[1] = 0.0;
 //		velocityRef[2] = 0.0*M_PI;
 //		halt = false;
@@ -570,7 +552,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 
 
 		DO_Control(velocityRef, vision_yaw, vision_available, wheels_ref); // outputs to wheels_ref
-
 		// send PWM to motors
 		if (halt) { // when communication is lost for too long, we send 0 to the motors
 			float wheel_powers[4] = {0,0,0,0};
@@ -591,6 +572,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		//		float * euler;
 		//		euler = MT_GetAngles();
 		//		if(Xsens_state == Xsens_Measure && print_euler)	uprintf("euler angles[%f, %f, %f]\n\r", euler[0], euler[1], euler[2]);
+
 	}else if(htim->Instance == htim13.Instance){
 		kick_Callback();
 	}else if(htim->Instance == htim14.Instance){

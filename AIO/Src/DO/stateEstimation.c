@@ -27,7 +27,6 @@ void estimateState(float State[3], float xsensData[3]) {
 	//wheelFilter(wheelSpeeds);
 
 	// Transform to velocities
-	float velocities[3];
 	wheels2Body(wheelSpeeds, velocities);
 
 	// Put data into State variable
