@@ -15,23 +15,34 @@
 #define TIMESTEP 0.01
 
 // certainties
-#define MEASURE_VAR 0.1F // variance in the measurements
-#define STATE_VAR 0.25F // variance in the predicted state
+#define VEL_VAR 0.005F*0.005F // variance in the velocity measurements
+#define ACC_VAR 0.05F // variance in the acceleration measurements
+#define STATE_VAR 0.15F // variance in the predicted state
 #define RAND_VAR 0.25F // variance in the random force
 
 //create arrays
 float32_t aXold[STATE] = {0};
 float32_t aF[STATE*STATE] = {
 		1, TIMESTEP, 0, 0,
-		0, 0, 0, 0,
+		0, 1, 0, 0,
 		0, 0, 1, TIMESTEP,
-		0, 0, 0, 0};
+		0, 0, 0, 1};
 float32_t aH[OBSERVE*STATE] = {
 		1, 0, 0, 0,
 		0, 0, 1, 0};
 float32_t aR[OBSERVE*OBSERVE] = {
-		MEASURE_VAR, 0,
-		0, MEASURE_VAR};
+		VEL_VAR, 0,
+		0, VEL_VAR};
+//float32_t aH[OBSERVE*STATE] = {
+//		1, 0, 0, 0,
+//		0, 1, 0, 0,
+//		0, 0, 1, 0,
+//		0, 0, 0, 1};
+//float32_t aR[OBSERVE*OBSERVE] = {
+//		VEL_VAR, 0, 0, 0,
+//		0, ACC_VAR, 0, 0,
+//		0, 0, VEL_VAR, 0,
+//		0, 0, 0, ACC_VAR};
 float32_t az[OBSERVE] = {0};
 float32_t aI[STATE*STATE] = {
 		1,0,0,0,
@@ -40,9 +51,9 @@ float32_t aI[STATE*STATE] = {
 		0,0,0,1};
 float32_t aPold[STATE*STATE] = {
 		STATE_VAR,0,0,0,
-		0,0,0,0,
+		0,STATE_VAR,0,0,
 		0,0,STATE_VAR,0,
-		0,0,0,0};
+		0,0,0,STATE_VAR};
 float32_t aB[STATE*STATE] = {
 		1, 0, 0, 0,
 		0, 1, 0, 0,

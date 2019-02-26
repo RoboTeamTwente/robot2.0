@@ -63,7 +63,7 @@ void Kalman_init(){
 }
 
 
-void Kalman(float vel[2], float controlInput[STATE]){
+void Kalman(float acc[2], float vel[2], float controlInput[STATE]){
 
 	// Predict
 //	for (int i = 0; i < STATE; i++) {
@@ -82,7 +82,9 @@ void Kalman(float vel[2], float controlInput[STATE]){
 
 	// Get measurement
 	az[0] = vel[0];
+	//az[1] = acc[0];
 	az[1] = vel[1];
+	//az[3] = acc[1];
 
 
 	// Process data
