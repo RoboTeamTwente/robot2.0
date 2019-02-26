@@ -19,6 +19,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include "stdbool.h"
 
 char smallStrBuffer[1024];
 uint8_t TxBuf[1024];
@@ -61,7 +62,7 @@ static void HandlePcInput(char * input, size_t n_chars, HandleLine func){
 	static uint8_t PC_Input_counter = 0;	// counts the letters in the current forming command
 	static int8_t commands_counter = 0;		// counts the entered commands
 	static int8_t kb_arrow_counter = 0;		// counts the offset from the last entered command
-	static uint8_t commands_overflow = 0;	// checks if there are COMMANDS_TO_REMEMBER commands stored
+	static bool commands_overflow = false;	// checks if there are COMMANDS_TO_REMEMBER commands stored
 	if(input[0] == 0x0d){						//newline, is end of command
 		kb_arrow_counter = 0;						// reset the arrow input counter
 		PC_Input[commands_counter][PC_Input_counter++] = '\0';
@@ -70,7 +71,13 @@ static void HandlePcInput(char * input, size_t n_chars, HandleLine func){
 		TextOut("\n\r");
 		PC_Input_counter = 0;
 		func(PC_Input[commands_counter++]);			// Callback func
-        commands_overflow = !(commands_counter = commands_counter % COMMANDS_TO_REMEMBER) || commands_overflow;// if there are more than the maximum amount of stored values, this needs to be known
+		commands_overflow = commands_counter>COMMANDS_TO_REMEMBER;
+		if (commands_overflow) {
+			commands_counter = 0;
+		}
+
+
+
         PC_Input[commands_counter][0] = '\0';
 	}else if(input[0] == 0x08){//backspace
 		if(PC_Input_counter != 0)
@@ -91,8 +98,13 @@ static void HandlePcInput(char * input, size_t n_chars, HandleLine func){
 				case 'D'://arrow <-
 					break;
 				}
-				uint8_t cur_pos = commands_overflow ? wrap(commands_counter, kb_arrow_counter, COMMANDS_TO_REMEMBER) : wrap(commands_counter, kb_arrow_counter, commands_counter+1);
-				PC_Input_counter = strlen(PC_Input[cur_pos]);
+				uint8_t cur_pos;
+                if (commands_overflow) {
+                    cur_pos = wrap(commands_counter, kb_arrow_counter, COMMANDS_TO_REMEMBER);
+                } else {
+                    cur_pos = wrap(commands_counter, kb_arrow_counter, commands_counter + 1);
+                }
+                PC_Input_counter = strlen(PC_Input[cur_pos]);
 				strcpy(PC_Input[commands_counter], PC_Input[cur_pos]);
 				ClearLine();
 				TextOut(PC_Input[commands_counter]);
