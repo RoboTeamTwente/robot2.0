@@ -32,7 +32,7 @@ Still need to add the right specs
 ///////////////////////////////////////////////////// PUBLIC FUNCTION DECLARATIONS
 
 int vel_control_Init();
-void getvel(float Vel[3]);
+void getvel(float Vel[2]);
 void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float wheel_ref[4]);
 
 float getYaw(); // For debugging

@@ -14,19 +14,24 @@
 #define OBSERVE 2
 #define TIMESTEP 0.01
 
+// certainties
+#define MEASURE_VAR 0.1F // variance in the measurements
+#define STATE_VAR 0.25F // variance in the predicted state
+#define RAND_VAR 0.25F // variance in the random force
+
 //create arrays
 float32_t aXold[STATE] = {0};
 float32_t aF[STATE*STATE] = {
 		1, TIMESTEP, 0, 0,
-		0, 1, 0, 0,
+		0, 0, 0, 0,
 		0, 0, 1, TIMESTEP,
-		0, 0, 0, 1};
+		0, 0, 0, 0};
 float32_t aH[OBSERVE*STATE] = {
 		1, 0, 0, 0,
 		0, 0, 1, 0};
 float32_t aR[OBSERVE*OBSERVE] = {
-		6.25, 0,
-		0, 6.25};
+		MEASURE_VAR, 0,
+		0, MEASURE_VAR};
 float32_t az[OBSERVE] = {0};
 float32_t aI[STATE*STATE] = {
 		1,0,0,0,
@@ -34,10 +39,20 @@ float32_t aI[STATE*STATE] = {
 		0,0,1,0,
 		0,0,0,1};
 float32_t aPold[STATE*STATE] = {
-		0.5,0,0,0,
-		0,0.5,0,0,
-		0,0,0.5,0,
-		0,0,0,0.5};
+		STATE_VAR,0,0,0,
+		0,0,0,0,
+		0,0,STATE_VAR,0,
+		0,0,0,0};
+float32_t aB[STATE*STATE] = {
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1};
+float32_t aQ[STATE*STATE] = {
+		RAND_VAR, 0, 0, 0,
+		0, RAND_VAR, 0, 0,
+		0, 0, RAND_VAR, 0,
+		0, 0, 0, RAND_VAR};
 
 //empty arrays
 float32_t aXcurrent[STATE] = {0.0f};
@@ -63,6 +78,8 @@ float32_t aI_KH[STATE*STATE] = {0.0f};
 float32_t aI_KHt[STATE*STATE] = {0.0f};
 float32_t aI_KHP[STATE*STATE] = {0.0f};
 float32_t aI_KHPI_KHt[STATE*STATE] = {0.0f};
+float32_t aU[STATE] = {0.0f};
+float32_t aBU[STATE] = {0.0f};
 //float32_t aHXnew[STATE] = {0.0f};
 //float32_t aynew[STATE] = {0.0f};
 
@@ -97,7 +114,12 @@ arm_matrix_instance_f32 I_KH;
 arm_matrix_instance_f32 I_KHt;
 arm_matrix_instance_f32 I_KHP;
 arm_matrix_instance_f32 I_KHPI_KHt;
-arm_matrix_instance_f32 HXnew;
-arm_matrix_instance_f32 ynew;
+arm_matrix_instance_f32 B;
+arm_matrix_instance_f32 U;
+arm_matrix_instance_f32 BU;
+arm_matrix_instance_f32 z;
+arm_matrix_instance_f32 Q;
+//arm_matrix_instance_f32 HXnew;
+//arm_matrix_instance_f32 ynew;
 
 #endif /* KALMAN_KALMANV_H_ */

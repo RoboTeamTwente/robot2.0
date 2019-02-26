@@ -48,7 +48,8 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 
 	// Translational control
 	float velLocalRef[3] = {0};
-	global2Local(vel_ref, velLocalRef, State[body_w]); //transfer global to local
+	//global2Local(vel_ref, velLocalRef, State[body_w]); //transfer global to local
+	global2Local(vel_ref, velLocalRef, 0); //transfer global to local
 
 //	float velxErr = velLocalRef[body_x] - State[body_x];
 //	float velyErr = velLocalRef[body_y] - State[body_y];

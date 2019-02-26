@@ -63,6 +63,7 @@
 #include "DO/control_util.h"
 #include "arm_math.h"
 #include "Kalman/Kalman.h"
+#include "DO/stateEstimation.h"
 
 /* USER CODE END Includes */
 
@@ -89,6 +90,11 @@ float velocityRef[3] = {0};
 float vision_yaw = 0;
 uint kick_timer = 0;
 uint8_t corrected_kick_power = 0;
+
+// KALMAN
+float vel[2] = {0};
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -162,7 +168,7 @@ int main(void)
 	ballsensorInit();
 	wheelsInit();
 	MT_Init();
-	geneva_Init();
+	//geneva_Init();
 	kick_Init();
 
 	if(HAL_GPIO_ReadPin(SW_freq_GPIO_Port, SW_freq_Pin)){
@@ -278,9 +284,6 @@ int main(void)
 		geneva_Update();
 		MT_Update();
 		if((HAL_GetTick() - printtime >= 1000)){
-			float velocities[3] = {0};
-			getvel(velocities);
-			Kalman(velocities);
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -302,7 +305,7 @@ int main(void)
 
 			//uprintf("acceleration: %f %f %f\n\r", MT_GetAcceleration()[0], MT_GetAcceleration()[1], MT_GetAcceleration()[2]);
 
-			uprintf("vel ref: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
+
 //			uprintf("Angle ref: %f\n\r", velocityRef[body_w]);
 //			uprintf("kP: %f \n\r", angleK.kP);
 //			uprintf("kI: %f \n\r", angleK.kI);
@@ -318,7 +321,23 @@ int main(void)
 			//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
 			//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
 
-			uprintf("speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
+			float state[4] = {0};
+			getState(state);
+			float gain[4][2] = {0};
+			getKGain(gain);
+
+			uprintf("vel command: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
+			uprintf("wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
+			uprintf("velocities: %f %f\n\r", vel[0], vel[1]);
+			uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
+			uprintf("Kalman Gain x: %f \n\r", gain[0][0]);
+			uprintf("Kalman Gain y: %f \n\r", gain[1][1]);
+//			float P[16] = {0};
+//			getP(P);
+//			for (int i = 0; i < 4; i++) {
+//				uprintf("P %d: %f %f %f %f\n\r", i, P[0+4*i], P[1+4*i], P[2+4*i], P[3+4*i])
+//			}
+			uprintf("\n\r");
 //			uprintf("ref: %f %f %f %f\n\r", wheels_ref[wheels_RF], wheels_ref[wheels_RB], wheels_ref[wheels_LB], wheels_ref[wheels_LF]);
 //			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
 			//		uprintf("\n\r");
@@ -459,7 +478,7 @@ void HandleCommand(char* input){
 		kick_Stateprint();
 	}else if(!memcmp(input, TEST_WHEELS_COMMAND, strlen(TEST_WHEELS_COMMAND))){
 		wheels_testing_power = atoff(input + strlen(TEST_WHEELS_COMMAND));
-		wheels_testing = (wheels_testing_power <= -10 || wheels_testing_power >= 10);
+		wheels_testing = true;
 		if((wheels_testing)){
 			uprintf("wheels test on, pwm [%f]\n\r", wheels_testing_power);
 		}
@@ -549,8 +568,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		*/
 		//------------------------------------
 
+		float controlInput[4] = {0};
+		if (fabs(velocityRef[0]-vel[0]) > 0.1) {
+			controlInput[1] = (velocityRef[0]-vel[0] < 0) ? -5 : 5;
+		}
+		if (fabs(velocityRef[1]-vel[1]) > 0.1) {
+			controlInput[3] = (velocityRef[1]-vel[1] < 0) ? -5 : 5;
+		}
+		getvel(vel);
+		Kalman(vel, controlInput);
 
-
+//		halt = false;
 		DO_Control(velocityRef, vision_yaw, vision_available, wheels_ref); // outputs to wheels_ref
 		// send PWM to motors
 		if (halt) { // when communication is lost for too long, we send 0 to the motors

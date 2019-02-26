@@ -53,58 +53,68 @@ void Kalman_init(){
 	arm_mat_init_f32(&I_KHt, STATE, STATE, (float32_t *)aI_KHt);
 	arm_mat_init_f32(&I_KHP, STATE, STATE, (float32_t *)aI_KHP);
 	arm_mat_init_f32(&I_KHPI_KHt, STATE, STATE, (float32_t *)aI_KHPI_KHt);
+	arm_mat_init_f32(&B, STATE, STATE, (float32_t *)aB);
+	arm_mat_init_f32(&U, STATE, 1, (float32_t *)aU);
+	arm_mat_init_f32(&BU, STATE, 1, (float32_t *)aBU);
+	arm_mat_init_f32(&z, OBSERVE, 1, (float32_t *)az);
+	arm_mat_init_f32(&Q, STATE, STATE, (float32_t *)aQ);
 	//arm_mat_init_f32(&HXnew, OBSERVE, 1, (float32_t *)aHXnew);
 	//arm_mat_init_f32(&ynew, OBSERVE, 1, (float32_t *)aynew);
 }
 
 
-void Kalman(float vel[2]){
+void Kalman(float vel[2], float controlInput[STATE]){
 
-	az[0] = vel[0];
-	az[1] = vel[1];
+	// Predict
+//	for (int i = 0; i < STATE; i++) {
+//		aU[i] = controlInput[i];
+//	}
 
 	arm_mat_mult_f32(&F, &Xold, &Xcurrent);
+	arm_mat_mult_f32(&B, &U, &BU);
+	arm_mat_add_f32(&Xcurrent, &BU, &Xcurrent);
 
 	arm_mat_trans_f32(&F, &Ft);
 	arm_mat_mult_f32(&F, &Pold, &FP);
 	arm_mat_mult_f32(&FP, &Ft, &Pcurrent);
+	arm_mat_add_f32(&Pcurrent, &Q, &Pcurrent);
 
+
+	// Get measurement
+	az[0] = vel[0];
+	az[1] = vel[1];
+
+
+	// Process data
 	arm_mat_mult_f32(&H, &Xcurrent, &HX);
-	for (int i=0; i<OBSERVE; i++){
-		ayold[i] = az[i] - aHX[i];
-	}
-
+	arm_mat_sub_f32(&z, &HX, &yold);
 
 	arm_mat_trans_f32(&H, &Ht);
 	arm_mat_mult_f32(&Pcurrent, &Ht, &PHt);
 	arm_mat_mult_f32(&H, &PHt, &HPHt);
-	for (int i=0; i<OBSERVE*OBSERVE; i++){
-		aS[i] = aR[i] - aHPHt[i];
-	}
+	arm_mat_add_f32(&R, &HPHt, &S);
 
+
+	// Compute Kalman Gain
 	arm_mat_inverse_f32(&S, &Si);
 	arm_mat_mult_f32(&PHt, &Si, &K);
 
+
+	// Update
 	arm_mat_mult_f32(&K, &yold, &Ky);
-	for (int i=0; i<STATE; i++){
-		aXnew[i] = aXcurrent[i] + aKy[i];
-	}
+	arm_mat_add_f32(&Xcurrent, &Ky, &Xnew);
 
 	arm_mat_trans_f32(&K, &Kt);
 	arm_mat_mult_f32(&K, &R, &KR);
 	arm_mat_mult_f32(&KR, &Kt, &KRKt);
 	arm_mat_mult_f32(&K, &H, &KH);
-	for (int i=0; i<STATE*STATE; i++){
-		aI_KH[i] = aI[i] - aKH[i];
-	}
+	arm_mat_sub_f32(&I, &KH, &I_KH);
 	arm_mat_trans_f32(&I_KH, &I_KHt);
 	arm_mat_mult_f32(&I_KH, &Pcurrent, &I_KHP);
 	arm_mat_mult_f32(&I_KHP, &I_KHt, &I_KHPI_KHt);
-	for (int i=0; i<STATE*STATE; i++){
-		aPnew[i] = aI_KHPI_KHt[i] + aKRKt[i];
-	}
+	arm_mat_add_f32(&I_KHPI_KHt, &KRKt, &Pnew);
 
-	uprintf("M = | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f | \n\r", aXold[0], aXold[1], aK[0], aK[1], ayold[0], az[0]);
+	//uprintf("M = | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f | \n\r", aXold[0], aXold[1], aK[0], aK[1], ayold[0], az[0]);
 
 	/*
 	arm_mat_mult_f32(&H, &Xnew, &HXnew);
@@ -113,14 +123,33 @@ void Kalman(float vel[2]){
 	}
 	*/
 	for (int i=0; i<STATE; i++){
-			aXold[i] = aXnew[i];
+		aXold[i] = aXnew[i];
 	}
 	for (int i=0; i<STATE*STATE; i++){
-				aPold[i] = aPnew[i];
+		aPold[i] = aPnew[i];
 	}
 }
 
+void getState(float state[STATE]) {
+	for (int i=0; i<STATE; i++) {
+		state[i] = aXold[i];
+	}
+}
 
+void getKGain(float gain[STATE][OBSERVE]) {
+	for (int i=0; i<STATE; i++) {
+		gain[i][0] = aK[i];
+	}
+	for (int i=0; i<STATE; i++) {
+		gain[i][1] = aK[i+STATE];
+	}
+}
+
+void getP(float P[STATE*STATE]) {
+	for (int i = 0; i < STATE*STATE; i++) {
+		P[i] = aPold[i];
+	}
+}
 
 
 

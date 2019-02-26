@@ -15,5 +15,6 @@
 
 float velocities[3];
 void estimateState(float State[3], float xsensData[3]);
+void getvel(float Vel[2]);
 
 #endif /* DO_STATEESTIMATION_H_ */

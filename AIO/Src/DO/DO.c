@@ -37,11 +37,10 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	calibrateXsens(xsensData, vision_yaw, vision_available);
 
 	static float State[3] = {0};
-	State[2] = xsensData[2];
-//	estimateState(State, xsensData);
-//	State[0] = 0;
-//	State[1] = 0;
-//	State[2] = 0;
+	estimateState(State, xsensData);
+	State[0] = 0;
+	State[1] = 0;
+	State[2] = 0;//xsensData[2];
 
 	// control part
 	vel_control_Callback(wheel_ref, State, velocityRef);
@@ -50,12 +49,6 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 
 float getYaw() {
 	return xsensData[2];
-}
-
-void getvel(float Vel[3]){
-	for (int i=0; i<3; i++){
-		Vel[i] = velocities[i];
-	}
 }
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
