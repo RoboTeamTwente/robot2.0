@@ -11,12 +11,12 @@
 #include "arm_math.h"
 
 #define STATE 4
-#define OBSERVE 2
+#define OBSERVE 4
 #define TIMESTEP 0.01
 
 // certainties
 #define VEL_VAR 0.005F*0.005F // variance in the velocity measurements
-#define ACC_VAR 0.05F // variance in the acceleration measurements
+#define ACC_VAR 10.0F // variance in the acceleration measurements
 #define STATE_VAR 0.15F // variance in the predicted state
 #define RAND_VAR 0.25F // variance in the random force
 
@@ -27,22 +27,23 @@ float32_t aF[STATE*STATE] = {
 		0, 1, 0, 0,
 		0, 0, 1, TIMESTEP,
 		0, 0, 0, 1};
-float32_t aH[OBSERVE*STATE] = {
-		1, 0, 0, 0,
-		0, 0, 1, 0};
-float32_t aR[OBSERVE*OBSERVE] = {
-		VEL_VAR, 0,
-		0, VEL_VAR};
 //float32_t aH[OBSERVE*STATE] = {
-//		1, 0, 0, 0,
 //		0, 1, 0, 0,
-//		0, 0, 1, 0,
 //		0, 0, 0, 1};
 //float32_t aR[OBSERVE*OBSERVE] = {
-//		VEL_VAR, 0, 0, 0,
-//		0, ACC_VAR, 0, 0,
-//		0, 0, VEL_VAR, 0,
-//		0, 0, 0, ACC_VAR};
+//		ACC_VAR, 0,
+//		0, ACC_VAR};
+float32_t aH[OBSERVE*STATE] = {
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1};
+//TODO rework R with delta t
+float32_t aR[OBSERVE*OBSERVE] = {
+		VEL_VAR, 0, 0, 0,
+		0, ACC_VAR, 0, 0,
+		0, 0, VEL_VAR, 0,
+		0, 0, 0, ACC_VAR};
 float32_t az[OBSERVE] = {0};
 float32_t aI[STATE*STATE] = {
 		1,0,0,0,
@@ -59,11 +60,12 @@ float32_t aB[STATE*STATE] = {
 		0, 1, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1};
+//TODO rework Q with delta t
 float32_t aQ[STATE*STATE] = {
-		RAND_VAR, 0, 0, 0,
-		0, RAND_VAR, 0, 0,
-		0, 0, RAND_VAR, 0,
-		0, 0, 0, RAND_VAR};
+		TIMESTEP*TIMESTEP*RAND_VAR, TIMESTEP*RAND_VAR, 0, 0,
+		TIMESTEP*RAND_VAR, RAND_VAR, 0, 0,
+		0, 0, TIMESTEP*TIMESTEP*RAND_VAR, TIMESTEP*RAND_VAR,
+		0, 0, TIMESTEP*RAND_VAR, RAND_VAR};
 
 //empty arrays
 float32_t aXcurrent[STATE] = {0.0f};

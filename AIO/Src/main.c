@@ -283,7 +283,7 @@ int main(void)
 
 		geneva_Update();
 		MT_Update();
-		if((HAL_GetTick() - printtime >= 10)){
+		if((HAL_GetTick() - printtime >= 100)){
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -323,16 +323,16 @@ int main(void)
 
 			float state[4] = {0};
 			getState(state);
-//			float gain[4][4] = {0};
-//			getKGain(gain);
+			float gain[4][4] = {0};
+			getKGain(gain);
 
 			//uprintf("vel command: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
 			//uprintf("wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
-			uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
-			uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
-//			for (int i = 0; i < 4; i++) {
-//				uprintf("Kalman Gain %d: %f %f %f %f\n\r", i, gain[0][i], gain[1][i], gain[2][i], gain[3][i]);
-//			}
+			//uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
+			//uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
+			for (int i = 0; i < 4; i++) {
+				uprintf("Kalman Gain %d: %f %f %f %f\n\r", i, gain[0][i], gain[1][i], gain[2][i], gain[3][i]);
+			}
 
 //			float P[16] = {0};
 //			getP(P);
