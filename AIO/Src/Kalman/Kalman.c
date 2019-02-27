@@ -144,11 +144,11 @@ void inverse(float input[OBSERVE*OBSERVE], float output[OBSERVE*OBSERVE]){
 	output[5] = a/determinant;
 
 	//Second 2X2
-	float a = input[10];
-	float b = input[11];
-	float c = input[14];
-	float d = input[15];
-	float determinant = a*d-b*c;
+	a = input[10];
+	b = input[11];
+	c = input[14];
+	d = input[15];
+	determinant = a*d-b*c;
 	output[10] = d/determinant;
 	output[11] = -b/determinant;
 	output[14] = -c/determinant;
