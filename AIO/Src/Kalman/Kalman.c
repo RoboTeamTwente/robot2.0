@@ -131,7 +131,7 @@ void Kalman(float acc[2], float vel[2], float controlInput[STATE]){
 	}
 }
 
-void inverse(float input[OBSERVE*OBSERVE], float output[OBSERVE*OBSERVE]){
+void inverse(float32_t input[OBSERVE*OBSERVE], float32_t output[OBSERVE*OBSERVE]){
 	//First 2X2
 	float a = input[0];
 	float b = input[1];
