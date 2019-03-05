@@ -14,7 +14,6 @@
 ///////////////////////////////////////////////////// PUBLIC FUNCTION DECLARATIONS
 
 float velocities[3];
-float globalVel[3];
 void estimateState(float State[3], float xsensData[3]);
 void getvel(float Vel[2]);
 

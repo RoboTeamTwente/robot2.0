@@ -283,7 +283,7 @@ int main(void)
 
 		geneva_Update();
 		MT_Update();
-		if((HAL_GetTick() - printtime >= 1000)){
+		if((HAL_GetTick() - printtime >= 10)){
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -306,7 +306,7 @@ int main(void)
 			//uprintf("acceleration: %f %f %f\n\r", MT_GetAcceleration()[0], MT_GetAcceleration()[1], MT_GetAcceleration()[2]);
 
 
-			//uprintf("Angle ref: %f\n\r", velocityRef[body_w]);
+//			uprintf("Angle ref: %f\n\r", velocityRef[body_w]);
 //			uprintf("kP: %f \n\r", angleK.kP);
 //			uprintf("kI: %f \n\r", angleK.kI);
 //			uprintf("\n\r");
@@ -317,18 +317,18 @@ int main(void)
 			//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
 //					uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
 			//		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
-			uprintf("Calibrated XSens yaw: %f rad\n\r", getYaw());
+//					uprintf("Calibrated XSens yaw: %f degrees\n\r", getYaw()/M_PI*180);
 			//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
 			//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
 
+			float state[4] = {0};
+			getState(state);
 //			float gain[4][4] = {0};
 //			getKGain(gain);
 
-			uprintf("vel command: %f %f\n\r", velocityRef[0], velocityRef[1]);
-
-			//uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
-			float state[4] = {0};
-			getState(state);
+			//uprintf("vel command: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
+			//uprintf("wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
+			uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
 			uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
 //			for (int i = 0; i < 4; i++) {
 //				uprintf("Kalman Gain %d: %f %f %f %f\n\r", i, gain[0][i], gain[1][i], gain[2][i], gain[3][i]);
@@ -339,10 +339,9 @@ int main(void)
 //			for (int i = 0; i < 4; i++) {
 //				uprintf("P %d: %f %f %f %f\n\r", i, P[0+4*i], P[1+4*i], P[2+4*i], P[3+4*i])
 //			}
-
-			uprintf("wheel speeds: %d %d %d %d\n\r", (int)getWheelSpeed(wheels_RF), (int)getWheelSpeed(wheels_RB), (int)getWheelSpeed(wheels_LB), (int)getWheelSpeed(wheels_LF));
-			uprintf("ref: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
-			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
+			uprintf("\n\r");
+//			uprintf("ref: %f %f %f %f\n\r", wheels_ref[wheels_RF], wheels_ref[wheels_RB], wheels_ref[wheels_LB], wheels_ref[wheels_LF]);
+//			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
 			//		uprintf("\n\r");
 			//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
 			//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
@@ -350,7 +349,7 @@ int main(void)
 			//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 			//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
 
-			uprintf("\n\r");
+
 		}
   /* USER CODE END WHILE */
 
@@ -523,7 +522,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		//		vision_yaw = 0.0*M_PI;
 		//		vision_available = true;
 
-/*
+
 
 		velocityRef[0] = 0.0;
 		velocityRef[1] = 0.0;
@@ -534,25 +533,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		static uint velTimer;
 		int reps = 1;
 		static int count = 0;
-		int dir = 1;
+		static int mul = 0;
 
-		if (HAL_GetTick() < 7000) {
+		if (HAL_GetTick() < 5000) {
 			velTimer = HAL_GetTick();
-		} else if (HAL_GetTick() - velTimer < 1500) {
-				velocityRef[dir] = incVel;
-		} else if (HAL_GetTick() - velTimer < 2500) {
-			velocityRef[dir] = 0.0;
+		} else if (HAL_GetTick() - velTimer < 1000) {
+			velocityRef[0] = incVel;
+		} else if (HAL_GetTick() - velTimer < 2000) {
+			velocityRef[0] = 0.0;
+		} else if (HAL_GetTick() - velTimer < 3000) {
+			velocityRef[0] = -incVel;
 		} else if (HAL_GetTick() - velTimer < 4000) {
-			velocityRef[dir] = -incVel;
-		} else if (HAL_GetTick() - velTimer < 5000) {
-			velocityRef[dir] = 0.0;
+			velocityRef[0] = 0.0;
 		} else if (count < reps-1) {
 			velTimer = HAL_GetTick();
 			count++;
 		} else {
-			velocityRef[dir] = 0.0;
+			velocityRef[0] = 0.0;
 		}
-*/
+
 		//------------------------------------
 
 		float controlInput[4] = {0};
@@ -563,8 +562,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 //			controlInput[3] = (velocityRef[1]-vel[1] < 0) ? -5 : 5;
 //		}
 		float acc[2];
-//		acc[0] = MT_GetAcceleration()[0];
-//		acc[1] = MT_GetAcceleration()[1];
+		acc[0] = MT_GetAcceleration()[0];
+		acc[1] = MT_GetAcceleration()[1];
 		getvel(vel);
 		Kalman(acc, vel, controlInput);
 

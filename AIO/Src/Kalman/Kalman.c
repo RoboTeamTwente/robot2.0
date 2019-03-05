@@ -162,10 +162,11 @@ void getState(float state[STATE]) {
 }
 
 void getKGain(float gain[STATE][OBSERVE]) {
-	for (int j=0; j<OBSERVE; j++) {
-		for (int i=0; i<STATE; i++) {
-			gain[i][j] = aK[i+j*STATE];
-		}
+	for (int i=0; i<STATE; i++) {
+		gain[i][0] = aK[i];
+	}
+	for (int i=0; i<STATE; i++) {
+		gain[i][1] = aK[i+STATE];
 	}
 
 }
