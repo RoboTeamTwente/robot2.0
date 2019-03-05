@@ -161,8 +161,9 @@ void PuttyInterface_Update(PuttyInterfaceTypeDef* pitd){
 #endif
 		HandlePcInput((char*)&pitd->small_buf, pitd->huart_Rx_len, pitd->handle);
 		pitd->huart_Rx_len = 0;
-#ifdef PUTTY_USART
-		HAL_UART_Receive_IT(&huartx, pitd->rec_buf, 1);
-#endif
+
 	}
+#ifdef PUTTY_USART
+	HAL_UART_Receive_IT(&huartx, pitd->rec_buf, 1);
+#endif
 }
