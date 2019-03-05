@@ -99,7 +99,7 @@ static void HandlePcInput(char * input, size_t n_chars, HandleLine func){
 					break;
 				}
 				uint8_t cur_pos;
-                if (commands_counter==COMMANDS_TO_REMEMBER) {
+                if (commands_counter>=COMMANDS_TO_REMEMBER) {
                     cur_pos = wrap(commands_counter, kb_arrow_counter, 0);
                 } else {
                     cur_pos = wrap(commands_counter, kb_arrow_counter, commands_counter + 1);

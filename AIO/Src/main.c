@@ -360,7 +360,27 @@ void SystemClock_Config(void)
 #define TEST_WHEELS_COMMAND "test wheels"
 #define SET_FILTER_COMMAND "mt filter"
 void HandleCommand(char* input){
-	if(strcmp(input, "mt start") == 0){
+    if(!memcmp(input, "vel_command",strlen("vel_command"))){
+        long in = strtol(input + strlen("vel_command"), NULL, 10);
+        receivedRoboData.rho = in & 0xFFFF;
+        receivedRoboData.theta = (in >> 16) & 0xFFFF;
+
+        float velRefAmp = (float)receivedRoboData.rho * 0.004F;
+        float velRefDir = (float)receivedRoboData.theta / 1024.0F * M_PI;
+        velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
+        velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
+        halt = false;
+    }
+    else if(!memcmp(input, "angle_command",strlen("angle_command"))) {
+        receivedRoboData.velocity_angular = strtol(input + strlen("angle_command"), NULL, 10);;
+
+        float angularVelRef = (float) receivedRoboData.velocity_angular / 512.0F * 16.0F * M_PI;
+        //if(receivedRoboData.use_angle){
+        velocityRef[body_w] = angularVelRef;
+        halt = false;
+        //}
+    }
+	else if(strcmp(input, "mt start") == 0){
 		uprintf("Starting device MTi\n\r");
 		if(MT_succes == MT_Init()){
 			uprintf("MTi started.\n\r");
@@ -434,33 +454,15 @@ void HandleCommand(char* input){
 		keyboard_control = true;
 		wheels_testing = true;
 	}
-	else if(!memcmp(input, "vel_command",strlen("vel_command"))){
-		long in = strtol(input + strlen("vel_command"), NULL, 10);
-		receivedRoboData.rho = in & 0xFFFF;
-		receivedRoboData.theta = (in >> 16) & 0xFFFF;
 
-		float velRefAmp = (float)receivedRoboData.rho * 0.004F;
-		float velRefDir = (float)receivedRoboData.theta / 1024.0F * M_PI;
-		velocityRef[body_x] = cosf(velRefDir) * velRefAmp;
-		velocityRef[body_y] = sinf(velRefDir) * velRefAmp;
-		halt = false;
-	}
-	else if(!memcmp(input, "angle_command",strlen("angle_command"))){
-		receivedRoboData.velocity_angular = strtol(input + strlen("angle_command"), NULL, 10);;
 
-		float angularVelRef = (float)receivedRoboData.velocity_angular / 512.0F * 16.0F*M_PI;
-		//if(receivedRoboData.use_angle){
-		velocityRef[body_w] = angularVelRef;
-		halt = false;
-		//}
-	}
 }
 
 
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if(huart->Instance == huart3.Instance){//input from the PC
-		puttystruct.huart_Rx_len = 1;
+		puttystruct.huart_Rx_len++;
 		puttystruct.small_buf[0] = *(huart->pRxBuffPtr-1);
 	}else if(huart->Instance == huartMT.Instance){// Input from the Xsens
 		MT_UART_RxCpltCallback();
