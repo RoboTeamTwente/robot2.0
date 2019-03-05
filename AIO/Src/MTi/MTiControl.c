@@ -79,7 +79,7 @@ MT_StatusTypeDef MT_Init(){
 		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
 		MT_BuildConfig(XDI_StatusWord, 10, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
-		MT_SetFilterProfile(2);
+		MT_SetFilterProfile(4);
 		ret = MT_GoToMeasure();
 		HAL_Delay(50);
 		ret = MT_NoRotation(6);
