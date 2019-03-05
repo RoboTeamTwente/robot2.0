@@ -32,7 +32,7 @@
 
 #define OMEGAtoPWM (1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // conversion factor from wheel speed [rad/s] to required PWM on the motor
 #define ENCODERtoOMEGA (float)2*M_PI/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to wheel speed [rad/s]
-#define OMEGA_LIMIT (PWM_LIMIT/OMEGAtoPWM) // Highest wheel speed that is allowed
+#define OMEGA_LIMIT 150.0F // Highest wheel speed that is allowed
 
 ///////////////////////////////////////////////////// STRUCTS AND VARIABLES
 
@@ -69,7 +69,7 @@ static PIDvariables angleK = {
 static PIDvariables velxK = {
 		.kP = 1,//kp
 		.kI = 0,//ki
-		.kD = 0,//kd
+		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero
 		.timeDiff = TIME_DIFF
@@ -77,7 +77,7 @@ static PIDvariables velxK = {
 static PIDvariables velyK = {
 		.kP = 1,//kp
 		.kI = 0,//ki
-		.kD = 0,//kd
+		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero
 		.timeDiff = TIME_DIFF

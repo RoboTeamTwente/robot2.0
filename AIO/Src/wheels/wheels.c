@@ -72,16 +72,6 @@ void setWheelSpeed(float wheelref[4]){
 			limitScale(wheel);
 		}
 
-//		int p = 200;
-//		bool d = 1;
-//		for (int i = 0; i < 4; i++) {
-//			pwm[i] = (HAL_GetTick() > 3000) ? p : 0;
-//		}
-//		direction[0] = d;
-//		direction[1] = d;
-//		direction[2] = !d;
-//		direction[3] = !d;
-
 		SetDir();
 		SetPWM();
 	}

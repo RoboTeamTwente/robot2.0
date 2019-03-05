@@ -47,14 +47,24 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 
 
 	// Translational control
+//	float velxErr = vel_ref[body_x] - State[body_x];
+//	float velyErr = vel_ref[body_y] - State[body_y];
+//
+//	float velGlobalRef[3];
+//	velGlobalRef[body_x] = vel_ref[body_x];
+//	velGlobalRef[body_y] = vel_ref[body_y];
+
+//	velGlobalRef[body_x] = vel_ref[body_x] + PID(velxErr, &velxK);
+//	velGlobalRef[body_y] = vel_ref[body_y] + PID(velyErr, &velyK);
+
 	float velLocalRef[3] = {0};
-	//global2Local(vel_ref, velLocalRef, State[body_w]); //transfer global to local
+	//global2Local(velGlobalRef, velLocalRef, State[body_w]); //transfer global to local
 	global2Local(vel_ref, velLocalRef, 0); //transfer global to local
 
-//	float velxErr = velLocalRef[body_x] - State[body_x];
-//	float velyErr = velLocalRef[body_y] - State[body_y];
-//	velLocalRef[body_x] += PID(velxErr, &velxK);
-//	velLocalRef[body_y] += PID(velyErr, &velyK);
+	float velxErr = velLocalRef[body_x] - State[body_x];
+	float velyErr = velLocalRef[body_y] - State[body_y];
+	velLocalRef[body_x] += PID(velxErr, &velxK);
+	velLocalRef[body_y] += PID(velyErr, &velyK);
 
 	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
 

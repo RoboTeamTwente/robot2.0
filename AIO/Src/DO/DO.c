@@ -15,6 +15,7 @@
 #include "vel_control.h"
 #include "stateEstimation.h"
 #include "control_util.h"
+#include "../Kalman/Kalman.h"
 
 static float xsensData[3];
 
@@ -40,7 +41,12 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	estimateState(State, xsensData);
 	State[0] = 0;
 	State[1] = 0;
-	State[2] = 0;//xsensData[2];
+	State[2] = xsensData[2];
+
+	float kalmanState[4] = {0};
+	getState(kalmanState);
+	State[0] = kalmanState[0];
+	State[1] = kalmanState[2];
 
 	// control part
 	vel_control_Callback(wheel_ref, State, velocityRef);
