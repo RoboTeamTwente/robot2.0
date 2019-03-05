@@ -58,6 +58,7 @@ static uint8_t wrap(uint8_t val, int8_t dif, uint8_t modulus)
 // n_chars is the amount of chars to handle
 // func is the function to call when a command is complete
 static void HandlePcInput(char * input, size_t n_chars, HandleLine func){
+    uprintf("handling PC input\r\n")
 	static char PC_Input[COMMANDS_TO_REMEMBER][MAX_COMMAND_LENGTH];// Matrix which holds the entered commands
 	static uint8_t PC_Input_counter = 0;	// counts the letters in the current forming command
 	static int8_t commands_counter = 0;		// counts the entered commands
@@ -73,6 +74,7 @@ static void HandlePcInput(char * input, size_t n_chars, HandleLine func){
 
 		if (commands_counter>COMMANDS_TO_REMEMBER) {
 			// TODO maybe clear all commands
+			uprintf("Command overflow\r\n")
 			commands_counter = 0;
 		}
 
@@ -156,6 +158,7 @@ void PuttyInterface_Init(PuttyInterfaceTypeDef* pitd){
 
 void PuttyInterface_Update(PuttyInterfaceTypeDef* pitd){
 	if(pitd->huart_Rx_len){
+	    uprintf("huart_Rx_len>=1\r\n")
 #ifdef PUTTY_USB
 		usb_comm = true;
 #endif
