@@ -93,6 +93,7 @@ uint8_t corrected_kick_power = 0;
 
 // KALMAN
 float vel[2] = {0};
+float accel[2] = {0};
 
 
 /* USER CODE END PV */
@@ -325,14 +326,16 @@ int main(void)
 			getState(state);
 			float gain[4][4] = {0};
 			getKGain(gain);
-
+			//float controlInput[4] = {0};
+			//KalmanK();
+			//KalmanState(accel, vel, controlInput);
 			//uprintf("vel command: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
 			//uprintf("wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
-			//uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
-			//uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
-			for (int i = 0; i < 4; i++) {
-				uprintf("Kalman Gain %d: %f %f %f %f\n\r", i, gain[0][i], gain[1][i], gain[2][i], gain[3][i]);
-			}
+			uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
+			uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
+			//for (int i = 0; i < 4; i++) {
+			//	uprintf("Kalman Gain %d: %f %f %f %f\n\r", i, gain[0][i], gain[1][i], gain[2][i], gain[3][i]);
+			//}
 
 //			float P[16] = {0};
 //			getP(P);
@@ -561,12 +564,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 //		if (fabs(velocityRef[1]-vel[1]) > 0.1) {
 //			controlInput[3] = (velocityRef[1]-vel[1] < 0) ? -5 : 5;
 //		}
-		float acc[2];
-		acc[0] = MT_GetAcceleration()[0];
-		acc[1] = MT_GetAcceleration()[1];
+		accel[0] = 0.0f+MT_GetAcceleration()[0];
+		accel[1] = 0.0f+MT_GetAcceleration()[1];
 		getvel(vel);
-		Kalman(acc, vel, controlInput);
-
+		KalmanK();
+		KalmanState(accel, vel, controlInput);
 //		halt = false;
 		DO_Control(velocityRef, vision_yaw, vision_available, wheels_ref); // outputs to wheels_ref
 		// send PWM to motors
