@@ -56,10 +56,15 @@ void wheelsDeInit(){
 	HAL_TIM_Base_Stop(&htim3); //LB
 	HAL_TIM_Base_Stop(&htim4); //LF
 	HAL_TIM_Base_Stop(&htim5); //TIME
-	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_2); //RF
-	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1); //RB
-	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_1); //LB
-	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2); //LF
+//	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_2); //RF
+//	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1); //RB
+//	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_1); //LB
+//	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2); //LF
+
+	//TODO: Fix this huge stopping hack
+	for (int i=0; i<4; i++) {
+		pwm[i] = 0;
+	}
 }
 
 // Set the desired rotations per second for every wheel
@@ -152,10 +157,10 @@ static void computeWheelSpeed(){
 
 // Set PWM to the motor
 static void SetPWM(){
-	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, pwm[wheels_RF]);
-	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, pwm[wheels_RB]);
-	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, pwm[wheels_LB]);
-	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, pwm[wheels_LF]);
+	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2, MAX_PWM-pwm[wheels_RF]);
+	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1, MAX_PWM-pwm[wheels_RB]);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1, MAX_PWM-pwm[wheels_LB]);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, MAX_PWM-pwm[wheels_LF]);
 }
 
 // Set direction to the motor
