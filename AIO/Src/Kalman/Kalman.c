@@ -31,20 +31,21 @@ void Kalman_init(){
 
 void KalmanState(float accel[2], float vel[2], float controlInput[STATE]){
 
+
 	// Predict
 //	for (int i = 0; i < STATE; i++) {
 //		aU[i] = controlInput[i];
 //	}
+	az[0] = vel[0];
+	az[1] = accel[0];
+	az[2] = vel[1];
+	az[3] = accel[1];
 
 	multiplyMatrix(aF, aXold, aFX, STATE, 1, STATE);
 	multiplyMatrix(aB, aU, aBU, STATE, 1, STATE);
 	addMatrix(aFX, aBU, aXcurrent, STATE);
 
 	// Get measurement
-	az[0] = vel[0];
-	az[1] = accel[0];
-	az[2] = vel[1];
-	az[3] = accel[1];
 
 	// Process data
 	multiplyMatrix(aH, aXcurrent, aHX, OBSERVE, 1, STATE);
