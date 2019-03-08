@@ -284,7 +284,7 @@ int main(void)
 
 		geneva_Update();
 		MT_Update();
-		if((HAL_GetTick() - printtime >= 100)){
+		if((HAL_GetTick() - printtime >= 20)){
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -330,7 +330,7 @@ int main(void)
 			//float controlInput[4] = {0};
 			//KalmanK();
 			//KalmanState(accel, vel, controlInput);
-			//uprintf("vel command: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
+			uprintf("vel command: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
 			//uprintf("wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
 			uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
 			uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
@@ -528,13 +528,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		velocityRef[2] = 0.0*M_PI;
 
 		halt = false;
-		float incVel = 0.5;
+		float incVel = 0.3;
 		static uint velTimer;
-		int reps = 1;
+		int reps = 3;
 		static int count = 0;
-		int dir = 1;
+		int dir = 0;
 
-		if (HAL_GetTick() < 7000) {
+		if (HAL_GetTick() < 3000) {
 			velTimer = HAL_GetTick();
 		} else if (HAL_GetTick() - velTimer < 1500) {
 				velocityRef[dir] = incVel;
