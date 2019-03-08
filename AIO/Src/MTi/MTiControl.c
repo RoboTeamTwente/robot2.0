@@ -26,6 +26,7 @@ struct XbusMessage* ReceivedMessageStorage;
 uint MT_Data_succerr[2] = {0};
 float angles[3];
 float acc[3];
+float acc_correct[3]= {0.0f};
 float gyro[3];
 uint8_t raw[128];
 uint32_t statusword;
@@ -391,7 +392,10 @@ uint* MT_GetSuccErr(){
 }
 
 float* MT_GetAcceleration(){
-	return acc;
+	acc_correct[0] = -acc[0];//Xsens is placed inverted
+	acc_correct[1] = -acc[1];
+	acc_correct[2] = acc[2];
+	return acc_correct;
 }
 float* MT_GetAngles(){
 	return angles;
