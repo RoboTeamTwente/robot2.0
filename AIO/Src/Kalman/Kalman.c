@@ -81,10 +81,10 @@ void Kalman(float acc[2], float vel[2], float controlInput[STATE]){
 
 
 	// Get measurement
-	az[0] = 0;
-	az[1] = acc[0];
-	az[2] = 0;
-	az[3] = acc[1];
+	az[0] = vel[0];
+	//az[1] = acc[0];
+	az[1] = vel[1];
+	//az[3] = acc[1];
 
 
 	// Process data
@@ -98,8 +98,9 @@ void Kalman(float acc[2], float vel[2], float controlInput[STATE]){
 
 
 	// Compute Kalman Gain
-	inverse(aS, aSi);
+	arm_mat_inverse_f32(&S, &Si);
 	arm_mat_mult_f32(&PHt, &Si, &K);
+
 
 	// Update
 	arm_mat_mult_f32(&K, &yold, &Ky);
@@ -131,30 +132,6 @@ void Kalman(float acc[2], float vel[2], float controlInput[STATE]){
 	}
 }
 
-void inverse(float32_t input[OBSERVE*OBSERVE], float32_t output[OBSERVE*OBSERVE]){
-	//First 2X2
-	float a = input[0];
-	float b = input[1];
-	float c = input[4];
-	float d = input[5];
-	float determinant = a*d-b*c;
-	output[0] = d/determinant;
-	output[1] = -b/determinant;
-	output[4] = -c/determinant;
-	output[5] = a/determinant;
-
-	//Second 2X2
-	a = input[10];
-	b = input[11];
-	c = input[14];
-	d = input[15];
-	determinant = a*d-b*c;
-	output[10] = d/determinant;
-	output[11] = -b/determinant;
-	output[14] = -c/determinant;
-	output[15] = a/determinant;
-}
-
 void getState(float state[STATE]) {
 	for (int i=0; i<STATE; i++) {
 		state[i] = aXold[i];
@@ -167,7 +144,6 @@ void getKGain(float gain[STATE][OBSERVE]) {
 			gain[i][j] = aK[i+j*STATE];
 		}
 	}
-
 }
 
 void getP(float P[STATE*STATE]) {
