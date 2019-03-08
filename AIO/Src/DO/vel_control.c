@@ -6,6 +6,7 @@
  */
 
 #include "vel_control.h"
+#include "stdbool.h"
 
 ///////////////////////////////////////////////////// PRIVATE FUNCTION DECLARATIONS
 
@@ -17,7 +18,7 @@ static void global2Local(float input[3], float output[2], float  yaw);
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
-void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
+void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], bool use_global_ref){
 
 	/*---------------------------
 	 * 			TESTING
@@ -29,6 +30,7 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 
 	static float prevAngle = 0;
 	if (prevAngle - vel_ref[2] > 1) {
+
 		if (angleK.kP < maxP) {
 			angleK.kP += stepP;
 		} else if(angleK.kI < maxI) {
@@ -47,24 +49,38 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]){
 
 
 	// Translational control
-//	float velxErr = vel_ref[body_x] - State[body_x];
-//	float velyErr = vel_ref[body_y] - State[body_y];
-//
-//	float velGlobalRef[3];
-//	velGlobalRef[body_x] = vel_ref[body_x];
-//	velGlobalRef[body_y] = vel_ref[body_y];
-
-//	velGlobalRef[body_x] = vel_ref[body_x] + PID(velxErr, &velxK);
-//	velGlobalRef[body_y] = vel_ref[body_y] + PID(velyErr, &velyK);
-
+	//use_global_ref = false;
 	float velLocalRef[3] = {0};
-	//global2Local(velGlobalRef, velLocalRef, State[body_w]); //transfer global to local
-	global2Local(vel_ref, velLocalRef, 0); //transfer global to local
+	if (use_global_ref) {
+		// Global control
+//		float velxErr = vel_ref[body_x] - State[body_x];
+//		float velyErr = vel_ref[body_y] - State[body_y];
+//
+//		float velGlobalRef[3];
+//		vel_ref[body_x] = vel_ref[body_x] + PID(velxErr, &velxK);
+//		vel_ref[body_y] = vel_ref[body_y] + PID(velyErr, &velyK);
 
+		global2Local(vel_ref, velLocalRef, State[body_w]); //transfer global to local
+	} else {
+		global2Local(vel_ref, velLocalRef, 0); //transfer global to local
+	}
+
+	// Local control
 	float velxErr = velLocalRef[body_x] - State[body_x];
 	float velyErr = velLocalRef[body_y] - State[body_y];
 	velLocalRef[body_x] += PID(velxErr, &velxK);
 	velLocalRef[body_y] += PID(velyErr, &velyK);
+
+	//-----------limit acceleration----------
+//	float maxAccX = 20.0, maxAccY = 8.0; // [m/s^2]
+//
+//	if (fabs(velLocalRef[body_x]) > fabs(State[body_x]) && fabs((velLocalRef[body_x]-State[body_x])/TIME_DIFF) > maxAccX) {
+//		velLocalRef[body_x] = State[body_x] + fabs(velLocalRef[body_x]-State[body_x])/(velLocalRef[body_x]-State[body_x])*maxAccX*TIME_DIFF;
+//	}
+//	if (fabs(velLocalRef[body_y]) > fabs(State[body_y]) && fabs((velLocalRef[body_y]-State[body_y])/TIME_DIFF) > maxAccY) {
+//		velLocalRef[body_y] = State[body_y] + fabs(velLocalRef[body_y]-State[body_y])/(velLocalRef[body_y]-State[body_y])*maxAccY*TIME_DIFF;
+//	}
+	//---------------------------------------
 
 	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
 

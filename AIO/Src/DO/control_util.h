@@ -32,7 +32,6 @@
 
 #define OMEGAtoPWM (1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // conversion factor from wheel speed [rad/s] to required PWM on the motor
 #define ENCODERtoOMEGA (float)2*M_PI/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to wheel speed [rad/s]
-#define OMEGA_LIMIT 150.0F // Highest wheel speed that is allowed
 
 ///////////////////////////////////////////////////// STRUCTS AND VARIABLES
 
