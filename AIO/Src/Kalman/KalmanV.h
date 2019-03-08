@@ -17,7 +17,7 @@
 // certainties
 #define VEL_VAR 0.5F // variance in the velocity measurements
 #define ACC_VAR 6.25F // variance in the acceleration measurements
-#define STATE_VAR 1.0F // variance in the predicted state
+#define STATE_VAR 0.5F // variance in the predicted state
 #define RAND_VAR 1.0F // variance in the random force
 
 //create arrays
