@@ -320,7 +320,7 @@ int main(void)
 			//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
 //					uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
 			//		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
-			uprintf("Calibrated XSens yaw: %f rad\n\r", getYaw());
+			//uprintf("Calibrated XSens yaw: %f rad\n\r", getYaw());
 			//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
 			//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
 
@@ -523,7 +523,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		//		vision_yaw = 0.0*M_PI;
 		//		vision_available = true;
 
-
 		/*
 		velocityRef[0] = 0.0;
 		velocityRef[1] = 0.0;
@@ -563,9 +562,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 //			controlInput[3] = (velocityRef[1]-vel[1] < 0) ? -5 : 5;
 //		}
 
-		float acc[2];
-		acc[0] = MT_GetAcceleration()[0];
-		acc[1] = MT_GetAcceleration()[1];
+		float accel[2] = {0};
+		accel[0] = MT_GetAcceleration()[0];
+		accel[1] = MT_GetAcceleration()[1];
 		getvel(vel);
 		KalmanK();
 		KalmanState(accel, vel, controlInput);
