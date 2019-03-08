@@ -24,21 +24,61 @@ edits in the array means edits the matrix so each matrix needs it's own array ba
 #include "../PuttyInterface/PuttyInterface.h"
 
 void Kalman_init(){
-	transMatrix(aH, aHt, OBSERVE, STATE);
-	transMatrix(aF, aFt, STATE, STATE);
+	//Link arrays and matrix objects
+	arm_mat_init_f32(&Xold, STATE, 1, (float32_t *)aXold);
+	arm_mat_init_f32(&F, STATE, STATE, (float32_t *)aF);
+	arm_mat_init_f32(&Xcurrent, STATE, 1, (float32_t *)aXcurrent);
+	arm_mat_init_f32(&Pold, STATE, STATE, (float32_t *)aPold);
+	arm_mat_init_f32(&Ft, STATE, STATE, (float32_t *)aFt);
+	arm_mat_init_f32(&FP, STATE, STATE, (float32_t *)aFP);
+	arm_mat_init_f32(&Pcurrent, STATE, STATE, (float32_t *)aPcurrent);
+	arm_mat_init_f32(&yold, OBSERVE, 1, (float32_t *)ayold);
+	arm_mat_init_f32(&H, OBSERVE, STATE, (float32_t *)aH);
+	arm_mat_init_f32(&HX, OBSERVE, 1, (float32_t *)aHX);
+	arm_mat_init_f32(&S, OBSERVE, OBSERVE, (float32_t *)aS);
+	arm_mat_init_f32(&R, OBSERVE, OBSERVE, (float32_t *)aR);
+	arm_mat_init_f32(&Ht, STATE, OBSERVE, (float32_t *)aHt);
+	arm_mat_init_f32(&PHt, STATE, OBSERVE, (float32_t *)aPHt);
+	arm_mat_init_f32(&HPHt, OBSERVE, OBSERVE, (float32_t *)aHPHt);
+	arm_mat_init_f32(&K, STATE, OBSERVE, (float32_t *)aK);
+	arm_mat_init_f32(&Si, OBSERVE, OBSERVE, (float32_t *)aSi);
+	arm_mat_init_f32(&Xnew, STATE, 1, (float32_t *)aXnew);
+	arm_mat_init_f32(&Ky, STATE, 1, (float32_t *)aKy);
+	arm_mat_init_f32(&Pnew, STATE, STATE, (float32_t *)aPnew);
+	arm_mat_init_f32(&Kt, OBSERVE, STATE, (float32_t *)aKt);
+	arm_mat_init_f32(&KR, STATE, OBSERVE, (float32_t *)aKR);
+	arm_mat_init_f32(&KRKt, STATE, STATE, (float32_t *)aKRKt);
+	arm_mat_init_f32(&KH, STATE, STATE, (float32_t *)aKH);
+	arm_mat_init_f32(&I_KH, STATE, STATE, (float32_t *)aI_KH);
+	arm_mat_init_f32(&I_KHt, STATE, STATE, (float32_t *)aI_KHt);
+	arm_mat_init_f32(&I_KHP, STATE, STATE, (float32_t *)aI_KHP);
+	arm_mat_init_f32(&I_KHPI_KHt, STATE, STATE, (float32_t *)aI_KHPI_KHt);
+	arm_mat_init_f32(&B, STATE, STATE, (float32_t *)aB);
+	arm_mat_init_f32(&U, STATE, 1, (float32_t *)aU);
+	arm_mat_init_f32(&BU, STATE, 1, (float32_t *)aBU);
+	arm_mat_init_f32(&z, OBSERVE, 1, (float32_t *)az);
+	arm_mat_init_f32(&Q, STATE, STATE, (float32_t *)aQ);
+	//arm_mat_init_f32(&HXnew, OBSERVE, 1, (float32_t *)aHXnew);
+	//arm_mat_init_f32(&ynew, OBSERVE, 1, (float32_t *)aynew);
 }
 
 
-void KalmanState(float accel[2], float vel[2], float controlInput[STATE]){
+void KalmanState(float acc[2], float vel[2], float controlInput[STATE]){
 
 	// Predict
 //	for (int i = 0; i < STATE; i++) {
 //		aU[i] = controlInput[i];
 //	}
 
-	multiplyMatrix(aF, aXold, aFX, STATE, 1, STATE);
-	multiplyMatrix(aB, aU, aBU, STATE, 1, STATE);
-	addMatrix(aFX, aBU, aXcurrent, STATE);
+	arm_mat_mult_f32(&F, &Xold, &Xcurrent);
+	arm_mat_mult_f32(&B, &U, &BU);
+	arm_mat_add_f32(&Xcurrent, &BU, &Xcurrent);
+
+	arm_mat_trans_f32(&F, &Ft);
+	arm_mat_mult_f32(&F, &Pold, &FP);
+	arm_mat_mult_f32(&FP, &Ft, &Pcurrent);
+	arm_mat_add_f32(&Pcurrent, &Q, &Pcurrent);
+
 
 	// Get measurement
 	az[0] = vel[0];
@@ -61,64 +101,35 @@ void KalmanState(float accel[2], float vel[2], float controlInput[STATE]){
 	arm_mat_inverse_f32(&S, &Si);
 	arm_mat_mult_f32(&PHt, &Si, &K);
 
-	// Update
-	multiplyMatrix(aK, ayold, aKy, STATE, 1, OBSERVE);
-	addMatrix(aXcurrent, aKy, aXnew, STATE);
 
+	// Update
+	arm_mat_mult_f32(&K, &yold, &Ky);
+	arm_mat_add_f32(&Xcurrent, &Ky, &Xnew);
+
+	arm_mat_trans_f32(&K, &Kt);
+	arm_mat_mult_f32(&K, &R, &KR);
+	arm_mat_mult_f32(&KR, &Kt, &KRKt);
+	arm_mat_mult_f32(&K, &H, &KH);
+	arm_mat_sub_f32(&I, &KH, &I_KH);
+	arm_mat_trans_f32(&I_KH, &I_KHt);
+	arm_mat_mult_f32(&I_KH, &Pcurrent, &I_KHP);
+	arm_mat_mult_f32(&I_KHP, &I_KHt, &I_KHPI_KHt);
+	arm_mat_add_f32(&I_KHPI_KHt, &KRKt, &Pnew);
+
+	//uprintf("M = | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f | \n\r", aXold[0], aXold[1], aK[0], aK[1], ayold[0], az[0]);
+
+	/*
+	arm_mat_mult_f32(&H, &Xnew, &HXnew);
+	for (int i=0; i<STATE; i++){
+		aynew[i] = az[i] + aHXnew[i];
+	}
+	*/
 	for (int i=0; i<STATE; i++){
 		aXold[i] = aXnew[i];
 	}
-
-}
-
-void KalmanK(){
-
-	static float count = 0;
-
-	if (count != 100){
-		static float oldk[STATE*OBSERVE] = {0};
-		multiplyMatrix(aF, aPold, aFP, STATE, STATE, STATE);
-		multiplyMatrix(aFP, aFt, aFPFt, STATE, STATE, STATE);
-		addMatrix(aFPFt, aQ, aPcurrent, STATE*STATE);
-
-		multiplyMatrix(aPcurrent, aHt, aPHt, STATE, OBSERVE, STATE);
-		multiplyMatrix(aH, aPHt, aHPHt, OBSERVE, OBSERVE, STATE);
-		addMatrix(aR, aHPHt, aS, OBSERVE*OBSERVE);
-
-		// Compute Kalman Gain
-		inverse(aS, aSi);
-		multiplyMatrix(aPHt, aSi, aK, STATE, OBSERVE, OBSERVE);
-
-		transMatrix(aK, aKt, STATE, OBSERVE);
-		multiplyMatrix(aK, aR, aKR, STATE, OBSERVE, OBSERVE);
-		multiplyMatrix(aKR, aKt, aKRKt, STATE, STATE, OBSERVE);
-		multiplyMatrix(aK, aH, aKH, STATE, STATE, OBSERVE);
-		subMatrix(aI, aKH, aI_KH, STATE*STATE);
-		transMatrix(aI_KH, aI_KHt, STATE, STATE);
-		multiplyMatrix(aI_KH, aPcurrent, aI_KHP, STATE, STATE, STATE);
-		multiplyMatrix(aI_KHP, aI_KHt, aI_KHPI_KHt, STATE, STATE, STATE);
-		addMatrix(aI_KHPI_KHt, aKRKt, aPnew, STATE*STATE);
-
-
-		float same = 0;
-		for (int i=0; i<STATE*OBSERVE; i++){
-			if (oldk[i] - aK[i] < 0.0000001 && oldk[i] - aK[i] > -0.0000001){
-				same +=1;
-			}
-			oldk[i] = aK[i];
-		}
-
-		if (same == STATE*OBSERVE){
-			count += 1;
-		}
-
-		for (int i=0; i<STATE*STATE; i++){
-			aPold[i] = aPnew[i];
-		}
+	for (int i=0; i<STATE*STATE; i++){
+		aPold[i] = aPnew[i];
 	}
-	//for (int i = 0; i < 4; i++) {
-	//	uprintf(": %f %f %f %f\n\r", aK[i*4], aK[i*4+1], aK[i*4+2], aK[i*4+3]);
-	//}
 }
 
 void getState(float state[STATE]) {
@@ -128,6 +139,7 @@ void getState(float state[STATE]) {
 }
 
 void getKGain(float gain[STATE][OBSERVE]) {
+
 	for (int j=0; j<OBSERVE; j++) {
 		for (int i=0; i<STATE; i++) {
 			gain[i][j] = aK[i+j*STATE];

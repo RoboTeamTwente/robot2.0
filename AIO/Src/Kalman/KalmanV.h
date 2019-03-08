@@ -97,7 +97,7 @@ float aBU[STATE] = {0.0f};
 //float aynew[STATE] = {0.0f};
 
 //create matrix objects
-/*
+
 arm_matrix_instance_f32 Xold;
 arm_matrix_instance_f32 F;
 arm_matrix_instance_f32 Xcurrent;
@@ -135,5 +135,5 @@ arm_matrix_instance_f32 z;
 arm_matrix_instance_f32 Q;
 //arm_matrix_instance_f32 HXnew;
 //arm_matrix_instance_f32 ynew;
-*/
+
 #endif /* KALMAN_KALMANV_H_ */

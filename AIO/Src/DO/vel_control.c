@@ -68,8 +68,8 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 	// Local control
 	float velxErr = velLocalRef[body_x] - State[body_x];
 	float velyErr = velLocalRef[body_y] - State[body_y];
-	velLocalRef[body_x] += PID(velxErr, &velxK);
-	velLocalRef[body_y] += PID(velyErr, &velyK);
+//	velLocalRef[body_x] += PID(velxErr, &velxK);
+//	velLocalRef[body_y] += PID(velyErr, &velyK);
 
 	//-----------limit acceleration----------
 //	float maxAccX = 20.0, maxAccY = 8.0; // [m/s^2]
