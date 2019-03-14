@@ -32,8 +32,8 @@ void estimateState(float State[3], float xsensData[3]) {
 	//local2Global(globalVel, velocities, xsensData[body_w]);
 
 	// Put data into State variable
-	State[body_x] = velocities[body_x];
-	State[body_y] = velocities[body_y];
+	State[body_x] = velocities[body_x] * MAGIC_CONSTANT_X;
+	State[body_y] = velocities[body_y] * MAGIC_CONSTANT_Y;
 	State[body_w] = xsensData[body_w];
 }
 
@@ -71,6 +71,6 @@ void wheelFilter(float wheelSpeeds[4]){
 
 void local2Global(float global[3], float local[3], float  yaw){
 	//trigonometry
-	global[body_x] = cosf(yaw)*local[body_x]+sinf(yaw)*local[body_y];
-	global[body_y] = -sinf(yaw)*local[body_x]+cosf(yaw)*local[body_y];
+	global[body_x] = cosf(yaw)*local[body_x]-sinf(yaw)*local[body_y];
+	global[body_y] = sinf(yaw)*local[body_x]+cosf(yaw)*local[body_y];
 }

@@ -16,12 +16,15 @@
 #define TIME_DIFF 0.01F // time difference due to 100Hz frequency
 
 // Robot
-#define rad_robot 0.0775F 	// robot radius (m) (from center to wheel contact point)
-#define rad_wheel 0.0275F 	// wheel radius (m)
+#define rad_robot 0.081F 	// robot radius (m) (from center to wheel contact point)
+#define rad_wheel 0.028F 	// wheel radius (m)
 #define cos60 0.5F		// cosine of 60 degrees (wheel angle is at 60 degrees)
 #define sin60 0.866F	// sine of 60 degrees
 
 // Wheels
+#define MAGIC_CONSTANT_X 1.4F // Factor to multiply measured local x-vel with
+#define MAGIC_CONSTANT_Y 3.2F // Factor to multiply measured local y-vel with
+
 #define PWM_CUTOFF 100.0F // arbitrary treshold to avoid motor shutdown
 #define GEAR_RATIO 2.5F // gear ratio between motor and wheel
 #define MAX_PWM 2400 // defined in CubeMX

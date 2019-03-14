@@ -65,6 +65,7 @@ void wheelsDeInit(){
 	for (int i=0; i<4; i++) {
 		pwm[i] = 0;
 	}
+	SetPWM();
 }
 
 // Set the desired rotations per second for every wheel

@@ -49,7 +49,7 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 
 
 	// Translational control
-	//use_global_ref = false;
+	use_global_ref = true;
 	float velLocalRef[3] = {0};
 	if (use_global_ref) {
 		// Global control
@@ -68,12 +68,12 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 	// Local control
 	float velxErr = velLocalRef[body_x] - State[body_x];
 	float velyErr = velLocalRef[body_y] - State[body_y];
-//	velLocalRef[body_x] += PID(velxErr, &velxK);
-//	velLocalRef[body_y] += PID(velyErr, &velyK);
+	velLocalRef[body_x] += PID(velxErr, &velxK);
+	velLocalRef[body_y] += PID(velyErr, &velyK);
 
 	//-----------limit acceleration----------
-//	float maxAccX = 20.0, maxAccY = 8.0; // [m/s^2]
-//
+//	float maxAccX = 25.0, maxAccY = 10.0; // [m/s^2]
+////
 //	if (fabs(velLocalRef[body_x]) > fabs(State[body_x]) && fabs((velLocalRef[body_x]-State[body_x])/TIME_DIFF) > maxAccX) {
 //		velLocalRef[body_x] = State[body_x] + fabs(velLocalRef[body_x]-State[body_x])/(velLocalRef[body_x]-State[body_x])*maxAccX*TIME_DIFF;
 //	}
@@ -112,6 +112,6 @@ static void body2Wheels(float wheelspeed[4], float velocity[3]){
 
 static void global2Local(float global[3], float local[3], float  yaw){
 	//trigonometry
-	local[body_x] = cosf(yaw)*global[body_x]-sinf(yaw)*global[body_y];
-	local[body_y] = sinf(yaw)*global[body_x]+cosf(yaw)*global[body_y];
+	local[body_x] = cosf(yaw)*global[body_x]+sinf(yaw)*global[body_y];
+	local[body_y] = -sinf(yaw)*global[body_x]+cosf(yaw)*global[body_y];
 }

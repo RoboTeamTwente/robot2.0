@@ -320,21 +320,21 @@ int main(void)
 			//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
 //					uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
 			//		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
-			//uprintf("Calibrated XSens yaw: %f rad\n\r", getYaw());
+			uprintf("Calibrated XSens yaw: %f rad\n\r", getYaw());
 			//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
 			//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
 
 
 			float state[4] = {0};
 			getState(state);
-			float gain[4][4] = {0};
-			getKGain(gain);
+//			float gain[4][4] = {0};
+//			getKGain(gain);
 			//float controlInput[4] = {0};
 			//KalmanK();
 			//KalmanState(accel, vel, controlInput);
-			uprintf("vel command: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
-			//uprintf("wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
-			uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
+			uprintf("vel command: %f %f %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
+//			uprintf("wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
+			//uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
 			uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
 			//for (int i = 0; i < 4; i++) {
 			//	uprintf("Kalman Gain %d: %f %f %f %f\n\r", i, gain[0][i], gain[1][i], gain[2][i], gain[3][i]);
@@ -522,36 +522,46 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		//		wheelsPWM = {0,0,0,0};
 		//		vision_yaw = 0.0*M_PI;
 		//		vision_available = true;
-
+		/*
 
 		velocityRef[0] = 0.0;
 		velocityRef[1] = 0.0;
 		velocityRef[2] = 0.0*M_PI;
 
 		halt = false;
-		float incVel = 0.3;
+		static float incVel = 0.0;
 		static uint velTimer;
-		int reps = 3;
+		int reps = 8;
 		static int count = 0;
 		int dir = body_x;
+		static float tempVel = 0.0;
 
-		if (HAL_GetTick() < 3000) {
+		if (HAL_GetTick() < 7000) {
 			velTimer = HAL_GetTick();
-		} else if (HAL_GetTick() - velTimer < 1500) {
-				velocityRef[dir] = incVel;
-		} else if (HAL_GetTick() - velTimer < 2500) {
+		} else if (HAL_GetTick() - velTimer < 2000) {
+//			if (tempVel < incVel) {
+//				tempVel += 0.01;
+//			}
+			velocityRef[dir] = incVel;
+		} else if (HAL_GetTick() - velTimer < 3000) {
 			velocityRef[dir] = 0.0;
-		} else if (HAL_GetTick() - velTimer < 4000) {
-			velocityRef[dir] = -incVel;
+			tempVel = 0.0;
 		} else if (HAL_GetTick() - velTimer < 5000) {
+//			if (tempVel < incVel) {
+//				tempVel += 0.01;
+//			}
+			velocityRef[dir] = -incVel;
+		} else if (HAL_GetTick() - velTimer < 6000) {
 			velocityRef[dir] = 0.0;
+			tempVel = 0.0;
 		} else if (count < reps-1) {
 			velTimer = HAL_GetTick();
+			incVel += 0.05;
 			count++;
 		} else {
 			velocityRef[dir] = 0.0;
 		}
-
+		*/
 		//------------------------------------
 
 		float controlInput[4] = {0};
