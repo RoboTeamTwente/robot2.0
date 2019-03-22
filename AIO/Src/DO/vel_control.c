@@ -21,7 +21,7 @@ static void global2Local(float input[3], float output[2], float  yaw);
 void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], bool use_global_ref){
 
 	/*---------------------------
-	 * 			TESTING
+	 * 	      PID TUNING
 	  ---------------------------
 
 	float minP = 10.0;
@@ -56,7 +56,6 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 //		float velxErr = vel_ref[body_x] - State[body_x];
 //		float velyErr = vel_ref[body_y] - State[body_y];
 //
-//		float velGlobalRef[3];
 //		vel_ref[body_x] = vel_ref[body_x] + PID(velxErr, &velxK);
 //		vel_ref[body_y] = vel_ref[body_y] + PID(velyErr, &velyK);
 
@@ -70,17 +69,6 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 	float velyErr = velLocalRef[body_y] - State[body_y];
 	velLocalRef[body_x] += PID(velxErr, &velxK);
 	velLocalRef[body_y] += PID(velyErr, &velyK);
-
-	//-----------limit acceleration----------
-//	float maxAccX = 25.0, maxAccY = 10.0; // [m/s^2]
-////
-//	if (fabs(velLocalRef[body_x]) > fabs(State[body_x]) && fabs((velLocalRef[body_x]-State[body_x])/TIME_DIFF) > maxAccX) {
-//		velLocalRef[body_x] = State[body_x] + fabs(velLocalRef[body_x]-State[body_x])/(velLocalRef[body_x]-State[body_x])*maxAccX*TIME_DIFF;
-//	}
-//	if (fabs(velLocalRef[body_y]) > fabs(State[body_y]) && fabs((velLocalRef[body_y]-State[body_y])/TIME_DIFF) > maxAccY) {
-//		velLocalRef[body_y] = State[body_y] + fabs(velLocalRef[body_y]-State[body_y])/(velLocalRef[body_y]-State[body_y])*maxAccY*TIME_DIFF;
-//	}
-	//---------------------------------------
 
 	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
 
@@ -100,18 +88,18 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 
 static void body2Wheels(float wheelspeed[4], float velocity[3]){
 	//mixing matrix
-	//TODO check minuses
-	float velx2wheel = (velocity[body_x]/(sin60*rad_wheel));
-	float vely2wheel = (velocity[body_y]/(cos60*rad_wheel));
+	float velx2wheel = (velocity[body_x]*cos60/rad_wheel);
+	float vely2wheel = (velocity[body_y]*sin60/rad_wheel);
 	//float rot2wheel =  (rad_robot*velocity[body_w]/rad_wheel);
-	wheelspeed[wheels_RF] = -(velx2wheel + vely2wheel);
-	wheelspeed[wheels_RB] = -(velx2wheel - vely2wheel);
-	wheelspeed[wheels_LB] = -(-velx2wheel - vely2wheel);
-	wheelspeed[wheels_LF] = -(-velx2wheel + vely2wheel);
+	wheelspeed[wheels_RF] = (velx2wheel + vely2wheel);
+	wheelspeed[wheels_RB] = (velx2wheel - vely2wheel);
+	wheelspeed[wheels_LB] = (-velx2wheel - vely2wheel);
+	wheelspeed[wheels_LF] = (-velx2wheel + vely2wheel);
 }
 
 static void global2Local(float global[3], float local[3], float  yaw){
 	//trigonometry
 	local[body_x] = cosf(yaw)*global[body_x]+sinf(yaw)*global[body_y];
 	local[body_y] = -sinf(yaw)*global[body_x]+cosf(yaw)*global[body_y];
+	local[body_w] = global[body_w];
 }

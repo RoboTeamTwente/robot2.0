@@ -22,8 +22,8 @@
 #define sin60 0.866F	// sine of 60 degrees
 
 // Wheels
-#define MAGIC_CONSTANT_X 1.4F // Factor to multiply measured local x-vel with
-#define MAGIC_CONSTANT_Y 3.2F // Factor to multiply measured local y-vel with
+//#define MAGIC_CONSTANT_X 1.4F // Factor to multiply measured local x-vel with, see https://docs.google.com/document/d/196xaFXpYc2ibcTBXA8pA9vP2OrCCVTXykL1nR8dG_Xo/edit
+//#define MAGIC_CONSTANT_Y 3.2F // Factor to multiply measured local y-vel with, see https://docs.google.com/document/d/196xaFXpYc2ibcTBXA8pA9vP2OrCCVTXykL1nR8dG_Xo/edit
 
 #define PWM_CUTOFF 100.0F // arbitrary treshold to avoid motor shutdown
 #define GEAR_RATIO 2.5F // gear ratio between motor and wheel
@@ -61,7 +61,7 @@ typedef struct {
 }PIDvariables;
 
 static PIDvariables angleK = {
-		.kP = 25,//kp
+		.kP = 20,//kp
 		.kI = 1.5,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
@@ -69,7 +69,7 @@ static PIDvariables angleK = {
 		.timeDiff = TIME_DIFF
 };
 static PIDvariables velxK = {
-		.kP = 1,//kp
+		.kP = 0.0,//kp
 		.kI = 0,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
@@ -77,8 +77,8 @@ static PIDvariables velxK = {
 		.timeDiff = TIME_DIFF
 };
 static PIDvariables velyK = {
-		.kP = 1,//kp
-		.kI = 0,//ki
+		.kP = 0.0,//kp
+		.kI = 0.0,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero

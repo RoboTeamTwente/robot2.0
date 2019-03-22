@@ -48,9 +48,9 @@ void getvel(float Vel[2]){
 //multiplies a 3*4 matrix by a vector of 4 elements.
 void wheels2Body(float wheelSpeeds[4], float output[3]){
 	//Applying transpose(M_inv) matrix to go from wheel angular velocity to body velocity (assuming no slip)
-	output[body_x] = -(sin60*wheelSpeeds[wheels_RF] + sin60*wheelSpeeds[wheels_RB] - sin60*wheelSpeeds[wheels_LB] - sin60*wheelSpeeds[wheels_LF])*rad_wheel/4;
-	output[body_y] = -(cos60*wheelSpeeds[wheels_RF] - cos60*wheelSpeeds[wheels_RB] - cos60*wheelSpeeds[wheels_LB] + cos60*wheelSpeeds[wheels_LF])*rad_wheel/4;
-	output[body_w] = -(wheelSpeeds[wheels_RF] + wheelSpeeds[wheels_RB] + wheelSpeeds[wheels_LB] + wheelSpeeds[wheels_LF])/rad_robot*rad_wheel/4;
+	output[body_x] = (wheelSpeeds[wheels_RF] + wheelSpeeds[wheels_RB] - wheelSpeeds[wheels_LB] - wheelSpeeds[wheels_LF])/cos60 * rad_wheel/4;
+	output[body_y] = (wheelSpeeds[wheels_RF] - wheelSpeeds[wheels_RB] - wheelSpeeds[wheels_LB] + wheelSpeeds[wheels_LF])/sin60 * rad_wheel/4;
+	output[body_w] = (wheelSpeeds[wheels_RF] + wheelSpeeds[wheels_RB] + wheelSpeeds[wheels_LB] + wheelSpeeds[wheels_LF])/rad_robot * rad_wheel/4;
 }
 
 //TODO: describe what this does
@@ -73,4 +73,5 @@ void local2Global(float global[3], float local[3], float  yaw){
 	//trigonometry
 	global[body_x] = cosf(yaw)*local[body_x]-sinf(yaw)*local[body_y];
 	global[body_y] = sinf(yaw)*local[body_x]+cosf(yaw)*local[body_y];
+	global[body_w] = local[body_w];
 }
