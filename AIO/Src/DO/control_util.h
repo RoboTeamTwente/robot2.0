@@ -63,21 +63,21 @@ typedef struct {
 static PIDvariables angleK = {
 		.kP = 20,//kp
 		.kI = 1.5,//ki
-		.kD = 0.0,//kd
+		.kD = 0,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero
 		.timeDiff = TIME_DIFF
 };
 static PIDvariables velxK = {
-		.kP = 0.0,//kp
-		.kI = 0,//ki
+		.kP = 1.0,//kp
+		.kI = 0.0,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero
 		.timeDiff = TIME_DIFF
 };
 static PIDvariables velyK = {
-		.kP = 0.0,//kp
+		.kP = 2.5,//kp
 		.kI = 0.0,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
