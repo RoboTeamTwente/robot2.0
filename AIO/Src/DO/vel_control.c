@@ -73,7 +73,7 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
 
 	// Angular control
-	float angleErr = constrainAngle(State[body_w] - vel_ref[body_w]);//constrain it to one circle turn
+	float angleErr = constrainAngle(vel_ref[body_w] - State[body_w]);//constrain it to one circle turn
 	if (fabs(angleErr) < M_PI/180) { // allow 1 degree deviation
 		angleErr = 0;
 		angleK.I = 0;
@@ -88,8 +88,8 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 
 static void body2Wheels(float wheelspeed[4], float velocity[3]){
 	//mixing matrix
-	float velx2wheel = (velocity[body_x]*cos60/rad_wheel);
-	float vely2wheel = (velocity[body_y]*sin60/rad_wheel);
+	float velx2wheel = (velocity[body_x]*sin60/rad_wheel);
+	float vely2wheel = (velocity[body_y]*cos60/rad_wheel);
 	//float rot2wheel =  (rad_robot*velocity[body_w]/rad_wheel);
 	wheelspeed[wheels_RF] = (velx2wheel + vely2wheel);
 	wheelspeed[wheels_RB] = (velx2wheel - vely2wheel);
