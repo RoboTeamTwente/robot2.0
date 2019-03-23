@@ -114,9 +114,9 @@ static void limitScale(wheel_names wheel){
 		// Determine direction
 	if(pwm[wheel] <= -1.0F){
 		pwm[wheel] *= -1;
-		direction[wheel] = 1;
+		direction[wheel] = 0; // turn anti-clockwise
 	} else if(pwm[wheel] >= 1.0F){
-		direction[wheel] = 0;
+		direction[wheel] = 1; // turn clockwise
 	} else {
 		pwm[wheel] = 0; // the motor does not brake if pwm 0 is sent
 	}
@@ -151,7 +151,7 @@ static void computeWheelSpeed(){
 	short int encoderData[4]= {0};
 	getEncoderData(encoderData);
 	for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-	wheelspeed[wheel] = ENCODERtoOMEGA * encoderData[wheel];
+		wheelspeed[wheel] = -1 * ENCODERtoOMEGA * encoderData[wheel]; // We define clockwise as positive, therefore we have a minus sign here
 	}
 	ResetEncoder();
 }
