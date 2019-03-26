@@ -22,9 +22,6 @@
 #define sin60 0.866F	// sine of 60 degrees
 
 // Wheels
-//#define MAGIC_CONSTANT_X 1.4F // Factor to multiply measured local x-vel with, see https://docs.google.com/document/d/196xaFXpYc2ibcTBXA8pA9vP2OrCCVTXykL1nR8dG_Xo/edit
-//#define MAGIC_CONSTANT_Y 3.2F // Factor to multiply measured local y-vel with, see https://docs.google.com/document/d/196xaFXpYc2ibcTBXA8pA9vP2OrCCVTXykL1nR8dG_Xo/edit
-
 #define PWM_CUTOFF 100.0F // arbitrary treshold to avoid motor shutdown
 #define GEAR_RATIO 2.5F // gear ratio between motor and wheel
 #define MAX_PWM 2400 // defined in CubeMX
@@ -35,6 +32,9 @@
 
 #define OMEGAtoPWM (1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // conversion factor from wheel speed [rad/s] to required PWM on the motor
 #define ENCODERtoOMEGA (float)2*M_PI/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to wheel speed [rad/s]
+
+// Control
+#define YAW_MARGIN (2.0F/180.0F)*(float)M_PI // margin at which the I-value of the PID is reset to 0
 
 ///////////////////////////////////////////////////// STRUCTS AND VARIABLES
 
@@ -77,8 +77,8 @@ static PIDvariables velxK = {
 		.timeDiff = TIME_DIFF
 };
 static PIDvariables velyK = {
-		.kP = 2.5,//kp
-		.kI = 0.0,//ki
+		.kP = 2.0,//kp
+		.kI = 0,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero
