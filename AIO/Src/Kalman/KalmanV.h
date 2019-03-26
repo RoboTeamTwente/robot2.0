@@ -87,47 +87,5 @@ float aI_KHP[STATE*STATE] = {0.0f};
 float aI_KHPI_KHt[STATE*STATE] = {0.0f};
 float aU[STATE] = {0.0f};
 float aBU[STATE] = {0.0f};
-//float aHXnew[STATE] = {0.0f};
-//float aynew[STATE] = {0.0f};
 
-//create matrix objects
-/*
-arm_matrix_instance_f32 Xold;
-arm_matrix_instance_f32 F;
-arm_matrix_instance_f32 Xcurrent;
-arm_matrix_instance_f32 Pold;
-arm_matrix_instance_f32 Ft;
-arm_matrix_instance_f32 FP;
-arm_matrix_instance_f32 Pcurrent;
-arm_matrix_instance_f32 yold;
-arm_matrix_instance_f32 H;
-arm_matrix_instance_f32 HX;
-arm_matrix_instance_f32 S;
-arm_matrix_instance_f32 R;
-arm_matrix_instance_f32 Ht;
-arm_matrix_instance_f32 PHt;
-arm_matrix_instance_f32 HPHt;
-arm_matrix_instance_f32 K;
-arm_matrix_instance_f32 Si;
-arm_matrix_instance_f32 PHtSi;
-arm_matrix_instance_f32 Xnew;
-arm_matrix_instance_f32 Ky;
-arm_matrix_instance_f32 Pnew;
-arm_matrix_instance_f32 Kt;
-arm_matrix_instance_f32 KR;
-arm_matrix_instance_f32 KRKt;
-arm_matrix_instance_f32 I;
-arm_matrix_instance_f32 KH;
-arm_matrix_instance_f32 I_KH;
-arm_matrix_instance_f32 I_KHt;
-arm_matrix_instance_f32 I_KHP;
-arm_matrix_instance_f32 I_KHPI_KHt;
-arm_matrix_instance_f32 B;
-arm_matrix_instance_f32 U;
-arm_matrix_instance_f32 BU;
-arm_matrix_instance_f32 z;
-arm_matrix_instance_f32 Q;
-//arm_matrix_instance_f32 HXnew;
-//arm_matrix_instance_f32 ynew;
-*/
 #endif /* KALMAN_KALMANV_H_ */
