@@ -16,8 +16,8 @@
 #define TIME_DIFF 0.01F // time difference due to 100Hz frequency
 
 // Robot
-#define rad_robot 0.0775F 	// robot radius (m) (from center to wheel contact point)
-#define rad_wheel 0.0275F 	// wheel radius (m)
+#define rad_robot 0.081F 	// robot radius (m) (from center to wheel contact point)
+#define rad_wheel 0.028F 	// wheel radius (m)
 #define cos60 0.5F		// cosine of 60 degrees (wheel angle is at 60 degrees)
 #define sin60 0.866F	// sine of 60 degrees
 
@@ -32,7 +32,9 @@
 
 #define OMEGAtoPWM (1/SPEED_CONSTANT)*(MAX_PWM/MAX_VOLTAGE)*GEAR_RATIO // conversion factor from wheel speed [rad/s] to required PWM on the motor
 #define ENCODERtoOMEGA (float)2*M_PI/(TIME_DIFF*GEAR_RATIO*PULSES_PER_ROTATION) // conversion factor from number of encoder pulses to wheel speed [rad/s]
-#define OMEGA_LIMIT 150.0F // Highest wheel speed that is allowed
+
+// Control
+#define YAW_MARGIN (2.0F/180.0F)*(float)M_PI // margin at which the I-value of the PID is reset to 0
 
 ///////////////////////////////////////////////////// STRUCTS AND VARIABLES
 
@@ -59,23 +61,23 @@ typedef struct {
 }PIDvariables;
 
 static PIDvariables angleK = {
-		.kP = 25,//kp
+		.kP = 20,//kp
 		.kI = 1.5,//ki
-		.kD = 0.0,//kd
+		.kD = 0,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero
 		.timeDiff = TIME_DIFF
 };
 static PIDvariables velxK = {
-		.kP = 1,//kp
-		.kI = 0,//ki
+		.kP = 1.0,//kp
+		.kI = 0.0,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero
 		.prev_e = 0,//always starts as zero
 		.timeDiff = TIME_DIFF
 };
 static PIDvariables velyK = {
-		.kP = 1,//kp
+		.kP = 2.0,//kp
 		.kI = 0,//ki
 		.kD = 0.0,//kd
 		.I = 0,//always starts as zero

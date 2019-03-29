@@ -56,10 +56,16 @@ void wheelsDeInit(){
 	HAL_TIM_Base_Stop(&htim3); //LB
 	HAL_TIM_Base_Stop(&htim4); //LF
 	HAL_TIM_Base_Stop(&htim5); //TIME
-	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_2); //RF
-	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1); //RB
-	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_1); //LB
-	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2); //LF
+//	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_2); //RF
+//	HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1); //RB
+//	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_1); //LB
+//	HAL_TIM_PWM_Stop(&htim12, TIM_CHANNEL_2); //LF
+
+	//TODO: Fix this huge stopping hack
+	for (int i=0; i<4; i++) {
+		pwm[i] = 0;
+	}
+	SetPWM();
 }
 
 // Set the desired rotations per second for every wheel
@@ -68,7 +74,7 @@ void setWheelSpeed(float wheelref[4]){
 		computeWheelSpeed();
 		for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
 			float err = wheelref[wheel]-wheelspeed[wheel];
-			pwm[wheel] = OMEGAtoPWM*(wheelref[wheel] + PID(err, &wheelsK[wheel])); // add PID to wheels reference angular velocity and convert to pwm
+			pwm[wheel] = wheelref[wheel];///OMEGAtoPWM*(wheelref[wheel] + PID(err, &wheelsK[wheel])); // add PID to wheels reference angular velocity and convert to pwm
 			limitScale(wheel);
 		}
 
@@ -108,9 +114,9 @@ static void limitScale(wheel_names wheel){
 		// Determine direction
 	if(pwm[wheel] <= -1.0F){
 		pwm[wheel] *= -1;
-		direction[wheel] = 1;
+		direction[wheel] = 0; // turn anti-clockwise
 	} else if(pwm[wheel] >= 1.0F){
-		direction[wheel] = 0;
+		direction[wheel] = 1; // turn clockwise
 	} else {
 		pwm[wheel] = 0; // the motor does not brake if pwm 0 is sent
 	}
@@ -145,17 +151,17 @@ static void computeWheelSpeed(){
 	short int encoderData[4]= {0};
 	getEncoderData(encoderData);
 	for(wheel_names wheel = wheels_RF; wheel <= wheels_LF; wheel++){
-	wheelspeed[wheel] = ENCODERtoOMEGA * encoderData[wheel];
+		wheelspeed[wheel] = -1 * ENCODERtoOMEGA * encoderData[wheel]; // We define clockwise as positive, therefore we have a minus sign here
 	}
 	ResetEncoder();
 }
 
 // Set PWM to the motor
 static void SetPWM(){
-	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2,0);// MAX_PWM - pwm[wheels_RF]);
-	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1,0);// MAX_PWM - pwm[wheels_RB]);
-	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1,0);// MAX_PWM - pwm[wheels_LB]);
-	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2,0);// MAX_PWM - pwm[wheels_LF]);
+	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_2,pwm[wheels_RF]);
+	__HAL_TIM_SET_COMPARE(&htim9 , TIM_CHANNEL_1,pwm[wheels_RB]);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_1,pwm[wheels_LB]);
+	__HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2,pwm[wheels_LF]);
 }
 
 // Set direction to the motor

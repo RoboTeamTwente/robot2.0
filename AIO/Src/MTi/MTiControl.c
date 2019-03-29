@@ -386,9 +386,6 @@ uint* MT_GetSuccErr(){
 }
 
 float* MT_GetAcceleration(){
-	//acc_correct[0] = -acc[0];//Xsens is placed inverted
-	//acc_correct[1] = -acc[1];
-	//acc_correct[2] = acc[2];
 	return acc;
 }
 float* MT_GetAngles(){

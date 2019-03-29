@@ -30,7 +30,7 @@ int vel_control_Init(){
 	return 0;
 }
 
-void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float wheel_ref[4]){
+void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, float wheel_ref[4], bool use_global_ref){
 	// get and offset xsens data
 	getXsensData(xsensData);
 
@@ -49,7 +49,7 @@ void DO_Control(float velocityRef[3], float vision_yaw, bool vision_available, f
 	State[1] = kalmanState[2];
 
 	// control part
-	vel_control_Callback(wheel_ref, State, velocityRef);
+	vel_control_Callback(wheel_ref, State, velocityRef, use_global_ref);
 
 }
 

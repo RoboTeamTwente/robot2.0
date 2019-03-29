@@ -84,6 +84,7 @@ bool started_icc = false;
 bool halt = true;
 bool calibration_needed = true;
 bool vision_available = false;
+bool use_global_ref = false;
 
 float wheels_ref[4] = {0,0,0,0};
 float velocityRef[3] = {0};
@@ -209,6 +210,7 @@ int main(void)
 			if(receivedRoboData.use_angle){
 				velocityRef[body_w] = angularVelRef;
 			}
+			use_global_ref = receivedRoboData.driving_reference;
 
 			//TODO: test vision angle and calibration etc.
 			vision_available = receivedRoboData.use_cam_info;
@@ -325,8 +327,8 @@ int main(void)
 
 			float state[4] = {0};
 			getState(state);
-			//float gain[4][4] = {0};
-			//getKGain(gain);
+			float gain[4][4] = {0};
+			getKGain(gain);
 			//float controlInput[4] = {0};
 			//uprintf("vel command: %f, %f, %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
 			//uprintf("wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
@@ -337,8 +339,8 @@ int main(void)
 			//}
 
 			//uprintf("wheel speeds: %d %d %d %d\n\r", (int)getWheelSpeed(wheels_RF), (int)getWheelSpeed(wheels_RB), (int)getWheelSpeed(wheels_LB), (int)getWheelSpeed(wheels_LF));
-			//uprintf("ref: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
-			//uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
+//			uprintf("ref: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
+//			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
 			//		uprintf("\n\r");
 			//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
 			//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
@@ -508,56 +510,24 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		geneva_Control();
 	}else if(htim->Instance == htim7.Instance){
 
-
-		/*------------------------------------
-						TESTING
-		------------------------------------*/
-
-
-		//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 1);
-		//		wheelsPWM = {0,0,0,0};
-		//		vision_yaw = 0.0*M_PI;
-		//		vision_available = true;
-
-
-
-		velocityRef[0] = 0.0;
-		velocityRef[1] = 0.0;
-		velocityRef[2] = 0.0*M_PI;
-		/*
-		halt = false;
-		float incVel = 0.3;
-		static uint velTimer;
-		int reps = 3;
-		static int count = 0;
-		int dir = 0;
-
-		if (HAL_GetTick() < 3000) {
-			velTimer = HAL_GetTick();
-		} else if (HAL_GetTick() - velTimer < 1500) {
-				velocityRef[dir] = incVel;
-		} else if (HAL_GetTick() - velTimer < 2500) {
-			velocityRef[dir] = 0.0;
-		} else if (HAL_GetTick() - velTimer < 4000) {
-			velocityRef[dir] = -incVel;
-		} else if (HAL_GetTick() - velTimer < 5000) {
-			velocityRef[dir] = 0.0;
-		} else if (count < reps-1) {
-			velTimer = HAL_GetTick();
-			count++;
-		} else {
-			velocityRef[dir] = 0.0;
-		}
-*/
-		//------------------------------------
-
 		float controlInput[4] = {0};
-//		if (fabs(velocityRef[0]-vel[0]) > 0.1) {
-//			controlInput[1] = (velocityRef[0]-vel[0] < 0) ? -5 : 5;
-//		}
-//		if (fabs(velocityRef[1]-vel[1]) > 0.1) {
-//			controlInput[3] = (velocityRef[1]-vel[1] < 0) ? -5 : 5;
-//		}
+		float wheels_set[4] = {0};
+		float velTimer = 0.0f;
+
+		if (HAL_GetTick() < 7000) {
+			velTimer = HAL_GetTick();
+		} else if (HAL_GetTick() - velTimer < 20000) {
+			wheels_set[0] = 100;
+			wheels_set[1] = 100;
+			wheels_set[2] = 100;
+			wheels_set[3] = 100;
+		}
+		else{
+			wheels_set[0] = 0;
+			wheels_set[1] = 0;
+			wheels_set[2] = 0;
+			wheels_set[3] = 0;
+		}
 
 		float accel[2] = {0};
 		accel[0] = MT_GetAcceleration()[0];
@@ -566,8 +536,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		KalmanK();
 		KalmanState(accel, vel, controlInput);
 
-//		halt = false;
-		DO_Control(velocityRef, vision_yaw, vision_available, wheels_ref); // outputs to wheels_ref
+		halt = false;
+		DO_Control(velocityRef, vision_yaw, vision_available, wheels_ref, use_global_ref); // outputs to wheels_ref
 		// send PWM to motors
 		if (halt) { // when communication is lost for too long, we send 0 to the motors
 			float wheel_powers[4] = {0,0,0,0};
@@ -575,7 +545,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			setWheelSpeed(wheel_powers);
 		} else {
 			// copy the controller output before sending it to SetOutput, to make sure it doesnt get altered at the wrong time
-			float wheel_powers[4] = {wheels_ref[0], wheels_ref[1],wheels_ref[2],wheels_ref[3]};
+			float wheel_powers[4] = {wheels_set[0], wheels_set[1],wheels_set[2],wheels_set[3]};
 			//			float wheel_powers[4] = {20,20,20,20};
 			setWheelSpeed(wheel_powers);
 		}

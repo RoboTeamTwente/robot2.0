@@ -17,81 +17,81 @@ void Kalman_init(){
 
 void KalmanState(float accel[2], float vel[2], float controlInput[STATE]){
 
-
 	// Predict
-//	for (int i = 0; i < STATE; i++) {
-//		aU[i] = controlInput[i];
-//	}
-	az[0] = vel[0];
-	az[1] = accel[0];
-	az[2] = vel[1];
-	az[3] = accel[1];
+	//	for (int i = 0; i < STATE; i++) {
+	//		aU[i] = controlInput[i];
+	//	}
+		az[0] = vel[0];
+		az[1] = accel[0];
+		az[2] = vel[1];
+		az[3] = accel[1];
 
-	multiplyMatrix(aF, aXold, aFX, STATE, 1, STATE);
-	multiplyMatrix(aB, aU, aBU, STATE, 1, STATE);
-	addMatrix(aFX, aBU, aXcurrent, STATE);
+		multiplyMatrix(aF, aXold, aFX, STATE, 1, STATE);
+		multiplyMatrix(aB, aU, aBU, STATE, 1, STATE);
+		addMatrix(aFX, aBU, aXcurrent, STATE);
 
-	// Get measurement
+		// Get measurement
 
-	// Process data
-	multiplyMatrix(aH, aXcurrent, aHX, OBSERVE, 1, STATE);
-	subMatrix(az, aHX, ayold, OBSERVE);
+		// Process data
+		multiplyMatrix(aH, aXcurrent, aHX, OBSERVE, 1, STATE);
+		subMatrix(az, aHX, ayold, OBSERVE);
 
-	// Update
-	multiplyMatrix(aK, ayold, aKy, STATE, 1, OBSERVE);
-	addMatrix(aXcurrent, aKy, aXnew, STATE);
+		// Update
+		multiplyMatrix(aK, ayold, aKy, STATE, 1, OBSERVE);
+		addMatrix(aXcurrent, aKy, aXnew, STATE);
 
-	for (int i=0; i<STATE; i++){
-		aXold[i] = aXnew[i];
+		for (int i=0; i<STATE; i++){
+			aXold[i] = aXnew[i];
 	}
 
 }
+
 
 void KalmanK(){
 
 	static float count = 0;
 
-	if (count < 100){
-		static float oldk[STATE*OBSERVE] = {0};
-		multiplyMatrix(aF, aPold, aFP, STATE, STATE, STATE);
-		multiplyMatrix(aFP, aFt, aFPFt, STATE, STATE, STATE);
-		addMatrix(aFPFt, aQ, aPcurrent, STATE*STATE);
+		if (count < 100){
+			static float oldk[STATE*OBSERVE] = {0};
+			multiplyMatrix(aF, aPold, aFP, STATE, STATE, STATE);
+			multiplyMatrix(aFP, aFt, aFPFt, STATE, STATE, STATE);
+			addMatrix(aFPFt, aQ, aPcurrent, STATE*STATE);
 
-		multiplyMatrix(aPcurrent, aHt, aPHt, STATE, OBSERVE, STATE);
-		multiplyMatrix(aH, aPHt, aHPHt, OBSERVE, OBSERVE, STATE);
-		addMatrix(aR, aHPHt, aS, OBSERVE*OBSERVE);
+			multiplyMatrix(aPcurrent, aHt, aPHt, STATE, OBSERVE, STATE);
+			multiplyMatrix(aH, aPHt, aHPHt, OBSERVE, OBSERVE, STATE);
+			addMatrix(aR, aHPHt, aS, OBSERVE*OBSERVE);
 
-		// Compute Kalman Gain
-		inverse(aS, aSi);
-		multiplyMatrix(aPHt, aSi, aK, STATE, OBSERVE, OBSERVE);
+			// Compute Kalman Gain
+			inverse(aS, aSi);
+			multiplyMatrix(aPHt, aSi, aK, STATE, OBSERVE, OBSERVE);
 
-		transMatrix(aK, aKt, STATE, OBSERVE);
-		multiplyMatrix(aK, aR, aKR, STATE, OBSERVE, OBSERVE);
-		multiplyMatrix(aKR, aKt, aKRKt, STATE, STATE, OBSERVE);
-		multiplyMatrix(aK, aH, aKH, STATE, STATE, OBSERVE);
-		subMatrix(aI, aKH, aI_KH, STATE*STATE);
-		transMatrix(aI_KH, aI_KHt, STATE, STATE);
-		multiplyMatrix(aI_KH, aPcurrent, aI_KHP, STATE, STATE, STATE);
-		multiplyMatrix(aI_KHP, aI_KHt, aI_KHPI_KHt, STATE, STATE, STATE);
-		addMatrix(aI_KHPI_KHt, aKRKt, aPnew, STATE*STATE);
+			transMatrix(aK, aKt, STATE, OBSERVE);
+			multiplyMatrix(aK, aR, aKR, STATE, OBSERVE, OBSERVE);
+			multiplyMatrix(aKR, aKt, aKRKt, STATE, STATE, OBSERVE);
+			multiplyMatrix(aK, aH, aKH, STATE, STATE, OBSERVE);
+			subMatrix(aI, aKH, aI_KH, STATE*STATE);
+			transMatrix(aI_KH, aI_KHt, STATE, STATE);
+			multiplyMatrix(aI_KH, aPcurrent, aI_KHP, STATE, STATE, STATE);
+			multiplyMatrix(aI_KHP, aI_KHt, aI_KHPI_KHt, STATE, STATE, STATE);
+			addMatrix(aI_KHPI_KHt, aKRKt, aPnew, STATE*STATE);
 
 
-		float same = 0;
-		for (int i=0; i<STATE*OBSERVE; i++){
-			if (oldk[i] - aK[i] < 0.0000001 && oldk[i] - aK[i] > -0.0000001){
-				same +=1;
+			float same = 0;
+			for (int i=0; i<STATE*OBSERVE; i++){
+				if (oldk[i] - aK[i] < 0.0000001 && oldk[i] - aK[i] > -0.0000001){
+					same +=1;
+				}
+				oldk[i] = aK[i];
 			}
-			oldk[i] = aK[i];
-		}
 
-		if (same == STATE*OBSERVE){
-			count += 1;
-		}
+			if (same == STATE*OBSERVE){
+				count += 1;
+			}
 
-		for (int i=0; i<STATE*STATE; i++){
-			aPold[i] = aPnew[i];
+			for (int i=0; i<STATE*STATE; i++){
+				aPold[i] = aPnew[i];
+			}
 		}
-	}
 }
 
 void inverse(float input[OBSERVE*OBSERVE], float output[OBSERVE*OBSERVE]){
@@ -171,6 +171,3 @@ void getP(float P[STATE*STATE]) {
 		P[i] = aPold[i];
 	}
 }
-
-
-

@@ -9,9 +9,10 @@
 #define DO_VEL_CONTROL_H_
 
 #include "control_util.h"
+#include "stdbool.h"
 
 ///////////////////////////////////////////////////// PUBLIC FUNCTION DECLARATIONS
 
-void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3]);
+void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], bool use_global_ref);
 
 #endif /* DO_VEL_CONTROL_H_ */

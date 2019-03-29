@@ -1,10 +1,3 @@
-/*
- * KalmanV.h
- *
- *  Created on: Feb 21, 2019
- *      Author: kjhertenberg
- */
-
 #ifndef KALMAN_KALMANV_H_
 #define KALMAN_KALMANV_H_
 
@@ -21,7 +14,6 @@
 #define RAND_VAR 1.0F // variance in the random force
 
 //create arrays
-float aXold[STATE] = {0.0f};
 float aF[STATE*STATE] = {
 		1, TIMESTEP, 0, 0,
 		0, 1, 0, 0,
@@ -37,7 +29,6 @@ float aR[OBSERVE*OBSERVE] = {
 		0, ACC_VAR, 0, 0,
 		0, 0, VEL_VAR, 0,
 		0, 0, 0, ACC_VAR};
-float az[OBSERVE] = {0.0f};
 float aI[STATE*STATE] = {
 		1,0,0,0,
 		0,1,0,0,
@@ -60,6 +51,8 @@ float aQ[STATE*STATE] = {
 		0, 0, TIMESTEP*RAND_VAR, RAND_VAR};
 
 //empty arrays
+float aXold[STATE] = {0.0f};
+float az[OBSERVE] = {0.0f};
 float aXcurrent[STATE] = {0.0f};
 float aFX[STATE] = {0.0f};
 float aFt[STATE*STATE] = {0.0f};
