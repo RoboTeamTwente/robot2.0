@@ -30,8 +30,6 @@ float acc_correct[3]= {0.0f};
 float gyro[3];
 uint8_t raw[128];
 uint32_t statusword;
-float32_t pState[NUM_SECTIONS*4]={0};  //NUM_SECTIONS is define in test.h
-arm_biquad_casd_df1_inst_f32 S;   //structure that defines the filter
 
 enum reception_states{
 	uninitialized,
@@ -57,8 +55,6 @@ static inline MT_StatusTypeDef WaitForAck(enum XsMessageId XMID);
  */
 // Initialize controlling the MTi device
 MT_StatusTypeDef MT_Init(){
-	arm_biquad_cascade_df1_init_f32(&S,NUM_SECTIONS,pCoeffs,pState);
-	//arm_biquad_cascade_df1_init_f32();
 	MT_StatusTypeDef ret = MT_succes;
 	reception_state = receive_5;
 	cplt_mess_stored_flag = 0;
@@ -77,7 +73,7 @@ MT_StatusTypeDef MT_Init(){
 		uprintf("started MTi Operation\n\r");
 		//MT_SetOptions();
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
-		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
+		MT_BuildConfig(XDI_Acceleration, 100, false);
 		MT_BuildConfig(XDI_StatusWord, 10, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
 		MT_SetFilterProfile(4);
@@ -121,8 +117,6 @@ MT_StatusTypeDef MT_Update(){
 			case XMID_MTData2:
 				MT_Data_succerr[0]++;
 				PrintMessageData(ReceivedMessageStorage);
-				arm_biquad_cascade_df1_f32(&S,&acc[0],&acc[0],1);
-				arm_biquad_cascade_df1_f32(&S,&acc[1],&acc[1],1);
 				break;
 			case XMID_ReqOutputConfigurationAck:
 				PrintOutputConfig(ReceivedMessageStorage);
@@ -392,10 +386,10 @@ uint* MT_GetSuccErr(){
 }
 
 float* MT_GetAcceleration(){
-	acc_correct[0] = -acc[0];//Xsens is placed inverted
-	acc_correct[1] = -acc[1];
-	acc_correct[2] = acc[2];
-	return acc_correct;
+	//acc_correct[0] = -acc[0];//Xsens is placed inverted
+	//acc_correct[1] = -acc[1];
+	//acc_correct[2] = acc[2];
+	return acc;
 }
 float* MT_GetAngles(){
 	return angles;
@@ -568,7 +562,7 @@ static void PrintMessageData(struct XbusMessage const* message){
 	}
 	if (XbusMessage_getDataItem(acc, XDI_Acceleration, message)){
 		if(MT_DEBUG) uprintf( " Acceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);
-		bytes -= 1 + 2 * 4 + 2;
+		bytes -= 1 + 3 * 4 + 2;
 	}
 	if (XbusMessage_getDataItem(acc, XDI_FreeAcceleration, message)){
 		if(MT_DEBUG) uprintf( " FreeAcceleration: (%.3f, %.3f, %.3f)", acc[0], acc[1], acc[2]);

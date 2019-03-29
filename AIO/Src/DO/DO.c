@@ -60,7 +60,7 @@ float getYaw() {
 ///////////////////////////////////////////////////// PRIVATE FUNCTION IMPLEMENTATIONS
 
 static void getXsensData(float xsensData[3]){
-	xsensData[body_x] = -MT_GetAcceleration()[0]; // TODO: why the minus signs?
-	xsensData[body_y] = -MT_GetAcceleration()[1];
+	xsensData[body_x] = MT_GetAcceleration()[0]; // TODO: why the minus signs?
+	xsensData[body_y] = MT_GetAcceleration()[1];
 	xsensData[body_w] = MT_GetAngles()[2]/180*M_PI;
 }
