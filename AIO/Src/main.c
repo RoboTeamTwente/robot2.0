@@ -286,7 +286,7 @@ int main(void)
 
 		geneva_Update();
 		MT_Update();
-		if((HAL_GetTick() - printtime >= 100)){
+		if((HAL_GetTick() - printtime >= 10)){
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -337,7 +337,7 @@ int main(void)
 			//for (int i = 0; i < 4; i++) {
 			//	uprintf("Kalman Gain %d: %f %f %f %f\n\r", i, gain[0][i], gain[1][i], gain[2][i], gain[3][i]);
 			//}
-
+			//uprintf(" %f %f %f %f\n\r", C[0], C[1], C[2], C[3]);
 			//uprintf("wheel speeds: %d %d %d %d\n\r", (int)getWheelSpeed(wheels_RF), (int)getWheelSpeed(wheels_RB), (int)getWheelSpeed(wheels_LB), (int)getWheelSpeed(wheels_LF));
 //			uprintf("ref: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
 //			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
@@ -452,7 +452,7 @@ void HandleCommand(char* input){
 		MT_ReqFilterProfile();
 	}else if(memcmp(input, "mt setconfig", strlen("mt setconfig")) == 0){
 		MT_BuildConfig(XDI_PacketCounter, 100, false);
-		MT_BuildConfig(XDI_FreeAcceleration, 100, false);
+		MT_BuildConfig(XDI_Acceleration, 100, false);
 		MT_BuildConfig(XDI_EulerAngles, 100, true);
 	}else if(strcmp(input, "reqconfig") == 0){
 		uprintf("requesting output configuration mode\n\r");
@@ -512,22 +512,35 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 
 		float controlInput[4] = {0};
 		float wheels_set[4] = {0};
-		float velTimer = 0.0f;
+		static float velTimer = 0.0f;
+		int speed = 40;
 
-		if (HAL_GetTick() < 7000) {
+		if (HAL_GetTick() < 5000) {
 			velTimer = HAL_GetTick();
-		} else if (HAL_GetTick() - velTimer < 20000) {
-			wheels_set[0] = 100;
-			wheels_set[1] = 100;
-			wheels_set[2] = 100;
-			wheels_set[3] = 100;
-		}
-		else{
+		} else if (HAL_GetTick() - velTimer < 1000) {
+			wheels_set[0] = speed;
+			wheels_set[1] = speed;
+			wheels_set[2] = -speed;
+			wheels_set[3] = -speed;
+		} else if (HAL_GetTick() - velTimer < 3000){
 			wheels_set[0] = 0;
 			wheels_set[1] = 0;
 			wheels_set[2] = 0;
 			wheels_set[3] = 0;
+		} else if (HAL_GetTick() - velTimer < 4000) {
+			wheels_set[0] = -speed;
+			wheels_set[1] = -speed;
+			wheels_set[2] = speed;
+			wheels_set[3] = speed;
+		} else if (HAL_GetTick() - velTimer < 6000){
+			wheels_set[0] = 0;
+			wheels_set[1] = 0;
+			wheels_set[2] = 0;
+			wheels_set[3] = 0;
+		} else {
+		velTimer = HAL_GetTick();
 		}
+
 
 		float accel[2] = {0};
 		accel[0] = MT_GetAcceleration()[0];
@@ -540,7 +553,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 		DO_Control(velocityRef, vision_yaw, vision_available, wheels_ref, use_global_ref); // outputs to wheels_ref
 		// send PWM to motors
 		if (halt) { // when communication is lost for too long, we send 0 to the motors
-			float wheel_powers[4] = {0,0,0,0};
+			float wheel_powers[4] = {wheels_set[0], wheels_set[1],wheels_set[2],wheels_set[3]};
 			for (int i=0; i<4; i++) {wheels_ref[i]=0;}
 			setWheelSpeed(wheel_powers);
 		} else {

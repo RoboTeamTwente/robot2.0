@@ -8,6 +8,7 @@
 
 #include "Kalman.h"
 #include "KalmanV.h"
+#include "../PuttyInterface/PuttyInterface.h"
 
 void Kalman_init(){
 	transMatrix(aH, aHt, OBSERVE, STATE);
@@ -42,7 +43,7 @@ void KalmanState(float accel[2], float vel[2], float controlInput[STATE]){
 
 		for (int i=0; i<STATE; i++){
 			aXold[i] = aXnew[i];
-	}
+		}
 
 }
 
@@ -125,7 +126,8 @@ void multiplyMatrix(float A[], float B[], float C[], int m, int n, int c){ //mXc
 	for (int i=0; i<m; i++){
 		for (int j=0; j<n; j++){
 			for (int k=0; k<c; k++){
-				C[i*n+j] += A[i*n+k] * B[k*n+j];
+				C[i*n+j] += A[i*m+k] * B[k*n+j];
+				//uprintf(" %f %f, %f \n\r", C[i*n+j], A[i*m+k], B[k*n+j]); //For testing
 			}
 		}
 	}

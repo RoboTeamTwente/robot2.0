@@ -26,7 +26,6 @@ struct XbusMessage* ReceivedMessageStorage;
 uint MT_Data_succerr[2] = {0};
 float angles[3];
 float acc[3];
-float acc_correct[3]= {0.0f};
 float gyro[3];
 uint8_t raw[128];
 uint32_t statusword;
