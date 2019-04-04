@@ -20,61 +20,34 @@ static void global2Local(float input[3], float output[2], float  yaw);
 
 void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], bool use_global_ref){
 
-	/*---------------------------
-	 * 	      PID TUNING
-	  ---------------------------
-
-	float minP = 10.0;
-	float maxP = 20.0, maxI = 2.0;
-	float stepP = 1.0, stepI = 0.2;
-
-	static float prevAngle = 0;
-	if (prevAngle - vel_ref[2] > 1) {
-
-		if (angleK.kP < maxP) {
-			angleK.kP += stepP;
-		} else if(angleK.kI < maxI) {
-			angleK.kP = minP;
-			angleK.kI += stepI;
-		}
-	}
-
-	if (angleK.kP == maxP && angleK.kI == maxI) {
-		vel_ref[2] = 0;
-	}
-
-	prevAngle = vel_ref[2];
-
- 	 -----------------------------*/
-
-
-	// Translational control
-	use_global_ref = true;
+	/*----------------------
+	 * Translational control
+	 ----------------------*/
 	float velLocalRef[3] = {0};
+	use_global_ref = true;
 	if (use_global_ref) {
-		// Global control
-//		float velxErr = vel_ref[body_x] - State[body_x];
-//		float velyErr = vel_ref[body_y] - State[body_y];
-//
-//		vel_ref[body_x] = vel_ref[body_x] + PID(velxErr, &velxK);
-//		vel_ref[body_y] = vel_ref[body_y] + PID(velyErr, &velyK);
-
 		global2Local(vel_ref, velLocalRef, State[body_w]); //transfer global to local
 	} else {
 		global2Local(vel_ref, velLocalRef, 0); //transfer global to local
 	}
 
+	// Manual adjusting
+	velLocalRef[body_x] = 1.063 * velLocalRef[body_x];
+	velLocalRef[body_y] = 1.308 * velLocalRef[body_y];
+
 	// Local control
-	float velxErr = velLocalRef[body_x] - State[body_x];
-	float velyErr = velLocalRef[body_y] - State[body_y];
+	float velxErr = (velLocalRef[body_x] - State[body_x]);
+	float velyErr = (velLocalRef[body_y] - State[body_y]);
 	velLocalRef[body_x] += PID(velxErr, &velxK);
 	velLocalRef[body_y] += PID(velyErr, &velyK);
 
 	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
 
-	// Angular control
+	/*----------------
+	 * Angular control
+	 ----------------*/
 	float angleErr = constrainAngle(vel_ref[body_w] - State[body_w]);//constrain it to one circle turn
-	if (fabs(angleErr) < M_PI/180) { // allow 1 degree deviation
+	if (fabs(angleErr) < YAW_MARGIN) { // reset the I to zero everytime the target has been reached
 		angleErr = 0;
 		angleK.I = 0;
 	}
