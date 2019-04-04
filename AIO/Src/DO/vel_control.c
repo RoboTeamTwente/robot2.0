@@ -31,7 +31,8 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 		global2Local(vel_ref, velLocalRef, 0); //transfer global to local
 	}
 
-	// Manual adjusting
+	// Manual adjusting velocity command
+	//     Explanation: see Velocity Difference file on drive (https://docs.google.com/document/d/1pGKysiwpu19DKLpAZ4GpluMV7UBhBQZ65YMTtI7bd_8/)
 	velLocalRef[body_x] = 1.063 * velLocalRef[body_x];
 	velLocalRef[body_y] = 1.308 * velLocalRef[body_y];
 
