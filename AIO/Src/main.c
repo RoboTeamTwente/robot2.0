@@ -84,7 +84,7 @@ bool started_icc = false;
 bool halt = true;
 bool calibration_needed = true;
 bool vision_available = false;
-bool use_global_ref = false;
+bool use_global_ref = true;
 
 float wheels_ref[4] = {0,0,0,0};
 float velocityRef[3] = {0};
@@ -286,7 +286,7 @@ int main(void)
 
 		geneva_Update();
 		MT_Update();
-		if((HAL_GetTick() - printtime >= 20)){
+		if((HAL_GetTick() - printtime >= 1000)){
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -307,42 +307,26 @@ int main(void)
 			}
 
 			//uprintf("acceleration: %f %f %f\n\r", MT_GetAcceleration()[0], MT_GetAcceleration()[1], MT_GetAcceleration()[2]);
-
-
 			//uprintf("Angle ref: %f\n\r", velocityRef[body_w]);
 //			uprintf("kP: %f \n\r", angleK.kP);
 //			uprintf("kI: %f \n\r", angleK.kI);
 //			uprintf("\n\r");
 			//			uprintf("s: %d %d %d %d\n\r", (int)getWheelSpeed(wheels_RF), (int)getWheelSpeed(wheels_RB), (int)getWheelSpeed(wheels_LB), (int)getWheelSpeed(wheels_LF));
 			//			uprintf("r: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
-
 			//		uprintf("Vision available? ");
 			//		uprintf(vision_available ? "yes\n\r" : "no\n\r");
 //					uprintf("Vision yaw: %f degrees\n\r", vision_yaw/M_PI*180);
 			//		uprintf("Raw XSens yaw: %f degrees\n\r", MT_GetAngles()[2]);
-			uprintf("Calibrated XSens yaw: %f rad\n\r", getYaw());
+
 			//		uprintf("  Difference: %f\n\r", constrainAngle(MT_GetAngles()[2]/180*M_PI - getYaw())/M_PI*180);
 			//		uprintf("XSens rate of turn: %f degrees/sec\n\r", MT_GetGyro()[2]/M_PI*180);
-
-
-			float state[4] = {0};
-			getState(state);
-//			float gain[4][4] = {0};
+////			float gain[4][4] = {0};
 //			getKGain(gain);
-			//float controlInput[4] = {0};
 			//KalmanK();
-			//KalmanState(accel, vel, controlInput);
-			uprintf("vel command: %f %f %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
 //			uprintf("wheel speeds: %f %f %f %f\n\r", getWheelSpeed(wheels_RF), getWheelSpeed(wheels_RB), getWheelSpeed(wheels_LB), getWheelSpeed(wheels_LF));
-			//uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
-			uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
 			//for (int i = 0; i < 4; i++) {
 			//	uprintf("Kalman Gain %d: %f %f %f %f\n\r", i, gain[0][i], gain[1][i], gain[2][i], gain[3][i]);
 			//}
-
-			//uprintf("wheel speeds: %d %d %d %d\n\r", (int)getWheelSpeed(wheels_RF), (int)getWheelSpeed(wheels_RB), (int)getWheelSpeed(wheels_LB), (int)getWheelSpeed(wheels_LF));
-//			uprintf("ref: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
-//			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
 			//		uprintf("\n\r");
 			//uprintf("ballSensor = [%d]\n\r", preparedAckData.ballSensor);
 			//uprintf("MT status suc/err = [%u/%u]\n\r", MT_GetSuccErr()[0], MT_GetSuccErr()[1]);
@@ -350,7 +334,27 @@ int main(void)
 			//uprintf("charge = %d\n\r", HAL_GPIO_ReadPin(Charge_GPIO_Port, Charge_Pin));
 			//uprintf("geneva_state = [%d]\n\r", geneva_GetState());
 
+
+
+			/*
+			 * FREQUENTLY USED
+			 */
+/*
+			uprintf("Calibrated XSens yaw: %f rad\n\r", getYaw());
+			uprintf("vel command: %f %f %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
+			uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
+			float state[4] = {0};
+			getState(state);
+			float controlInput[4] = {0};
+			KalmanState(accel, vel, controlInput);
+			uprintf("Kalman state: %f %f %f %f\n\r", state[0], state[1], state[2], state[3]);
+
+			uprintf("wheel speeds: %d %d %d %d\n\r", (int)getWheelSpeed(wheels_RF), (int)getWheelSpeed(wheels_RB), (int)getWheelSpeed(wheels_LB), (int)getWheelSpeed(wheels_LF));
+			uprintf("ref: %d %d %d %d\n\r", (int)wheels_ref[wheels_RF], (int)wheels_ref[wheels_RB], (int)wheels_ref[wheels_LB], (int)wheels_ref[wheels_LF]);
+			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
+
 			uprintf("\n\r");
+*/
 		}
   /* USER CODE END WHILE */
 
@@ -562,6 +566,135 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			velocityRef[dir] = 0.0;
 		}
 		*/
+
+		/* SQUARE WITH 90 DEGREES TURNS AT SIDES
+		velocityRef[0] = 0.0;
+		velocityRef[1] = 0.0;
+		velocityRef[2] = 0.0*M_PI;
+
+		halt = false;
+		static uint velTimer;
+		int reps = 1;
+		static int count = 0;
+		float v = 0.7;
+		int t = 1500;
+
+		if (HAL_GetTick() < 7000) {
+			velTimer = HAL_GetTick();
+		} else if (HAL_GetTick() - velTimer < t) {
+			velocityRef[body_x] = v;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 0.0;
+		} else if (HAL_GetTick() - velTimer < 2*t) {
+			velocityRef[body_x] = v;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 0.5*M_PI;
+		} else if (HAL_GetTick() - velTimer < 3*t) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = v;
+			velocityRef[body_w] = 0.0;
+		} else if (HAL_GetTick() - velTimer < 4*t) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = v;
+			velocityRef[body_w] = 0.5*M_PI;
+		} else if (HAL_GetTick() - velTimer < 5*t) {
+			velocityRef[body_x] = -v;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 0.0;
+		} else if (HAL_GetTick() - velTimer < 6*t) {
+			velocityRef[body_x] = -v;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 0.5*M_PI;
+		} else if (HAL_GetTick() - velTimer < 7*t) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = -v;
+			velocityRef[body_w] = 0.0;
+		} else if (HAL_GetTick() - velTimer < 8*t) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = -v;
+			velocityRef[body_w] = 0.5*M_PI;
+		} else if (count < reps-1) {
+			velTimer = HAL_GetTick();
+			count++;
+		} else {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 0.0;
+		}
+		*/
+
+		/* SQUARE WITH 180 DEGREES TURNS AT SIDES
+		velocityRef[0] = 0.0;
+		velocityRef[1] = 0.0;
+		velocityRef[2] = 0.0*M_PI;
+
+		halt = false;
+		static uint velTimer;
+		int reps = 1;
+		static int count = 0;
+
+		if (HAL_GetTick() < 7000) {
+			velTimer = HAL_GetTick();
+		} else if (HAL_GetTick() - velTimer < 1000) {
+			velocityRef[body_x] = 0.5;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 0.0;
+		} else if (HAL_GetTick() - velTimer < 2000) {
+			velocityRef[body_x] = 0.5;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 1.0*M_PI;
+		} else if (HAL_GetTick() - velTimer < 3000) {
+			velocityRef[body_x] = 0.5;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 0.0*M_PI;
+
+		} else if (HAL_GetTick() - velTimer < 4000) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = 0.5;
+			velocityRef[body_w] = 0.5*M_PI;
+		} else if (HAL_GetTick() - velTimer < 5000) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = 0.5;
+			velocityRef[body_w] = -0.5*M_PI;
+		} else if (HAL_GetTick() - velTimer < 6000) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = 0.5;
+			velocityRef[body_w] = 0.5*M_PI;
+
+		} else if (HAL_GetTick() - velTimer < 7000) {
+			velocityRef[body_x] = -0.5;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = -1.0*M_PI;
+		} else if (HAL_GetTick() - velTimer < 8000) {
+			velocityRef[body_x] = -0.5;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 0.0*M_PI;
+		} else if (HAL_GetTick() - velTimer < 9000) {
+			velocityRef[body_x] = -0.5;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = -1.0*M_PI;
+
+		} else if (HAL_GetTick() - velTimer < 10000) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = -0.5;
+			velocityRef[body_w] = -0.5*M_PI;
+		} else if (HAL_GetTick() - velTimer < 11000) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = -0.5;
+			velocityRef[body_w] = 0.5*M_PI;
+		} else if (HAL_GetTick() - velTimer < 12000) {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = -0.5;
+			velocityRef[body_w] = -0.5*M_PI;
+		} else if (count < reps-1) {
+			velTimer = HAL_GetTick();
+			count++;
+		} else {
+			velocityRef[body_x] = 0.0;
+			velocityRef[body_y] = 0.0;
+			velocityRef[body_w] = 0.0;
+		}
+		*/
 		//------------------------------------
 
 		float controlInput[4] = {0};
@@ -571,7 +704,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 //		if (fabs(velocityRef[1]-vel[1]) > 0.1) {
 //			controlInput[3] = (velocityRef[1]-vel[1] < 0) ? -5 : 5;
 //		}
-
 		float accel[2] = {0};
 //		accel[0] = MT_GetAcceleration()[0];
 //		accel[1] = MT_GetAcceleration()[1];
@@ -584,10 +716,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim){
 			float wheel_powers[4] = {0,0,0,0};
 			for (int i=0; i<4; i++) {wheels_ref[i]=0;}
 			setWheelSpeed(wheel_powers);
+
+			// Reset integration value of PID
+			angleK.I = 0;
 		} else {
 			// copy the controller output before sending it to SetOutput, to make sure it doesnt get altered at the wrong time
 			float wheel_powers[4] = {wheels_ref[0], wheels_ref[1],wheels_ref[2],wheels_ref[3]};
-			//			float wheel_powers[4] = {20,20,20,20};
+			//float wheel_powers[4] = {20,20,20,20};
 			setWheelSpeed(wheel_powers);
 		}
 		//		HAL_GPIO_WritePin(LD5_GPIO_Port,LD5_Pin, 0);
