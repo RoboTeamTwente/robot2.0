@@ -35,6 +35,7 @@
 
 // Control
 #define YAW_MARGIN (2.0F/180.0F)*(float)M_PI // margin at which the I-value of the PID is reset to 0
+#define WHEEL_REF_LIMIT 2200/OMEGAtoPWM // Limit the maximum wheel reference to leave room for the wheels PID
 
 ///////////////////////////////////////////////////// STRUCTS AND VARIABLES
 

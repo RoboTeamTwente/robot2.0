@@ -16,6 +16,8 @@ static void body2Wheels(float input[2], float output[4]);
 //transfer global coordinate frame to local coordinate frame
 static void global2Local(float input[3], float output[2], float  yaw);
 
+static void calcScaleFactors(float translationalRef[4], float angularRef, float scaleFactors[2]);
+
 ///////////////////////////////////////////////////// PUBLIC FUNCTION IMPLEMENTATIONS
 
 void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], bool use_global_ref){
@@ -23,15 +25,11 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 	/*----------------------
 	 * Translational control
 	 ----------------------*/
-	float velLocalRef[3] = {0};
+	float velLocalRef[3] = {0, 0, 0};
 	use_global_ref = true;
-	if (use_global_ref) {
-		global2Local(vel_ref, velLocalRef, State[body_w]); //transfer global to local
-	} else {
-		global2Local(vel_ref, velLocalRef, 0); //transfer global to local
-	}
+	global2Local(vel_ref, velLocalRef, use_global_ref ? State[body_w] : 0); //transfer global to local
 
-	// Manual adjusting velocity command
+	// Manually adjusting velocity command
 	//     Explanation: see Velocity Difference file on drive (https://docs.google.com/document/d/1pGKysiwpu19DKLpAZ4GpluMV7UBhBQZ65YMTtI7bd_8/)
 	velLocalRef[body_x] = 1.063 * velLocalRef[body_x];
 	velLocalRef[body_y] = 1.308 * velLocalRef[body_y];
@@ -42,7 +40,9 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 	velLocalRef[body_x] += PID(velxErr, &velxK);
 	velLocalRef[body_y] += PID(velyErr, &velyK);
 
-	body2Wheels(wheel_ref, velLocalRef); //translate velocity to wheel speed
+	float translationalRef[4] = {0, 0, 0, 0};
+	body2Wheels(translationalRef, velLocalRef); //translate velocity to wheel speed
+
 
 	/*----------------
 	 * Angular control
@@ -52,9 +52,16 @@ void vel_control_Callback(float wheel_ref[4], float State[3], float vel_ref[3], 
 		angleErr = 0;
 		angleK.I = 0;
 	}
-	float angleComp = PID(angleErr, &angleK);// PID control from control_util.h
-	for (int i = 0; i < 4; ++i){
-		wheel_ref[i] += angleComp; //add necessary rotation value
+	float angularRef = PID(angleErr, &angleK);// PID control from control_util.h
+
+
+	/*---------------------------
+	 * Scale and mix both parts
+	 ---------------------------*/
+	float scaleFactors[2] = {1, 1};
+	calcScaleFactors(translationalRef, angularRef, scaleFactors);
+	for (int i=0; i<4; ++i) {
+		wheel_ref[i] = scaleFactors[0] * translationalRef[i] + scaleFactors[1] * angularRef;
 	}
 }
 
@@ -77,3 +84,29 @@ static void global2Local(float global[3], float local[3], float  yaw){
 	local[body_y] = -sinf(yaw)*global[body_x]+cosf(yaw)*global[body_y];
 	local[body_w] = global[body_w];
 }
+
+static void calcScaleFactors(float translationalRef[4], float angularRef, float scaleFactors[2]) {
+	float f = 1; // importance factor: 0 -> all rotational, 1 -> all translational
+
+	// Find highest difference between necessary wheel speed and limit
+	float highestOvershoot = 0, overshoot = 0;
+	int index = 0;
+	for (int i=0; i<4; ++i) {
+		overshoot = fabs(translationalRef[i] + angularRef) - WHEEL_REF_LIMIT;
+		if (overshoot > highestOvershoot) {
+			highestOvershoot = overshoot;
+			index = i;
+		}
+	}
+	if (highestOvershoot == 0) {
+		// Necessary wheel speed does not exceed the limit
+		return;
+	}
+
+	scaleFactors[0] = 1 - (1-f)*highestOvershoot/fabs(translationalRef[index]); // Translational factor
+	scaleFactors[1] = 1 - f*highestOvershoot/fabs(angularRef); // Rotational factor
+	scaleFactors[0] = scaleFactors[0] < 0 ? 0 : scaleFactors[0];
+	scaleFactors[1] = scaleFactors[1] < 0 ? 0 : scaleFactors[1];
+	return;
+}
+

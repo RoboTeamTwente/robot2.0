@@ -286,7 +286,7 @@ int main(void)
 
 		geneva_Update();
 		MT_Update();
-		if((HAL_GetTick() - printtime >= 1000)){
+		if((HAL_GetTick() - printtime >= 500)){
 			printtime = HAL_GetTick();
 			ToggleLD(1);
 
@@ -339,10 +339,10 @@ int main(void)
 			/*
 			 * FREQUENTLY USED
 			 */
-/*
+
 			uprintf("Calibrated XSens yaw: %f rad\n\r", getYaw());
 			uprintf("vel command: %f %f %f\n\r", velocityRef[0], velocityRef[1], velocityRef[2]);
-			uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
+			//uprintf("measurements: %f %f %f %f\n\r", vel[0], MT_GetAcceleration()[0], vel[1], MT_GetAcceleration()[1]);
 			float state[4] = {0};
 			getState(state);
 			float controlInput[4] = {0};
@@ -354,7 +354,7 @@ int main(void)
 			uprintf("PWM: %d %d %d %d\n\r", getPWM(wheels_RF), getPWM(wheels_RB), getPWM(wheels_LB), getPWM(wheels_LF));
 
 			uprintf("\n\r");
-*/
+
 		}
   /* USER CODE END WHILE */
 
